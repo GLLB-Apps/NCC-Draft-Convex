@@ -40,6 +40,7 @@ export interface SiteSettings {
   hero_title: string
   hero_intro: string
   hero_image: string | null
+  background_blocks: ContentBlock[]
 }
 
 export interface Category {

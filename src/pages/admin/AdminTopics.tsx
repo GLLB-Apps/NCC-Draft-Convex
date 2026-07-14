@@ -2,22 +2,30 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { Topic } from '../../lib/types'
 import { supabase } from '../../lib/supabase'
+import { useToast } from '../../lib/toast'
 import { formatDateShort, statusLabel, statusBadgeClass } from '../../lib/utils'
 
 export default function AdminTopics() {
   const [topics, setTopics] = useState<Topic[]>([])
   const [loading, setLoading] = useState(true)
+  const { show } = useToast()
 
-  useEffect(() => {
-    supabase
-      .from('topics')
-      .select('*')
-      .order('sort_order')
-      .then(({ data }) => {
-        setTopics(data as Topic[] ?? [])
-        setLoading(false)
-      })
-  }, [])
+  function load() {
+    setLoading(true)
+    supabase.from('topics').select('*').order('sort_order').then(({ data }) => {
+      setTopics(data as Topic[] ?? [])
+      setLoading(false)
+    })
+  }
+
+  useEffect(() => { load() }, [])
+
+  async function remove(id: string, title: string) {
+    if (!confirm(`Ta bort ämnet "${title}" permanent?`)) return
+    const { error } = await supabase.from('topics').delete().eq('id', id)
+    if (error) show('Kunde inte ta bort: ' + error.message, 'error')
+    else { show('Ämnet borttaget', 'success'); load() }
+  }
 
   if (loading) return <div className="loading"><div className="spinner"></div></div>
 
@@ -44,6 +52,7 @@ export default function AdminTopics() {
               </div>
               <div className="admin-table-actions">
                 <Link to={`/admin/amnen/${t.id}`} className="btn btn-secondary btn-sm">Redigera</Link>
+                <button className="btn btn-danger btn-sm" onClick={() => remove(t.id, t.title)}>Ta bort</button>
               </div>
             </div>
           ))}

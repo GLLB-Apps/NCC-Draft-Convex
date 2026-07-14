@@ -6,73 +6,70 @@ import { roleLabel } from '../../lib/utils'
 import type { UserRole } from '../../lib/types'
 
 interface AdminUser {
-  id: string
-  email: string
+  user_id: string
   role: UserRole
   display_name: string | null
+  created_at: string
+}
+
+interface PendingUser {
+  id: string
+  display_name: string | null
+  created_at: string
 }
 
 export default function AdminAdmins() {
   const { user: currentUser, role: currentRole } = useAuth()
   const { show } = useToast()
   const [admins, setAdmins] = useState<AdminUser[]>([])
+  const [pending, setPending] = useState<PendingUser[]>([])
   const [loading, setLoading] = useState(true)
-  const [newEmail, setNewEmail] = useState('')
-  const [newRole, setNewRole] = useState<UserRole>('skribent')
 
-  useEffect(() => {
-    load()
-  }, [])
+  useEffect(() => { load() }, [])
 
   async function load() {
     setLoading(true)
-    const { data } = await supabase
-      .from('user_roles')
-      .select('user_id, role, profiles(display_name)')
-      .order('created_at')
+    const [rolesRes, profilesRes] = await Promise.all([
+      supabase.from('user_roles').select('user_id, role, created_at, profiles(display_name)').order('created_at'),
+      supabase.from('profiles').select('id, display_name, created_at').order('created_at'),
+    ])
 
-    if (!data) { setLoading(false); return }
+    const roleRows = rolesRes.data ?? []
+    const profileRows = profilesRes.data ?? []
+    const assignedIds = new Set(roleRows.map((r: Record<string, unknown>) => r.user_id as string))
 
-    const adminList: AdminUser[] = data.map((row: Record<string, unknown>) => ({
-      id: row.user_id as string,
-      email: '', // We can't access email via anon key
+    const adminList: AdminUser[] = roleRows.map((row: Record<string, unknown>) => ({
+      user_id: row.user_id as string,
       role: row.role as UserRole,
       display_name: (row.profiles as Record<string, string | null> | null)?.display_name ?? null,
+      created_at: row.created_at as string,
     }))
 
+    const pendingList: PendingUser[] = (profileRows as Array<Record<string, unknown>>)
+      .filter(p => !assignedIds.has(p.id as string))
+      .map(p => ({ id: p.id as string, display_name: p.display_name as string | null, created_at: p.created_at as string }))
+
     setAdmins(adminList)
+    setPending(pendingList)
     setLoading(false)
   }
 
-  async function addAdmin() {
-    if (!newEmail.trim()) return
-    // We need to find the user by email. Since we can't query auth.users directly,
-    // we'll need the user to have signed up first, then we can assign a role.
-    show('För att lägga till en administratör: personen måste först skapa ett konto, sedan kan du tilldela en roll här.', 'warning')
-    setNewEmail('')
+  async function assignRole(userId: string, role: UserRole) {
+    const { error } = await supabase.from('user_roles').insert({ user_id: userId, role })
+    if (error) show('Kunde inte tilldela roll: ' + error.message, 'error')
+    else { show(`Roll ${roleLabel(role)} tilldelad`, 'success'); load() }
   }
 
   async function updateRole(userId: string, role: UserRole) {
-    const { error } = await supabase
-      .from('user_roles')
-      .update({ role })
-      .eq('user_id', userId)
-
+    const { error } = await supabase.from('user_roles').update({ role }).eq('user_id', userId)
     if (error) show('Kunde inte uppdatera: ' + error.message, 'error')
     else { show('Roll uppdaterad', 'success'); load() }
   }
 
   async function removeRole(userId: string) {
-    if (userId === currentUser?.id) {
-      show('Du kan inte ta bort din egen roll', 'error')
-      return
-    }
-    if (!confirm('Ta bort administratörsrollen?')) return
-    const { error } = await supabase
-      .from('user_roles')
-      .delete()
-      .eq('user_id', userId)
-
+    if (userId === currentUser?.id) { show('Du kan inte ta bort din egen roll', 'error'); return }
+    if (!confirm('Ta bort administratörsrollen? Användaren förlorar all åtkomst.')) return
+    const { error } = await supabase.from('user_roles').delete().eq('user_id', userId)
     if (error) show('Kunde inte ta bort: ' + error.message, 'error')
     else { show('Roll borttagen', 'success'); load() }
   }
@@ -85,41 +82,61 @@ export default function AdminAdmins() {
         <h1>Administratörer</h1>
       </div>
 
-      <div className="card" style={{ marginBottom: 'var(--space-5)' }}>
-        <h3 style={{ marginBottom: 'var(--space-3)' }}>Lägg till administratör</h3>
-        <p className="form-hint" style={{ marginBottom: 'var(--space-3)' }}>
-          Personen måste först ha skapat ett konto via inloggningssidan. Därefter kan du tilldela en roll här.
-        </p>
-        <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'flex-end' }}>
-          <div className="form-group" style={{ flex: 1, margin: 0 }}>
-            <label className="form-label" htmlFor="newEmail">E-post</label>
-            <input id="newEmail" className="form-input" type="email" placeholder="admin@example.com" value={newEmail} onChange={e => setNewEmail(e.target.value)} />
+      {/* Pending users */}
+      {pending.length > 0 && (
+        <div style={{ marginBottom: 'var(--space-6)' }}>
+          <h2 style={{ fontSize: '1.1rem', marginBottom: 'var(--space-3)', color: 'var(--warning)' }}>
+            Väntar på rolltilldelning ({pending.length})
+          </h2>
+          <div className="admin-list">
+            {pending.map(u => (
+              <div key={u.id} className="admin-list-item">
+                <div className="admin-list-item-info">
+                  <div className="admin-list-item-title">{u.display_name ?? 'Namnlös användare'}</div>
+                  <div className="admin-list-item-meta">
+                    <span className="badge badge-warning">Ingen roll</span>
+                    <span style={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>{u.id}</span>
+                  </div>
+                </div>
+                <div className="admin-table-actions">
+                  <select
+                    className="form-select"
+                    style={{ width: 'auto' }}
+                    defaultValue=""
+                    onChange={e => { if (e.target.value) assignRole(u.id, e.target.value as UserRole) }}
+                    aria-label="Tilldela roll"
+                  >
+                    <option value="" disabled>Tilldela roll…</option>
+                    <option value="superadmin">Superadmin</option>
+                    <option value="redaktor">Redaktör</option>
+                    <option value="skribent">Skribent</option>
+                  </select>
+                </div>
+              </div>
+            ))}
           </div>
-          <div className="form-group" style={{ margin: 0 }}>
-            <label className="form-label" htmlFor="newRole">Roll</label>
-            <select id="newRole" className="form-select" value={newRole} onChange={e => setNewRole(e.target.value as UserRole)}>
-              <option value="superadmin">Superadmin</option>
-              <option value="redaktor">Redaktör</option>
-              <option value="skribent">Skribent</option>
-            </select>
-          </div>
-          <button className="btn btn-primary btn-sm" onClick={addAdmin}>Lägg till</button>
         </div>
-      </div>
+      )}
+
+      {/* Active admins */}
+      <h2 style={{ fontSize: '1.1rem', marginBottom: 'var(--space-3)' }}>Aktiva administratörer ({admins.length})</h2>
 
       {admins.length === 0 ? (
         <div className="empty-state"><p>Inga administratörer finns ännu.</p></div>
       ) : (
         <div className="admin-list">
           {admins.map(a => (
-            <div key={a.id} className="admin-list-item">
+            <div key={a.user_id} className="admin-list-item">
               <div className="admin-list-item-info">
                 <div className="admin-list-item-title">
                   {a.display_name ?? 'Okänd användare'}
-                  {a.id === currentUser?.id && <span className="badge badge-success" style={{ marginLeft: 'var(--space-2)' }}>Du</span>}
+                  {a.user_id === currentUser?.id && (
+                    <span className="badge badge-success" style={{ marginLeft: 'var(--space-2)' }}>Du</span>
+                  )}
                 </div>
                 <div className="admin-list-item-meta">
                   <span>{roleLabel(a.role)}</span>
+                  <span style={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>{a.user_id.substring(0, 8)}…</span>
                 </div>
               </div>
               <div className="admin-table-actions">
@@ -127,20 +144,30 @@ export default function AdminAdmins() {
                   className="form-select"
                   style={{ width: 'auto' }}
                   value={a.role}
-                  onChange={e => updateRole(a.id, e.target.value as UserRole)}
-                  disabled={a.id === currentUser?.id && currentRole === 'superadmin'}
+                  onChange={e => updateRole(a.user_id, e.target.value as UserRole)}
+                  disabled={a.user_id === currentUser?.id && currentRole === 'superadmin'}
                   aria-label="Ändra roll"
                 >
                   <option value="superadmin">Superadmin</option>
                   <option value="redaktor">Redaktör</option>
                   <option value="skribent">Skribent</option>
                 </select>
-                <button className="btn btn-danger btn-sm" onClick={() => removeRole(a.id)}>Ta bort</button>
+                {a.user_id !== currentUser?.id && (
+                  <button className="btn btn-danger btn-sm" onClick={() => removeRole(a.user_id)}>Ta bort</button>
+                )}
               </div>
             </div>
           ))}
         </div>
       )}
+
+      <div className="card" style={{ marginTop: 'var(--space-6)', background: 'var(--bg-alt)' }}>
+        <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+          För att lägga till en ny administratör: personen skapar ett konto via{' '}
+          <a href="/admin/login" className="section-link">/admin/login</a>, sedan dyker de upp
+          i listan "Väntar på rolltilldelning" ovan.
+        </p>
+      </div>
     </div>
   )
 }

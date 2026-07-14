@@ -1,47 +1,57 @@
+import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
-import { AuthProvider, useAuth } from './lib/auth'
+import { AuthProvider } from './lib/auth'
 import { ToastProvider } from './lib/toast'
 import './index.css'
 import './components/public/public.css'
 import './components/admin/admin.css'
 
+// Public layout is always loaded
 import PublicLayout from './components/public/PublicLayout'
-import HomePage from './pages/public/HomePage'
-import BackgroundPage from './pages/public/BackgroundPage'
-import TopicsPage from './pages/public/TopicsPage'
-import TopicDetailPage from './pages/public/TopicDetailPage'
-import NewsPage from './pages/public/NewsPage'
-import NewsDetailPage from './pages/public/NewsDetailPage'
-import TestimoniesPage from './pages/public/TestimoniesPage'
-import MapPage from './pages/public/MapPage'
-import TimelinePage from './pages/public/TimelinePage'
-import DocumentsPage from './pages/public/DocumentsPage'
-import MediaPage from './pages/public/MediaPage'
-import PressPage from './pages/public/PressPage'
-import FaqPage from './pages/public/FaqPage'
-import ContactPage from './pages/public/ContactPage'
 
-import AdminLogin from './pages/admin/AdminLogin'
-import AdminGuard from './pages/admin/AdminGuard'
-import AdminOverview from './pages/admin/AdminOverview'
-import AdminTopics from './pages/admin/AdminTopics'
-import AdminTopicEdit from './pages/admin/AdminTopicEdit'
-import AdminNews from './pages/admin/AdminNews'
-import AdminNewsEdit from './pages/admin/AdminNewsEdit'
-import AdminTestimonies from './pages/admin/AdminTestimonies'
-import AdminDocuments from './pages/admin/AdminDocuments'
-import AdminDocumentEdit from './pages/admin/AdminDocumentEdit'
-import AdminMedia from './pages/admin/AdminMedia'
-import AdminMediaEdit from './pages/admin/AdminMediaEdit'
-import AdminMap from './pages/admin/AdminMap'
-import AdminMapEdit from './pages/admin/AdminMapEdit'
-import AdminTimeline from './pages/admin/AdminTimeline'
-import AdminTimelineEdit from './pages/admin/AdminTimelineEdit'
-import AdminFaq from './pages/admin/AdminFaq'
-import AdminContacts from './pages/admin/AdminContacts'
-import AdminMessages from './pages/admin/AdminMessages'
-import AdminSettings from './pages/admin/AdminSettings'
-import AdminAdmins from './pages/admin/AdminAdmins'
+// Public pages — lazy
+const HomePage = lazy(() => import('./pages/public/HomePage'))
+const BackgroundPage = lazy(() => import('./pages/public/BackgroundPage'))
+const TopicsPage = lazy(() => import('./pages/public/TopicsPage'))
+const TopicDetailPage = lazy(() => import('./pages/public/TopicDetailPage'))
+const NewsPage = lazy(() => import('./pages/public/NewsPage'))
+const NewsDetailPage = lazy(() => import('./pages/public/NewsDetailPage'))
+const TestimoniesPage = lazy(() => import('./pages/public/TestimoniesPage'))
+const MapPage = lazy(() => import('./pages/public/MapPage'))
+const TimelinePage = lazy(() => import('./pages/public/TimelinePage'))
+const DocumentsPage = lazy(() => import('./pages/public/DocumentsPage'))
+const MediaPage = lazy(() => import('./pages/public/MediaPage'))
+const PressPage = lazy(() => import('./pages/public/PressPage'))
+const FaqPage = lazy(() => import('./pages/public/FaqPage'))
+const ContactPage = lazy(() => import('./pages/public/ContactPage'))
+
+// Admin pages — lazy
+const AdminLogin = lazy(() => import('./pages/admin/AdminLogin'))
+const AdminGuard = lazy(() => import('./pages/admin/AdminGuard'))
+const AdminOverview = lazy(() => import('./pages/admin/AdminOverview'))
+const AdminTopics = lazy(() => import('./pages/admin/AdminTopics'))
+const AdminTopicEdit = lazy(() => import('./pages/admin/AdminTopicEdit'))
+const AdminNews = lazy(() => import('./pages/admin/AdminNews'))
+const AdminNewsEdit = lazy(() => import('./pages/admin/AdminNewsEdit'))
+const AdminTestimonies = lazy(() => import('./pages/admin/AdminTestimonies'))
+const AdminDocuments = lazy(() => import('./pages/admin/AdminDocuments'))
+const AdminDocumentEdit = lazy(() => import('./pages/admin/AdminDocumentEdit'))
+const AdminMedia = lazy(() => import('./pages/admin/AdminMedia'))
+const AdminMediaEdit = lazy(() => import('./pages/admin/AdminMediaEdit'))
+const AdminMap = lazy(() => import('./pages/admin/AdminMap'))
+const AdminMapEdit = lazy(() => import('./pages/admin/AdminMapEdit'))
+const AdminTimeline = lazy(() => import('./pages/admin/AdminTimeline'))
+const AdminTimelineEdit = lazy(() => import('./pages/admin/AdminTimelineEdit'))
+const AdminFaq = lazy(() => import('./pages/admin/AdminFaq'))
+const AdminContacts = lazy(() => import('./pages/admin/AdminContacts'))
+const AdminMessages = lazy(() => import('./pages/admin/AdminMessages'))
+const AdminSettings = lazy(() => import('./pages/admin/AdminSettings'))
+const AdminAdmins = lazy(() => import('./pages/admin/AdminAdmins'))
+const AdminBackground = lazy(() => import('./pages/admin/AdminBackground'))
+
+function PageSpinner() {
+  return <div className="loading"><div className="spinner" /></div>
+}
 
 function NotFound() {
   return (
@@ -53,70 +63,65 @@ function NotFound() {
   )
 }
 
-function AppRoutes() {
-  const { user, isAdmin, loading } = useAuth()
-
-  return (
-    <Routes>
-      {/* Public routes */}
-      <Route element={<PublicLayout />}>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/bakgrund" element={<BackgroundPage />} />
-        <Route path="/amnen" element={<TopicsPage />} />
-        <Route path="/amnen/:slug" element={<TopicDetailPage />} />
-        <Route path="/nyheter" element={<NewsPage />} />
-        <Route path="/nyheter/:slug" element={<NewsDetailPage />} />
-        <Route path="/vittnesmal" element={<TestimoniesPage />} />
-        <Route path="/karta" element={<MapPage />} />
-        <Route path="/tidslinje" element={<TimelinePage />} />
-        <Route path="/dokument" element={<DocumentsPage />} />
-        <Route path="/media" element={<MediaPage />} />
-        <Route path="/press" element={<PressPage />} />
-        <Route path="/fragor-och-svar" element={<FaqPage />} />
-        <Route path="/kontakt" element={<ContactPage />} />
-      </Route>
-
-      {/* Admin routes */}
-      <Route path="/admin/login" element={loading ? <div className="loading"><div className="spinner" /></div> : user && isAdmin ? <AdminLogin /> : <AdminLogin />} />
-      <Route path="/admin" element={<AdminGuard />}>
-        <Route index element={<AdminOverview />} />
-        <Route path="amnen" element={<AdminTopics />} />
-        <Route path="amnen/ny" element={<AdminTopicEdit />} />
-        <Route path="amnen/:id" element={<AdminTopicEdit />} />
-        <Route path="nyheter" element={<AdminNews />} />
-        <Route path="nyheter/ny" element={<AdminNewsEdit />} />
-        <Route path="nyheter/:id" element={<AdminNewsEdit />} />
-        <Route path="vittnesmal" element={<AdminTestimonies />} />
-        <Route path="dokument" element={<AdminDocuments />} />
-        <Route path="dokument/ny" element={<AdminDocumentEdit />} />
-        <Route path="dokument/:id" element={<AdminDocumentEdit />} />
-        <Route path="media" element={<AdminMedia />} />
-        <Route path="media/ny" element={<AdminMediaEdit />} />
-        <Route path="media/:id" element={<AdminMediaEdit />} />
-        <Route path="karta" element={<AdminMap />} />
-        <Route path="karta/ny" element={<AdminMapEdit />} />
-        <Route path="karta/:id" element={<AdminMapEdit />} />
-        <Route path="tidslinje" element={<AdminTimeline />} />
-        <Route path="tidslinje/ny" element={<AdminTimelineEdit />} />
-        <Route path="tidslinje/:id" element={<AdminTimelineEdit />} />
-        <Route path="faq" element={<AdminFaq />} />
-        <Route path="kontakter" element={<AdminContacts />} />
-        <Route path="meddelanden" element={<AdminMessages />} />
-        <Route path="inställningar" element={<AdminSettings />} />
-        <Route path="administratörer" element={<AdminAdmins />} />
-      </Route>
-
-      <Route path="*" element={<NotFound />} />
-    </Routes>
-  )
-}
-
 export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
         <ToastProvider>
-          <AppRoutes />
+          <Suspense fallback={<PageSpinner />}>
+            <Routes>
+              {/* Public routes */}
+              <Route element={<PublicLayout />}>
+                <Route path="/" element={<HomePage />} />
+                <Route path="/bakgrund" element={<BackgroundPage />} />
+                <Route path="/amnen" element={<TopicsPage />} />
+                <Route path="/amnen/:slug" element={<TopicDetailPage />} />
+                <Route path="/nyheter" element={<NewsPage />} />
+                <Route path="/nyheter/:slug" element={<NewsDetailPage />} />
+                <Route path="/vittnesmal" element={<TestimoniesPage />} />
+                <Route path="/karta" element={<MapPage />} />
+                <Route path="/tidslinje" element={<TimelinePage />} />
+                <Route path="/dokument" element={<DocumentsPage />} />
+                <Route path="/media" element={<MediaPage />} />
+                <Route path="/press" element={<PressPage />} />
+                <Route path="/fragor-och-svar" element={<FaqPage />} />
+                <Route path="/kontakt" element={<ContactPage />} />
+              </Route>
+
+              {/* Admin routes */}
+              <Route path="/admin/login" element={<AdminLogin />} />
+              <Route path="/admin" element={<AdminGuard />}>
+                <Route index element={<AdminOverview />} />
+                <Route path="amnen" element={<AdminTopics />} />
+                <Route path="amnen/ny" element={<AdminTopicEdit />} />
+                <Route path="amnen/:id" element={<AdminTopicEdit />} />
+                <Route path="nyheter" element={<AdminNews />} />
+                <Route path="nyheter/ny" element={<AdminNewsEdit />} />
+                <Route path="nyheter/:id" element={<AdminNewsEdit />} />
+                <Route path="vittnesmal" element={<AdminTestimonies />} />
+                <Route path="dokument" element={<AdminDocuments />} />
+                <Route path="dokument/ny" element={<AdminDocumentEdit />} />
+                <Route path="dokument/:id" element={<AdminDocumentEdit />} />
+                <Route path="media" element={<AdminMedia />} />
+                <Route path="media/ny" element={<AdminMediaEdit />} />
+                <Route path="media/:id" element={<AdminMediaEdit />} />
+                <Route path="karta" element={<AdminMap />} />
+                <Route path="karta/ny" element={<AdminMapEdit />} />
+                <Route path="karta/:id" element={<AdminMapEdit />} />
+                <Route path="tidslinje" element={<AdminTimeline />} />
+                <Route path="tidslinje/ny" element={<AdminTimelineEdit />} />
+                <Route path="tidslinje/:id" element={<AdminTimelineEdit />} />
+                <Route path="faq" element={<AdminFaq />} />
+                <Route path="kontakter" element={<AdminContacts />} />
+                <Route path="meddelanden" element={<AdminMessages />} />
+                <Route path="bakgrund" element={<AdminBackground />} />
+                <Route path="inställningar" element={<AdminSettings />} />
+                <Route path="administratörer" element={<AdminAdmins />} />
+              </Route>
+
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Suspense>
         </ToastProvider>
       </AuthProvider>
     </BrowserRouter>
