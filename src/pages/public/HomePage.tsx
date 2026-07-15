@@ -5,6 +5,7 @@ import { supabase } from '../../lib/supabase'
 import { formatDate, formatDateShort, truncate } from '../../lib/utils'
 import TopicIcon from '../../components/public/TopicIcon'
 import CountUp from '../../components/public/CountUp'
+import VoteWidget from '../../components/public/VoteWidget'
 import { usePage } from '../../lib/usePage'
 
 export default function HomePage() {
@@ -82,22 +83,29 @@ export default function HomePage() {
       {/* Sammanfattning */}
       <section className="section" style={{ background: 'var(--bg-alt)' }}>
         <div className="container">
-          <div className="section-header">
-            <h2>{page.text('summary_heading')}</h2>
-          </div>
-          <div className="grid grid-3">
-            <div className="card">
-              <h3>{page.text('card1_title')}</h3>
-              <p className="text-muted">{page.text('card1_text')}</p>
+          <div className="summary-layout">
+            <div className="summary-main">
+              <div className="section-header">
+                <h2>{page.text('summary_heading')}</h2>
+              </div>
+              <div className="grid grid-2">
+                <div className="card">
+                  <h3>{page.text('card1_title')}</h3>
+                  <p className="text-muted">{page.text('card1_text')}</p>
+                </div>
+                <div className="card">
+                  <h3>{page.text('card2_title')}</h3>
+                  <p className="text-muted">{page.text('card2_text')}</p>
+                </div>
+                <div className="card">
+                  <h3>{page.text('card3_title')}</h3>
+                  <p className="text-muted">{page.text('card3_text')}</p>
+                </div>
+              </div>
             </div>
-            <div className="card">
-              <h3>{page.text('card2_title')}</h3>
-              <p className="text-muted">{page.text('card2_text')}</p>
-            </div>
-            <div className="card">
-              <h3>{page.text('card3_title')}</h3>
-              <p className="text-muted">{page.text('card3_text')}</p>
-            </div>
+            <aside className="summary-aside">
+              <VoteWidget settings={settings} variant="inline" />
+            </aside>
           </div>
         </div>
       </section>

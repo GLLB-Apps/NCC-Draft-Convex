@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Outlet } from 'react-router-dom'
+import { Outlet, useLocation } from 'react-router-dom'
 import Header from './Header'
 import Footer from './Footer'
 import VoteWidget from './VoteWidget'
@@ -8,6 +8,7 @@ import { supabase } from '../../lib/supabase'
 
 export default function PublicLayout() {
   const [settings, setSettings] = useState<SiteSettings | null>(null)
+  const isHome = useLocation().pathname === '/'
 
   useEffect(() => {
     supabase
@@ -20,7 +21,8 @@ export default function PublicLayout() {
   return (
     <div className="public-layout">
       <Header settings={settings} />
-      <VoteWidget settings={settings} />
+      {/* On the start page the widget lives inline beside the summary section instead */}
+      {!isHome && <VoteWidget settings={settings} />}
       <main className="public-main">
         <Outlet context={{ settings }} />
       </main>
