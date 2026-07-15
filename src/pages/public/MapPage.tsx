@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import type { MapLocation } from '../../lib/types'
 import { supabase } from '../../lib/supabase'
 import MapPreview from '../../components/public/MapPreview'
-import { mapPointTypeLabel } from '../../lib/utils'
+import { mapPointTypeLabel, mapPointTypeIcon } from '../../lib/utils'
 
 const COLORS: Record<string, string> = {
   work_area: '#b94a3d',
@@ -60,33 +60,41 @@ export default function MapPage() {
           <p>Inga kartpunkter har publicerats ännu.</p>
         </div>
       ) : (
-        <>
+        <div className="map-layout">
           <div className="map-container">
-            <MapPreview points={filteredPoints} height={500} />
+            <MapPreview points={filteredPoints} height={520} />
           </div>
 
           {uniqueTypes.length > 0 && (
-            <div className="map-legend">
-              {uniqueTypes.map(type => (
-                <button
-                  key={type}
-                  className="map-legend-item"
-                  onClick={() => toggleType(type)}
-                  style={{
-                    cursor: 'pointer',
-                    opacity: activeTypes.size === 0 || activeTypes.has(type) ? 1 : 0.4,
-                    background: 'none',
-                    border: 'none',
-                    padding: 0,
-                  }}
-                >
-                  <span className="map-legend-dot" style={{ background: COLORS[type] ?? '#2d5a3d' }}></span>
-                  {mapPointTypeLabel(type)}
+            <aside className="map-filters">
+              <h2 className="map-filters-title">Kartlager</h2>
+              <p className="map-filters-hint">Tryck på en punkttyp för att visa eller dölja den på kartan.</p>
+              {uniqueTypes.map(type => {
+                const active = activeTypes.size === 0 || activeTypes.has(type)
+                const count = points.filter(p => p.point_type === type).length
+                return (
+                  <button
+                    key={type}
+                    className={active ? 'map-filter' : 'map-filter is-off'}
+                    onClick={() => toggleType(type)}
+                    aria-pressed={active}
+                  >
+                    <span className="map-filter-icon" style={{ background: COLORS[type] ?? '#2d5a3d' }} aria-hidden="true">
+                      {mapPointTypeIcon(type)}
+                    </span>
+                    <span className="map-filter-label">{mapPointTypeLabel(type)}</span>
+                    <span className="map-filter-count">{count}</span>
+                  </button>
+                )
+              })}
+              {activeTypes.size > 0 && (
+                <button className="map-filter-reset" onClick={() => setActiveTypes(new Set())}>
+                  Visa alla punkter
                 </button>
-              ))}
-            </div>
+              )}
+            </aside>
           )}
-        </>
+        </div>
       )}
     </div>
   )

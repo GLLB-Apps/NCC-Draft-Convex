@@ -30,18 +30,21 @@ export default function AdminAdmins() {
   async function load() {
     setLoading(true)
     const [rolesRes, profilesRes] = await Promise.all([
-      supabase.from('user_roles').select('user_id, role, created_at, profiles(display_name)').order('created_at'),
+      supabase.from('user_roles').select('user_id, role, created_at').order('created_at'),
       supabase.from('profiles').select('id, display_name, created_at').order('created_at'),
     ])
 
     const roleRows = rolesRes.data ?? []
     const profileRows = profilesRes.data ?? []
     const assignedIds = new Set(roleRows.map((r: Record<string, unknown>) => r.user_id as string))
+    const nameById = new Map(
+      (profileRows as Array<Record<string, unknown>>).map(p => [p.id as string, (p.display_name as string | null) ?? null]),
+    )
 
     const adminList: AdminUser[] = roleRows.map((row: Record<string, unknown>) => ({
       user_id: row.user_id as string,
       role: row.role as UserRole,
-      display_name: (row.profiles as Record<string, string | null> | null)?.display_name ?? null,
+      display_name: nameById.get(row.user_id as string) ?? null,
       created_at: row.created_at as string,
     }))
 

@@ -104,26 +104,45 @@ export default function BackgroundPage() {
             </p>
           </section>
 
-          <section className="background-section">
-            <h2>Vad vi gör</h2>
-            <ul style={{ paddingLeft: 'var(--space-5)', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
-              <li>Samlar och strukturerar offentlig information om planerna</li>
-              <li>Samlar in vittnesmål och observationer från boende</li>
-              <li>Sprider information till boende, journalister och beslutsfattare</li>
-              <li>Sammanställer frågor och farhågor som väcks av planerna</li>
-              <li>Uppmuntrar till saklig och respektfull dialog</li>
-            </ul>
-          </section>
+          <div className="principles-grid">
+            <section className="principle-card">
+              <div className="principle-card-head">
+                <span className="principle-card-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="6" y="4" width="12" height="16" rx="2" />
+                    <path d="M9 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1" />
+                    <path d="M9 12l2 2 4-4" />
+                  </svg>
+                </span>
+                <h2>Vad vi gör</h2>
+              </div>
+              <ul className="principle-list">
+                <li>Samlar och strukturerar offentlig information om planerna</li>
+                <li>Samlar in vittnesmål och observationer från boende</li>
+                <li>Sprider information till boende, journalister och beslutsfattare</li>
+                <li>Sammanställer frågor och farhågor som väcks av planerna</li>
+                <li>Uppmuntrar till saklig och respektfull dialog</li>
+              </ul>
+            </section>
 
-          <section className="background-section">
-            <h2>Viktiga principer</h2>
-            <ul style={{ paddingLeft: 'var(--space-5)', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
-              <li>All information ska vara saklig och källhänvisad där det är relevant</li>
-              <li>Personliga vittnesmål märks tydligt som sådana</li>
-              <li>Vi gör inga juridiska eller miljövetenskapliga påståenden utan stöd i publicerade källor</li>
-              <li>Initiativet är oberoende och drivs av boende</li>
-            </ul>
-          </section>
+            <section className="principle-card accent-alt">
+              <div className="principle-card-head">
+                <span className="principle-card-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z" />
+                    <path d="M9 12l2 2 4-4" />
+                  </svg>
+                </span>
+                <h2>Viktiga principer</h2>
+              </div>
+              <ul className="principle-list">
+                <li>All information ska vara saklig och källhänvisad där det är relevant</li>
+                <li>Personliga vittnesmål märks tydligt som sådana</li>
+                <li>Vi gör inga juridiska eller miljövetenskapliga påståenden utan stöd i publicerade källor</li>
+                <li>Initiativet är oberoende och drivs av boende</li>
+              </ul>
+            </section>
+          </div>
         </>
       )}
 

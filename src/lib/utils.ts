@@ -61,7 +61,7 @@ export function mapPointTypeLabel(type: string): string {
     quarry_area: 'Brytområde',
     property_border: 'Fastighetsgräns',
     transport_route: 'Transportväg',
-    residence_distance: 'Avstånd till bostad',
+    residence_distance: 'Närmaste bostad',
     nature_value: 'Naturvärde',
     walking_trail: 'Promenadstråk',
     observation_point: 'Observationspunkt',
@@ -69,6 +69,38 @@ export function mapPointTypeLabel(type: string): string {
     testimony_point: 'Vittnesmålspunkt',
   }
   return map[type] ?? type
+}
+
+export function mapPointTypeIcon(type: string): string {
+  const map: Record<string, string> = {
+    work_area: '🏗️',
+    quarry_area: '⛏️',
+    property_border: '📐',
+    transport_route: '🚚',
+    residence_distance: '🏠',
+    nature_value: '🌳',
+    walking_trail: '🥾',
+    observation_point: '🔭',
+    photo_point: '📷',
+    testimony_point: '💬',
+  }
+  return map[type] ?? '📍'
+}
+
+// Great-circle distance between two lat/lng points, in metres.
+export function distanceMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371000
+  const toRad = (d: number) => (d * Math.PI) / 180
+  const dLat = toRad(lat2 - lat1)
+  const dLng = toRad(lng2 - lng1)
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2
+  return 2 * R * Math.asin(Math.sqrt(a))
+}
+
+// Human-friendly distance, e.g. "1,8 km" or "740 m".
+export function formatDistance(m: number): string {
+  if (m >= 1000) return `${(m / 1000).toFixed(1).replace('.', ',')} km`
+  return `${Math.round(m / 10) * 10} m`
 }
 
 export function roleLabel(role: string): string {

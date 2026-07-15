@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import type { Topic } from '../../lib/types'
 import { supabase } from '../../lib/supabase'
 import { truncate } from '../../lib/utils'
+import TopicIcon from '../../components/public/TopicIcon'
 
 export default function TopicsPage() {
   const [topics, setTopics] = useState<Topic[]>([])
@@ -41,7 +42,7 @@ export default function TopicsPage() {
                 {topic.featured_image ? (
                   <img src={topic.featured_image} alt="" style={{ width: 48, height: 48, borderRadius: 'var(--radius-md)', objectFit: 'cover' }} />
                 ) : (
-                  <span aria-hidden="true">◇</span>
+                  <TopicIcon slug={topic.slug} />
                 )}
               </div>
               <h3>{topic.title}</h3>

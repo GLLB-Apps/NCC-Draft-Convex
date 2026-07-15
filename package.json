@@ -10,8 +10,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.110.5",
+    "appwrite": "^26.2.0",
     "leaflet": "^1.9.4",
+    "node-appwrite": "^27.0.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-leaflet": "^5.0.0",

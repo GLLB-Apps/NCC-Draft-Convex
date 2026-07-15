@@ -15,6 +15,7 @@ const MENU_ITEMS: { label: string; path: string; roles: UserRole[] }[] = [
   { label: 'Tidslinje', path: '/admin/tidslinje', roles: ['superadmin', 'redaktor'] },
   { label: 'FAQ', path: '/admin/faq', roles: ['superadmin', 'redaktor'] },
   { label: 'Kontakter', path: '/admin/kontakter', roles: ['superadmin', 'redaktor'] },
+  { label: 'Meny', path: '/admin/meny', roles: ['superadmin', 'redaktor'] },
   { label: 'Formulärmeddelanden', path: '/admin/meddelanden', roles: ['superadmin', 'redaktor'] },
   { label: 'Bakgrundssidan', path: '/admin/bakgrund', roles: ['superadmin', 'redaktor'] },
   { label: 'Webbplatsinställningar', path: '/admin/inställningar', roles: ['superadmin'] },

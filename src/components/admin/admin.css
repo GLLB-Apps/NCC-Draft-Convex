@@ -391,6 +391,21 @@
   gap: var(--space-3);
 }
 
+/* Reorder controls (menu editor) */
+.admin-nav-reorder {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.btn-xs {
+  padding: 1px 8px;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  min-width: 0;
+}
+
 .admin-list-item-info {
   flex: 1;
   min-width: 0;

@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import type { MapLocation } from '../../lib/types'
-import { mapPointTypeLabel } from '../../lib/utils'
+import { mapPointTypeLabel, distanceMeters, formatDistance } from '../../lib/utils'
 
 const COLORS: Record<string, string> = {
   work_area: '#b94a3d',
@@ -47,8 +47,20 @@ export default function MapPreview({ points, height = 350 }: { points: MapLocati
     if (!map) return
 
     map.eachLayer(layer => {
-      if (layer instanceof L.Marker) map.removeLayer(layer)
+      if (layer instanceof L.Marker || layer instanceof L.Polyline) map.removeLayer(layer)
     })
+
+    // Reference point(s) for "distance to residence": nearest quarry/work area.
+    const quarryPoints = points.filter(p => p.point_type === 'quarry_area' || p.point_type === 'work_area')
+    const nearestQuarry = (p: MapLocation) => {
+      let best: MapLocation | null = null
+      let bestDist = Infinity
+      for (const q of quarryPoints) {
+        const d = distanceMeters(p.lat, p.lng, q.lat, q.lng)
+        if (d < bestDist) { bestDist = d; best = q }
+      }
+      return best ? { point: best, dist: bestDist } : null
+    }
 
     points.forEach(point => {
       const color = COLORS[point.point_type] ?? '#2d5a3d'
@@ -59,11 +71,26 @@ export default function MapPreview({ points, height = 350 }: { points: MapLocati
         iconAnchor: [7, 7],
       })
 
+      // Distance line from a residence point to the nearest planned quarry area.
+      let distanceNote = ''
+      if (point.point_type === 'residence_distance') {
+        const nq = nearestQuarry(point)
+        if (nq) {
+          distanceNote = `<br/><strong style="font-size:0.85rem;color:#b94a3d;">≈ ${formatDistance(nq.dist)} till planerat täktområde</strong>`
+          L.polyline([[point.lat, point.lng], [nq.point.lat, nq.point.lng]], {
+            color: '#b94a3d', weight: 2, dashArray: '6 6', opacity: 0.75,
+          })
+            .addTo(map)
+            .bindTooltip(`≈ ${formatDistance(nq.dist)} till planerat täktområde`, { sticky: true })
+        }
+      }
+
       const marker = L.marker([point.lat, point.lng], { icon }).addTo(map)
       marker.bindPopup(`
         <strong>${point.title}</strong><br/>
         <span style="font-size:0.85rem;color:#666;">${mapPointTypeLabel(point.point_type)}</span>
         ${point.description ? `<br/><span style="font-size:0.85rem;">${point.description}</span>` : ''}
+        ${distanceNote}
       `)
     })
   }, [points])

@@ -227,6 +227,7 @@ export interface NavigationItem {
   url: string
   sort_order: number
   is_active: boolean
+  parent_id: string | null
 }
 
 export interface UserProfile {
