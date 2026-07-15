@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useOutletContext } from 'react-router-dom'
 import type { SiteSettings, Topic, Post } from '../../lib/types'
 import { supabase } from '../../lib/supabase'
@@ -15,6 +15,9 @@ export default function HomePage() {
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
 
+  const summaryRef = useRef<HTMLElement>(null)
+  const [showWidget, setShowWidget] = useState(false)
+
   useEffect(() => {
     Promise.all([
       supabase.from('topics').select('*').eq('status', 'published').order('sort_order').limit(6),
@@ -26,10 +29,22 @@ export default function HomePage() {
     })
   }, [])
 
+  // Reveal the floating widget once the summary section reaches the top; then it follows.
+  useEffect(() => {
+    const onScroll = () => {
+      const el = summaryRef.current
+      if (el) setShowWidget(el.getBoundingClientRect().top <= 120)
+    }
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [loading])
+
   if (loading) return <div className="loading"><div className="spinner"></div></div>
 
   return (
     <div className="fade-in">
+      {showWidget && <VoteWidget settings={settings} />}
       {/* Hero / översikt */}
       <section className="hero">
         {settings?.hero_image && (
@@ -81,31 +96,24 @@ export default function HomePage() {
       </section>
 
       {/* Sammanfattning */}
-      <section className="section" style={{ background: 'var(--bg-alt)' }}>
+      <section ref={summaryRef} className="section" style={{ background: 'var(--bg-alt)' }}>
         <div className="container">
-          <div className="summary-layout">
-            <div className="summary-main">
-              <div className="section-header">
-                <h2>{page.text('summary_heading')}</h2>
-              </div>
-              <div className="grid grid-2">
-                <div className="card">
-                  <h3>{page.text('card1_title')}</h3>
-                  <p className="text-muted">{page.text('card1_text')}</p>
-                </div>
-                <div className="card">
-                  <h3>{page.text('card2_title')}</h3>
-                  <p className="text-muted">{page.text('card2_text')}</p>
-                </div>
-                <div className="card">
-                  <h3>{page.text('card3_title')}</h3>
-                  <p className="text-muted">{page.text('card3_text')}</p>
-                </div>
-              </div>
+          <div className="section-header">
+            <h2>{page.text('summary_heading')}</h2>
+          </div>
+          <div className="grid grid-3">
+            <div className="card">
+              <h3>{page.text('card1_title')}</h3>
+              <p className="text-muted">{page.text('card1_text')}</p>
             </div>
-            <aside className="summary-aside">
-              <VoteWidget settings={settings} variant="inline" />
-            </aside>
+            <div className="card">
+              <h3>{page.text('card2_title')}</h3>
+              <p className="text-muted">{page.text('card2_text')}</p>
+            </div>
+            <div className="card">
+              <h3>{page.text('card3_title')}</h3>
+              <p className="text-muted">{page.text('card3_text')}</p>
+            </div>
           </div>
         </div>
       </section>

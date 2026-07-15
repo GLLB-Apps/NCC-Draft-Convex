@@ -705,27 +705,6 @@
   .vote-widget { display: block; }
 }
 
-/* Start page: summary section with a sticky widget column */
-.summary-layout {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: var(--space-6);
-}
-.summary-main { min-width: 0; }
-
-@media (min-width: 1000px) {
-  .summary-layout { grid-template-columns: minmax(0, 1fr) 250px; align-items: start; }
-}
-
-/* Inline (in-flow, sticky) variant of the vote widget */
-.vote-widget-inline {
-  display: block;
-  position: sticky;
-  top: 96px;
-  right: auto;
-  width: 100%;
-}
-
 /* Topic card */
 .topic-card {
   display: flex;
