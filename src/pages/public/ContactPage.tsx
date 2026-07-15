@@ -3,9 +3,11 @@ import type { Contact, SiteSettings } from '../../lib/types'
 import { supabase } from '../../lib/supabase'
 import { useToast } from '../../lib/toast'
 import { useOutletContext } from 'react-router-dom'
+import { usePage } from '../../lib/usePage'
 
 export default function ContactPage() {
   const { settings } = useOutletContext<{ settings: SiteSettings | null }>()
+  const page = usePage('kontakt')
   const [contacts, setContacts] = useState<Contact[]>([])
   const [loading, setLoading] = useState(true)
   const { show } = useToast()
@@ -53,7 +55,7 @@ export default function ContactPage() {
     if (error) {
       show('Något gick fel. Försök igen senare.', 'error')
     } else {
-      show('Tack! Ditt meddelande har skickats.', 'success')
+      show(page.text('success'), 'success')
       setForm({ name: '', email: '', subject: '', message: '', website: '' })
     }
   }
@@ -61,14 +63,14 @@ export default function ContactPage() {
   return (
     <div className="container fade-in">
       <div className="page-header">
-        <h1>Kontakt</h1>
-        <p>Kontakta initiativet för frågor, information eller samarbete.</p>
+        <h1>{page.title}</h1>
+        {page.intro && <p>{page.intro}</p>}
       </div>
 
       <div className="contact-grid" style={{ marginBottom: 'var(--space-9)' }}>
         <div>
           <div className="contact-info-card">
-            <h3>Kontaktpersoner</h3>
+            <h3>{page.text('contacts_heading')}</h3>
             {loading ? (
               <p className="text-muted">Laddar…</p>
             ) : contacts.length === 0 ? (
@@ -108,10 +110,10 @@ export default function ContactPage() {
 
         <div>
           <form onSubmit={handleSubmit} className="card" noValidate>
-            <h3 style={{ marginBottom: 'var(--space-5)' }}>Kontaktformulär</h3>
+            <h3 style={{ marginBottom: 'var(--space-5)' }}>{page.text('form_heading')}</h3>
 
             <div className="form-group">
-              <label className="form-label" htmlFor="name">Namn *</label>
+              <label className="form-label" htmlFor="name">{page.text('label_name')} *</label>
               <input
                 id="name"
                 className="form-input"
@@ -124,7 +126,7 @@ export default function ContactPage() {
             </div>
 
             <div className="form-group">
-              <label className="form-label" htmlFor="email">E-post *</label>
+              <label className="form-label" htmlFor="email">{page.text('label_email')} *</label>
               <input
                 id="email"
                 className="form-input"
@@ -137,7 +139,7 @@ export default function ContactPage() {
             </div>
 
             <div className="form-group">
-              <label className="form-label" htmlFor="subject">Ämne</label>
+              <label className="form-label" htmlFor="subject">{page.text('label_subject')}</label>
               <input
                 id="subject"
                 className="form-input"
@@ -148,7 +150,7 @@ export default function ContactPage() {
             </div>
 
             <div className="form-group">
-              <label className="form-label" htmlFor="message">Meddelande *</label>
+              <label className="form-label" htmlFor="message">{page.text('label_message')} *</label>
               <textarea
                 id="message"
                 className="form-textarea"
@@ -166,7 +168,7 @@ export default function ContactPage() {
             </div>
 
             <button type="submit" className="btn btn-primary" disabled={submitting}>
-              {submitting ? 'Skickar…' : 'Skicka meddelande'}
+              {submitting ? 'Skickar…' : page.text('submit')}
             </button>
           </form>
         </div>

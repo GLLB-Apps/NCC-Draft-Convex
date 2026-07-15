@@ -666,6 +666,20 @@
 .topic-card h3 { margin: 0; }
 .topic-card p { color: var(--text-muted); font-size: 0.9rem; }
 
+/* Large topic icon on the topic detail page */
+.topic-detail-icon {
+  width: 80px;
+  height: 80px;
+  border-radius: var(--radius-lg);
+  background: var(--primary-bg);
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: var(--space-4);
+}
+.topic-detail-icon .topic-icon-svg { width: 46px; height: 46px; }
+
 /* Subtle idle animations for the topic icons — motion-safe only */
 @media (prefers-reduced-motion: no-preference) {
   .tw-wave { transform-origin: 6px 12px; animation: tw-wave 2.4s ease-in-out infinite; }

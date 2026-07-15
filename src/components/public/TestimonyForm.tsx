@@ -1,9 +1,11 @@
 import { useState } from 'react'
+import { usePage } from '../../lib/usePage'
 interface TestimonyFormProps {
   onSubmit: (data: Record<string, unknown>) => Promise<void>
 }
 
 export default function TestimonyForm({ onSubmit }: TestimonyFormProps) {
+  const page = usePage('vittnesmal')
   const [submitting, setSubmitting] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [form, setForm] = useState({
@@ -50,7 +52,7 @@ export default function TestimonyForm({ onSubmit }: TestimonyFormProps) {
   return (
     <form onSubmit={handleSubmit} className="card" noValidate>
       <div className="form-group">
-        <label className="form-label" htmlFor="title">Rubrik (valfritt)</label>
+        <label className="form-label" htmlFor="title">{page.text('label_title')}</label>
         <input
           id="title"
           className="form-input"
@@ -61,7 +63,7 @@ export default function TestimonyForm({ onSubmit }: TestimonyFormProps) {
       </div>
 
       <div className="form-group">
-        <label className="form-label" htmlFor="story">Berättelse *</label>
+        <label className="form-label" htmlFor="story">{page.text('label_story')} *</label>
         <textarea
           id="story"
           className="form-textarea"
@@ -74,7 +76,7 @@ export default function TestimonyForm({ onSubmit }: TestimonyFormProps) {
       </div>
 
       <div className="form-group">
-        <label className="form-label" htmlFor="area_usage">Hur använder du området?</label>
+        <label className="form-label" htmlFor="area_usage">{page.text('label_area')}</label>
         <input
           id="area_usage"
           className="form-input"
@@ -87,7 +89,7 @@ export default function TestimonyForm({ onSubmit }: TestimonyFormProps) {
 
       <div className="grid grid-2">
         <div className="form-group">
-          <label className="form-label" htmlFor="author_name">Namn</label>
+          <label className="form-label" htmlFor="author_name">{page.text('label_name')}</label>
           <input
             id="author_name"
             className="form-input"
@@ -97,7 +99,7 @@ export default function TestimonyForm({ onSubmit }: TestimonyFormProps) {
           />
         </div>
         <div className="form-group">
-          <label className="form-label" htmlFor="location">Ort</label>
+          <label className="form-label" htmlFor="location">{page.text('label_location')}</label>
           <input
             id="location"
             className="form-input"
@@ -110,7 +112,7 @@ export default function TestimonyForm({ onSubmit }: TestimonyFormProps) {
       </div>
 
       <div className="form-group">
-        <label className="form-label" htmlFor="email">E-post *</label>
+        <label className="form-label" htmlFor="email">{page.text('label_email')} *</label>
         <input
           id="email"
           className="form-input"
@@ -119,7 +121,7 @@ export default function TestimonyForm({ onSubmit }: TestimonyFormProps) {
           onChange={e => update('email', e.target.value)}
           aria-invalid={!!errors.email}
         />
-        {errors.email ? <p className="form-error">{errors.email}</p> : <p className="form-hint">Visas aldrig publikt.</p>}
+        {errors.email ? <p className="form-error">{errors.email}</p> : <p className="form-hint">{page.text('email_hint')}</p>}
       </div>
 
       <div className="checkbox-group">
@@ -130,7 +132,7 @@ export default function TestimonyForm({ onSubmit }: TestimonyFormProps) {
           onChange={e => update('is_anonymous', e.target.checked)}
         />
         <label htmlFor="is_anonymous" className="form-label" style={{ margin: 0 }}>
-          Publicera anonymt (namnet visas inte publikt)
+          {page.text('anonymous')}
         </label>
       </div>
 
@@ -143,7 +145,7 @@ export default function TestimonyForm({ onSubmit }: TestimonyFormProps) {
           aria-invalid={!!errors.consent_publish}
         />
         <label htmlFor="consent_publish" className="form-label" style={{ margin: 0 }}>
-          Jag godkänner att min berättelse behandlas och kan publiceras på webbplatsen *
+          {page.text('consent_publish')} *
         </label>
       </div>
       {errors.consent_publish && <p className="form-error">{errors.consent_publish}</p>}
@@ -156,7 +158,7 @@ export default function TestimonyForm({ onSubmit }: TestimonyFormProps) {
           onChange={e => update('consent_contact', e.target.checked)}
         />
         <label htmlFor="consent_contact" className="form-label" style={{ margin: 0 }}>
-          Administratörer får kontakta mig via e-post vid behov
+          {page.text('consent_contact')}
         </label>
       </div>
 
@@ -167,11 +169,11 @@ export default function TestimonyForm({ onSubmit }: TestimonyFormProps) {
       </div>
 
       <p className="form-hint" style={{ marginBottom: 'var(--space-4)' }}>
-        Inskickat material granskas av administratörer före publicering.
+        {page.text('review_hint')}
       </p>
 
       <button type="submit" className="btn btn-primary" disabled={submitting}>
-        {submitting ? 'Skickar…' : 'Skicka vittnesmål'}
+        {submitting ? 'Skickar…' : page.text('submit')}
       </button>
     </form>
   )

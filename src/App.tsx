@@ -45,6 +45,8 @@ const AdminTimelineEdit = lazy(() => import('./pages/admin/AdminTimelineEdit'))
 const AdminFaq = lazy(() => import('./pages/admin/AdminFaq'))
 const AdminContacts = lazy(() => import('./pages/admin/AdminContacts'))
 const AdminNavigation = lazy(() => import('./pages/admin/AdminNavigation'))
+const AdminPages = lazy(() => import('./pages/admin/AdminPages'))
+const AdminPageEdit = lazy(() => import('./pages/admin/AdminPageEdit'))
 const AdminMessages = lazy(() => import('./pages/admin/AdminMessages'))
 const AdminSettings = lazy(() => import('./pages/admin/AdminSettings'))
 const AdminAdmins = lazy(() => import('./pages/admin/AdminAdmins'))
@@ -115,6 +117,8 @@ export default function App() {
                 <Route path="faq" element={<AdminFaq />} />
                 <Route path="kontakter" element={<AdminContacts />} />
                 <Route path="meny" element={<AdminNavigation />} />
+                <Route path="sidor" element={<AdminPages />} />
+                <Route path="sidor/:slug" element={<AdminPageEdit />} />
                 <Route path="meddelanden" element={<AdminMessages />} />
                 <Route path="bakgrund" element={<AdminBackground />} />
                 <Route path="inställningar" element={<AdminSettings />} />

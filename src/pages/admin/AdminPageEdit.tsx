@@ -1,0 +1,107 @@
+import { useEffect, useState } from 'react'
+import { useParams, Link } from 'react-router-dom'
+import { supabase } from '../../lib/supabase'
+import { useToast } from '../../lib/toast'
+import { pageBySlug } from '../../lib/pages'
+
+export default function AdminPageEdit() {
+  const { slug } = useParams<{ slug: string }>()
+  const cfg = slug ? pageBySlug(slug) : undefined
+  const { show } = useToast()
+  const [title, setTitle] = useState('')
+  const [intro, setIntro] = useState('')
+  const [texts, setTexts] = useState<Record<string, string>>({})
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    if (!slug) return
+    supabase.from('pages').select('*').eq('slug', slug).maybeSingle().then(({ data }) => {
+      const d = data as { title?: string; intro?: string; texts?: Record<string, string> } | null
+      setTitle(d?.title ?? cfg?.defaultTitle ?? '')
+      setIntro(d?.intro ?? cfg?.defaultIntro ?? '')
+      const base: Record<string, string> = {}
+      for (const f of cfg?.fields ?? []) base[f.key] = d?.texts?.[f.key] ?? f.default
+      setTexts(base)
+      setLoading(false)
+    })
+  }, [slug])
+
+  async function save() {
+    setSaving(true)
+    const { error } = await supabase.from('pages').upsert({ id: slug, slug, title, intro, texts })
+    setSaving(false)
+    if (error) show('Kunde inte spara: ' + error.message, 'error')
+    else show('Sparat', 'success')
+  }
+
+  if (!cfg) return <div className="empty-state"><p>Okänd sida.</p></div>
+  if (loading) return <div className="loading"><div className="spinner"></div></div>
+
+  return (
+    <div className="fade-in">
+      <div className="admin-page-header">
+        <h1>{cfg.label}</h1>
+        <Link to="/admin/sidor" className="btn btn-ghost btn-sm">← Alla sidor</Link>
+      </div>
+
+      <div className="editor-layout">
+        <div className="editor-main">
+          <div className="admin-form-card" style={{ maxWidth: 'none' }}>
+            {!cfg.headerless && (
+              <>
+                <div className="form-group">
+                  <label className="form-label" htmlFor="title">Rubrik</label>
+                  <input id="title" className="form-input" type="text" value={title} onChange={e => setTitle(e.target.value)} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label" htmlFor="intro">Ingress</label>
+                  <textarea id="intro" className="form-textarea" rows={3} value={intro} onChange={e => setIntro(e.target.value)} />
+                </div>
+              </>
+            )}
+
+            {cfg.fields && cfg.fields.length > 0 && (
+              <>
+                {!cfg.headerless && <h3 style={{ margin: 'var(--space-5) 0 var(--space-3)', fontSize: '0.95rem' }}>Texter på sidan</h3>}
+                {cfg.fields.map(f => (
+                  <div className="form-group" key={f.key}>
+                    <label className="form-label" htmlFor={`t_${f.key}`}>{f.label}</label>
+                    {f.multiline ? (
+                      <textarea id={`t_${f.key}`} className="form-textarea" rows={2} value={texts[f.key] ?? ''} onChange={e => setTexts(prev => ({ ...prev, [f.key]: e.target.value }))} />
+                    ) : (
+                      <input id={`t_${f.key}`} className="form-input" type="text" value={texts[f.key] ?? ''} onChange={e => setTexts(prev => ({ ...prev, [f.key]: e.target.value }))} />
+                    )}
+                  </div>
+                ))}
+              </>
+            )}
+
+            <div className="admin-form-actions">
+              <button className="btn btn-primary" onClick={save} disabled={saving}>{saving ? 'Sparar…' : 'Spara'}</button>
+              <a href={cfg.route} target="_blank" rel="noopener noreferrer" className="btn btn-ghost">Visa sidan →</a>
+            </div>
+          </div>
+        </div>
+
+        <aside className="editor-sidebar">
+          <div className="editor-panel">
+            <h3>Dynamiskt innehåll</h3>
+            {cfg.manage.length === 0 ? (
+              <p className="text-muted" style={{ fontSize: '0.85rem' }}>Den här sidan har inget dynamiskt innehåll att hantera.</p>
+            ) : (
+              <div className="editor-panel-actions">
+                {cfg.manage.map(m => (
+                  <Link key={m.to} to={m.to} className="btn btn-secondary">{m.label} →</Link>
+                ))}
+              </div>
+            )}
+            <p className="text-muted" style={{ fontSize: '0.8rem', marginTop: 'var(--space-3)' }}>
+              Hoppa hit och tillbaka för att redigera både text och innehåll.
+            </p>
+          </div>
+        </aside>
+      </div>
+    </div>
+  )
+}

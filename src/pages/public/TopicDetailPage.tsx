@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import type { Topic, ContentBlock } from '../../lib/types'
 import { supabase } from '../../lib/supabase'
 import { formatDate } from '../../lib/utils'
+import TopicIcon from '../../components/public/TopicIcon'
 
 function ContentBlockRenderer({ block }: { block: ContentBlock }) {
   switch (block.type) {
@@ -138,6 +139,11 @@ export default function TopicDetailPage() {
     <div className="container container-narrow fade-in">
       <div className="page-header">
         <Link to="/amnen" className="section-link" style={{ marginBottom: 'var(--space-3)' }}>← Alla ämnen</Link>
+        {topic.icon && (
+          <div className="topic-detail-icon" aria-hidden="true">
+            <TopicIcon icon={topic.icon} />
+          </div>
+        )}
         <h1>{topic.title}</h1>
         {topic.intro && <p>{topic.intro}</p>}
         {topic.published_at && (

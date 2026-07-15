@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import PageHeader from '../../components/public/PageHeader'
 import type { MediaItem } from '../../lib/types'
 import { supabase } from '../../lib/supabase'
 import { mediaTypeLabel } from '../../lib/utils'
@@ -30,8 +31,7 @@ export default function MediaPage() {
   return (
     <div className="container fade-in">
       <div className="page-header">
-        <h1>Media</h1>
-        <p>Bilder, videor, kartor och grafik från området.</p>
+        <PageHeader slug="media" />
       </div>
 
       <div className="filter-bar">

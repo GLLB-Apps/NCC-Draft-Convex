@@ -4,6 +4,7 @@ import type { MediaItem, ContentStatus, MediaType } from '../../lib/types'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../lib/auth'
 import { useToast } from '../../lib/toast'
+import Dropzone from '../../components/admin/Dropzone'
 
 export default function AdminMediaEdit() {
   const { id } = useParams<{ id: string }>()
@@ -124,8 +125,16 @@ export default function AdminMediaEdit() {
           </div>
         </div>
         <div className="form-group">
-          <label className="form-label" htmlFor="file_url">Fil-URL</label>
-          <input id="file_url" className="form-input" type="url" value={form.file_url} onChange={e => update('file_url', e.target.value)} placeholder="Direktlänk till bild/fil" />
+          <label className="form-label">Bild / fil</label>
+          {form.file_url && <img src={form.file_url} alt="" className="media-edit-preview" />}
+          <Dropzone
+            compact
+            label={form.file_url ? 'Byt bild — dra hit eller klicka' : 'Dra och släpp en bild här'}
+            onUploaded={url => update('file_url', url)}
+            onComplete={() => show('Bild uppladdad', 'success')}
+            onError={m => show('Uppladdning misslyckades: ' + m, 'error')}
+          />
+          <input className="form-input" type="url" value={form.file_url} onChange={e => update('file_url', e.target.value)} placeholder="…eller klistra in en URL" style={{ marginTop: 'var(--space-2)' }} />
         </div>
         <div className="form-group">
           <label className="form-label" htmlFor="video_url">Video-URL (YouTube/Vimeo embed)</label>

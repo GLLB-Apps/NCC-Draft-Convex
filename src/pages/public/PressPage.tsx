@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react'
 import type { Post, DocumentItem, MediaItem, Contact } from '../../lib/types'
 import { supabase } from '../../lib/supabase'
 import { formatDate, formatDateShort, senderTypeLabel, senderTypeBadge } from '../../lib/utils'
+import { usePage } from '../../lib/usePage'
 
 export default function PressPage() {
+  const page = usePage('press')
   const [posts, setPosts] = useState<Post[]>([])
   const [documents, setDocuments] = useState<DocumentItem[]>([])
   const [pressImages, setPressImages] = useState<MediaItem[]>([])
@@ -30,25 +32,22 @@ export default function PressPage() {
   return (
     <div className="container fade-in">
       <div className="page-header">
-        <h1>Press</h1>
-        <p>Information och material för journalister och media.</p>
+        <h1>{page.title}</h1>
+        {page.intro && <p>{page.intro}</p>}
       </div>
 
       <div className="press-grid" style={{ marginBottom: 'var(--space-9)' }}>
         <div>
           <div className="press-card">
-            <h3>Fakta i korthet</h3>
+            <h3>{page.text('facts_heading')}</h3>
             <ul style={{ paddingLeft: 'var(--space-5)', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
-              <li>NCC planerar en ny bergtäkt i Rögleskogen mellan Södra Sandby och Dalby i Lunds kommun.</li>
-              <li>Processen befinner sig i informations- och samrådsskedet.</li>
-              <li>Ett medborgarinitiativ har bildats för att samla information och frågor.</li>
-              <li>All information på denna webbplats är exempeldata om inte annat anges.</li>
+              {page.text('facts').split('\n').filter(Boolean).map((line, i) => <li key={i}>{line}</li>)}
             </ul>
           </div>
 
           {posts.length > 0 && (
             <div className="press-card">
-              <h3>Aktuella pressmeddelanden</h3>
+              <h3>{page.text('press_heading')}</h3>
               {posts.map(p => (
                 <div key={p.id} style={{ padding: 'var(--space-3) 0', borderBottom: '1px solid var(--border-light)' }}>
                   <p style={{ fontWeight: 500 }}>{p.title}</p>
@@ -60,7 +59,7 @@ export default function PressPage() {
 
           {documents.length > 0 && (
             <div className="press-card">
-              <h3>Nyckeldokument</h3>
+              <h3>{page.text('docs_heading')}</h3>
               {documents.map(d => (
                 <div key={d.id} style={{ padding: 'var(--space-3) 0', borderBottom: '1px solid var(--border-light)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
@@ -77,7 +76,7 @@ export default function PressPage() {
 
         <div>
           <div className="press-card">
-            <h3>Kontaktpersoner</h3>
+            <h3>{page.text('contacts_heading')}</h3>
             {contacts.map(c => (
               <div key={c.id} style={{ padding: 'var(--space-3) 0', borderBottom: '1px solid var(--border-light)' }}>
                 <p style={{ fontWeight: 500 }}>{c.name}</p>
@@ -90,7 +89,7 @@ export default function PressPage() {
 
           {pressImages.length > 0 && (
             <div className="press-card">
-              <h3>Pressbilder</h3>
+              <h3>{page.text('images_heading')}</h3>
               <div className="grid grid-2" style={{ gap: 'var(--space-3)' }}>
                 {pressImages.map(img => (
                   <div key={img.id}>

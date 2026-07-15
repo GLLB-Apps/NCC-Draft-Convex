@@ -6,6 +6,7 @@ import { useAuth } from '../../lib/auth'
 import { useToast } from '../../lib/toast'
 import { slugify } from '../../lib/utils'
 import TapEditor from '../../components/admin/TapEditor'
+import TopicIcon, { TOPIC_ICONS } from '../../components/public/TopicIcon'
 
 export default function AdminTopicEdit() {
   const { id } = useParams<{ id: string }>()
@@ -20,6 +21,7 @@ export default function AdminTopicEdit() {
   const [content, setContent] = useState<ContentBlock[]>([])
   const [status, setStatus] = useState<ContentStatus>('draft')
   const [featuredImage, setFeaturedImage] = useState('')
+  const [icon, setIcon] = useState<string>('')
   const [sortOrder, setSortOrder] = useState(0)
   const [loading, setLoading] = useState(!isNew)
   const [saving, setSaving] = useState(false)
@@ -40,6 +42,7 @@ export default function AdminTopicEdit() {
           setContent(Array.isArray(t.content) ? t.content : [])
           setStatus(t.status)
           setFeaturedImage(t.featured_image ?? '')
+          setIcon(t.icon ?? '')
           setSortOrder(t.sort_order)
         }
         setLoading(false)
@@ -65,6 +68,7 @@ export default function AdminTopicEdit() {
       content,
       status: saveStatus,
       featured_image: featuredImage || null,
+      icon: icon || null,
       sort_order: sortOrder,
       updated_by: user?.id,
       published_at: publish ? new Date().toISOString() : null,
@@ -141,6 +145,27 @@ export default function AdminTopicEdit() {
 
           <div className="editor-panel">
             <h3>Detaljer</h3>
+            <div className="form-group">
+              <label className="form-label">Ikon</label>
+              <div className="icon-picker">
+                {TOPIC_ICONS.map(ic => (
+                  <button
+                    key={ic.key}
+                    type="button"
+                    className={icon === ic.key ? 'icon-picker-btn active' : 'icon-picker-btn'}
+                    title={ic.label}
+                    aria-label={ic.label}
+                    aria-pressed={icon === ic.key}
+                    onClick={() => setIcon(icon === ic.key ? '' : ic.key)}
+                  >
+                    <TopicIcon icon={ic.key} />
+                  </button>
+                ))}
+              </div>
+              <p className="text-muted" style={{ fontSize: '0.78rem', marginTop: 'var(--space-2)' }}>
+                Ikonen visas på ämnessidan och i ämneskorten. Tryck igen för att avmarkera.
+              </p>
+            </div>
             <div className="form-group">
               <label className="form-label" htmlFor="slug">URL-slug</label>
               <input id="slug" className="form-input" type="text" value={slug} onChange={e => setSlug(e.target.value)} />

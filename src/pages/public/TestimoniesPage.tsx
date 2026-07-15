@@ -3,11 +3,13 @@ import type { Testimony } from '../../lib/types'
 import { supabase } from '../../lib/supabase'
 import { useToast } from '../../lib/toast'
 import TestimonyForm from '../../components/public/TestimonyForm'
+import { usePage } from '../../lib/usePage'
 
 export default function TestimoniesPage() {
   const [testimonies, setTestimonies] = useState<Testimony[]>([])
   const [loading, setLoading] = useState(true)
   const { show } = useToast()
+  const page = usePage('vittnesmal')
 
   useEffect(() => {
     supabase
@@ -37,19 +39,19 @@ export default function TestimoniesPage() {
     if (error) {
       show('Något gick fel. Försök igen senare.', 'error')
     } else {
-      show('Tack! Ditt vittnesmål är inlämnat och väntar på granskning.', 'success')
+      show(page.text('success'), 'success')
     }
   }
 
   return (
     <div className="container fade-in">
       <div className="page-header">
-        <h1>Vittnesmål</h1>
-        <p>Berättelser och upplevelser från boende och besökare i Rögleskogen.</p>
+        <h1>{page.title}</h1>
+        {page.intro && <p>{page.intro}</p>}
       </div>
 
       <section style={{ marginBottom: 'var(--space-9)' }}>
-        <h2 style={{ marginBottom: 'var(--space-5)' }}>Publicerade vittnesmål</h2>
+        <h2 style={{ marginBottom: 'var(--space-5)' }}>{page.text('list_heading')}</h2>
         {loading ? (
           <div className="loading"><div className="spinner"></div></div>
         ) : testimonies.length === 0 ? (
@@ -77,9 +79,9 @@ export default function TestimoniesPage() {
       </section>
 
       <section style={{ marginBottom: 'var(--space-9)' }}>
-        <h2 style={{ marginBottom: 'var(--space-3)' }}>Lämna ett vittnesmål</h2>
+        <h2 style={{ marginBottom: 'var(--space-3)' }}>{page.text('form_heading')}</h2>
         <p className="text-muted" style={{ marginBottom: 'var(--space-5)' }}>
-          Ditt vittnesmål granskas av administratörer innan det publiceras. E-postadressen visas aldrig publikt.
+          {page.text('form_intro')}
         </p>
         <TestimonyForm onSubmit={handleSubmit} />
       </section>

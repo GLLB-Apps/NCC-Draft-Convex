@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import PageHeader from '../../components/public/PageHeader'
 import { Link } from 'react-router-dom'
 import type { Post } from '../../lib/types'
 import { supabase } from '../../lib/supabase'
@@ -26,8 +27,7 @@ export default function NewsPage() {
   return (
     <div className="container fade-in">
       <div className="page-header">
-        <h1>Nyheter</h1>
-        <p>Senaste information och uppdateringar om planerna.</p>
+        <PageHeader slug="nyheter" />
       </div>
 
       {posts.length === 0 ? (

@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react'
+import PageHeader from '../../components/public/PageHeader'
 import type { FaqCategory, FaqItem } from '../../lib/types'
 import { supabase } from '../../lib/supabase'
+import { usePage } from '../../lib/usePage'
 
 export default function FaqPage() {
+  const page = usePage('fragor-och-svar')
   const [categories, setCategories] = useState<FaqCategory[]>([])
   const [items, setItems] = useState<FaqItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -33,8 +36,7 @@ export default function FaqPage() {
   return (
     <div className="container container-narrow fade-in">
       <div className="page-header">
-        <h1>Frågor och svar</h1>
-        <p>Vanliga frågor om den planerade bergtäkten och detta initiativ.</p>
+        <PageHeader slug="fragor-och-svar" />
       </div>
 
       {categories.length === 0 && items.length === 0 ? (
@@ -70,7 +72,7 @@ export default function FaqPage() {
           {/* Uncategorized items */}
           {items.filter(i => !i.category_id).length > 0 && (
             <div className="faq-category">
-              <h3>Övrigt</h3>
+              <h3>{page.text('uncategorized_heading')}</h3>
               {items.filter(i => !i.category_id).map(item => (
                 <div key={item.id} className="faq-item">
                   <button

@@ -4,9 +4,11 @@ import type { SiteSettings, Topic, Post } from '../../lib/types'
 import { supabase } from '../../lib/supabase'
 import { formatDate, formatDateShort, truncate } from '../../lib/utils'
 import TopicIcon from '../../components/public/TopicIcon'
+import { usePage } from '../../lib/usePage'
 
 export default function HomePage() {
   const { settings } = useOutletContext<{ settings: SiteSettings | null }>()
+  const page = usePage('hem')
   const [topics, setTopics] = useState<Topic[]>([])
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
@@ -46,8 +48,8 @@ export default function HomePage() {
       <section className="section">
         <div className="container">
           <div className="section-header">
-            <h2>Aktuell status</h2>
-            <p>Översikt över var i processen vi befinner oss.</p>
+            <h2>{page.text('status_heading')}</h2>
+            <p>{page.text('status_intro')}</p>
           </div>
           <div className="status-card">
             <div className="status-item">
@@ -80,20 +82,20 @@ export default function HomePage() {
       <section className="section" style={{ background: 'var(--bg-alt)' }}>
         <div className="container">
           <div className="section-header">
-            <h2>Kort sammanfattning</h2>
+            <h2>{page.text('summary_heading')}</h2>
           </div>
           <div className="grid grid-3">
             <div className="card">
-              <h3>Vad planeras?</h3>
-              <p className="text-muted">NCC har informerat om planer på att ansöka om tillstånd för en ny bergtäkt i Rögleskogen mellan Södra Sandby och Dalby i Lunds kommun.</p>
+              <h3>{page.text('card1_title')}</h3>
+              <p className="text-muted">{page.text('card1_text')}</p>
             </div>
             <div className="card">
-              <h3>Varför väcker det frågor?</h3>
-              <p className="text-muted">Boende och naturintresserade har frågor om buller, damm, trafik, naturvärden och påverkan på närmiljö och livsmiljö.</p>
+              <h3>{page.text('card2_title')}</h3>
+              <p className="text-muted">{page.text('card2_text')}</p>
             </div>
             <div className="card">
-              <h3>Vad händer nu?</h3>
-              <p className="text-muted">Processen befinner sig i ett tidigt skede. Information samlas här kontinuerligt. Håll dig uppdaterad via tidslinjen och nyheterna.</p>
+              <h3>{page.text('card3_title')}</h3>
+              <p className="text-muted">{page.text('card3_text')}</p>
             </div>
           </div>
         </div>
@@ -104,8 +106,8 @@ export default function HomePage() {
         <section className="section">
           <div className="container">
             <div className="section-header">
-              <h2>Ämnesområden</h2>
-              <p>Utforska olika aspekter av den planerade bergtäkten.</p>
+              <h2>{page.text('topics_heading')}</h2>
+              <p>{page.text('topics_intro')}</p>
             </div>
             <div className="grid grid-3">
               {topics.map(topic => (
@@ -114,7 +116,7 @@ export default function HomePage() {
                     {topic.featured_image ? (
                       <img src={topic.featured_image} alt="" style={{ width: 48, height: 48, borderRadius: 'var(--radius-md)', objectFit: 'cover' }} />
                     ) : (
-                      <TopicIcon slug={topic.slug} />
+                      <TopicIcon icon={topic.icon} />
                     )}
                   </div>
                   <h3>{topic.title}</h3>
@@ -132,7 +134,7 @@ export default function HomePage() {
         <section className="section" style={{ background: 'var(--bg-alt)' }}>
           <div className="container">
             <div className="section-header">
-              <h2>Senaste nytt</h2>
+              <h2>{page.text('news_heading')}</h2>
             </div>
             <div className="grid grid-3">
               {posts.map(post => (
@@ -155,8 +157,8 @@ export default function HomePage() {
       <section className="section">
         <div className="container">
           <div className="cta-section">
-            <h2>Hjälp till att sprida informationen</h2>
-            <p className="text-muted">Skriv under namninsamlingen, dela informationen eller lämna ditt vittnesmål.</p>
+            <h2>{page.text('cta_heading')}</h2>
+            <p className="text-muted">{page.text('cta_text')}</p>
             <div className="cta-actions">
               <a href={settings?.petition_url ?? '#'} target="_blank" rel="noopener noreferrer" className="btn btn-primary">Skriv under</a>
               <Link to="/vittnesmal" className="btn btn-secondary">Lämna ett vittnesmål</Link>

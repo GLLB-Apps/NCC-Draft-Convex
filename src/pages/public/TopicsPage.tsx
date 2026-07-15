@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import PageHeader from '../../components/public/PageHeader'
 import { Link } from 'react-router-dom'
 import type { Topic } from '../../lib/types'
 import { supabase } from '../../lib/supabase'
@@ -26,8 +27,7 @@ export default function TopicsPage() {
   return (
     <div className="container fade-in">
       <div className="page-header">
-        <h1>Ämnesområden</h1>
-        <p>Olika aspekter av den planerade bergtäkten, från naturvärden till buller och trafik.</p>
+        <PageHeader slug="amnen" />
       </div>
 
       {topics.length === 0 ? (
@@ -42,7 +42,7 @@ export default function TopicsPage() {
                 {topic.featured_image ? (
                   <img src={topic.featured_image} alt="" style={{ width: 48, height: 48, borderRadius: 'var(--radius-md)', objectFit: 'cover' }} />
                 ) : (
-                  <TopicIcon slug={topic.slug} />
+                  <TopicIcon icon={topic.icon} />
                 )}
               </div>
               <h3>{topic.title}</h3>

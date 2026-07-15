@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import PageHeader from '../../components/public/PageHeader'
 import type { TimelineEvent } from '../../lib/types'
 import { supabase } from '../../lib/supabase'
 import { formatDate } from '../../lib/utils'
@@ -22,8 +23,7 @@ export default function TimelinePage() {
   return (
     <div className="container container-narrow fade-in">
       <div className="page-header">
-        <h1>Tidslinje</h1>
-        <p>Viktiga händelser i processen kring den planerade bergtäkten.</p>
+        <PageHeader slug="tidslinje" />
       </div>
 
       {loading ? (

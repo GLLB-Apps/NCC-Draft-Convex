@@ -60,6 +60,7 @@ export interface Topic {
   content: ContentBlock[]
   status: ContentStatus
   featured_image: string | null
+  icon: string | null
   sort_order: number
   created_by: string | null
   updated_by: string | null

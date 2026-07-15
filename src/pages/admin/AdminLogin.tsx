@@ -43,144 +43,100 @@ export default function AdminLogin() {
     setSignupDone(true)
   }
 
-  if (signupDone) {
-    return (
-      <div className="admin-login-page">
-        <div className="admin-login-card" style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '2.5rem', marginBottom: 'var(--space-4)' }}>✓</div>
-          <h2 className="admin-login-title">Konto skapat</h2>
-          <p className="admin-login-subtitle">
-            Ditt konto är registrerat. En administratör behöver tilldela dig en roll innan du kan logga in på adminpanelen.
-          </p>
-          <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: 'var(--space-5)' }}>
-            Om du är den första administratören: logga in i Supabase Dashboard och kör:<br />
-            <code style={{ background: 'var(--bg-alt)', padding: '2px 6px', borderRadius: 4, fontSize: '0.8rem' }}>
-              INSERT INTO public.user_roles (user_id, role)<br />
-              VALUES ('{'<din user-id>'}', 'superadmin');
-            </code>
-          </p>
-          <button className="btn btn-primary" onClick={() => { setSignupDone(false); setMode('login') }}>
-            Logga in
-          </button>
-        </div>
-      </div>
-    )
-  }
-
   return (
     <div className="admin-login-page">
-      <div className="admin-login-card">
-        <h1 className="admin-login-title">Rögleskogen</h1>
-        <p className="admin-login-subtitle">
-          {mode === 'login' ? 'Logga in på adminpanelen' : 'Skapa administratörskonto'}
-        </p>
-
-        <div style={{ display: 'flex', gap: 'var(--space-2)', marginBottom: 'var(--space-5)' }}>
-          <button
-            type="button"
-            className={mode === 'login' ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm'}
-            style={{ flex: 1 }}
-            onClick={() => setMode('login')}
-          >
-            Logga in
-          </button>
-          <button
-            type="button"
-            className={mode === 'signup' ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm'}
-            style={{ flex: 1 }}
-            onClick={() => setMode('signup')}
-          >
-            Skapa konto
-          </button>
-        </div>
-
-        {mode === 'login' ? (
-          <form onSubmit={handleLogin}>
-            <div className="form-group">
-              <label className="form-label" htmlFor="email">E-postadress</label>
-              <input
-                id="email"
-                className="form-input"
-                type="email"
-                autoComplete="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label" htmlFor="password">Lösenord</label>
-              <input
-                id="password"
-                className="form-input"
-                type="password"
-                autoComplete="current-password"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                required
-              />
-            </div>
-            <button
-              type="submit"
-              className="btn btn-primary"
-              style={{ width: '100%', marginTop: 'var(--space-3)' }}
-              disabled={submitting}
-            >
-              {submitting ? 'Loggar in…' : 'Logga in'}
-            </button>
-          </form>
-        ) : (
-          <form onSubmit={handleSignup}>
-            <div className="form-group">
-              <label className="form-label" htmlFor="displayName">Ditt namn</label>
-              <input
-                id="displayName"
-                className="form-input"
-                type="text"
-                autoComplete="name"
-                value={displayName}
-                onChange={e => setDisplayName(e.target.value)}
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label" htmlFor="email">E-postadress</label>
-              <input
-                id="email"
-                className="form-input"
-                type="email"
-                autoComplete="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label" htmlFor="password">Lösenord (minst 8 tecken)</label>
-              <input
-                id="password"
-                className="form-input"
-                type="password"
-                autoComplete="new-password"
-                minLength={8}
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                required
-              />
-            </div>
-            <button
-              type="submit"
-              className="btn btn-primary"
-              style={{ width: '100%', marginTop: 'var(--space-3)' }}
-              disabled={submitting}
-            >
-              {submitting ? 'Skapar konto…' : 'Skapa konto'}
-            </button>
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 'var(--space-3)', textAlign: 'center' }}>
-              Konton aktiveras av en superadministratör.
+      <div className="admin-login-split">
+        <aside className="admin-login-brand">
+          <div className="admin-login-brand-inner">
+            <span className="admin-login-eyebrow">Medborgarinitiativ</span>
+            <h1 className="admin-login-brand-title">Rögleskogen</h1>
+            <p className="admin-login-brand-text">
+              Tillsammans bevakar och dokumenterar vi planerna för den föreslagna bergtäkten
+              mellan Södra Sandby och Dalby.
             </p>
-          </form>
-        )}
+            <ul className="admin-login-brand-list">
+              <li>Samla information, dokument och vittnesmål</li>
+              <li>Håll boende och beslutsfattare uppdaterade</li>
+              <li>Sakligt och källhänvisat – alltid</li>
+            </ul>
+          </div>
+          <p className="admin-login-brand-foot">Adminpanel · endast för behöriga</p>
+        </aside>
+
+        <div className="admin-login-panel">
+          {signupDone ? (
+            <div className="admin-login-card" style={{ textAlign: 'center' }}>
+              <div className="admin-login-check" aria-hidden="true">✓</div>
+              <h2 className="admin-login-title">Konto skapat</h2>
+              <p className="admin-login-subtitle">
+                Tack! Ditt konto är registrerat. En administratör behöver tilldela dig en roll
+                innan du kommer in i adminpanelen.
+              </p>
+              <button className="btn btn-primary" style={{ width: '100%' }} onClick={() => { setSignupDone(false); setMode('login') }}>
+                Till inloggningen
+              </button>
+            </div>
+          ) : (
+            <div className="admin-login-card">
+              <h2 className="admin-login-title">{mode === 'login' ? 'Välkommen tillbaka' : 'Skapa konto'}</h2>
+              <p className="admin-login-subtitle">
+                {mode === 'login' ? 'Logga in för att hantera webbplatsen.' : 'Registrera dig – en administratör aktiverar ditt konto.'}
+              </p>
+
+              <div className="admin-login-tabs">
+                <button
+                  type="button"
+                  className={mode === 'login' ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm'}
+                  onClick={() => setMode('login')}
+                >
+                  Logga in
+                </button>
+                <button
+                  type="button"
+                  className={mode === 'signup' ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm'}
+                  onClick={() => setMode('signup')}
+                >
+                  Skapa konto
+                </button>
+              </div>
+
+              {mode === 'login' ? (
+                <form onSubmit={handleLogin}>
+                  <div className="form-group">
+                    <label className="form-label" htmlFor="email">E-postadress</label>
+                    <input id="email" className="form-input" type="email" autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} required />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label" htmlFor="password">Lösenord</label>
+                    <input id="password" className="form-input" type="password" autoComplete="current-password" value={password} onChange={e => setPassword(e.target.value)} required />
+                  </div>
+                  <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: 'var(--space-3)' }} disabled={submitting}>
+                    {submitting ? 'Loggar in…' : 'Logga in'}
+                  </button>
+                </form>
+              ) : (
+                <form onSubmit={handleSignup}>
+                  <div className="form-group">
+                    <label className="form-label" htmlFor="displayName">Ditt namn</label>
+                    <input id="displayName" className="form-input" type="text" autoComplete="name" value={displayName} onChange={e => setDisplayName(e.target.value)} required />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label" htmlFor="email">E-postadress</label>
+                    <input id="email" className="form-input" type="email" autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} required />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label" htmlFor="password">Lösenord (minst 8 tecken)</label>
+                    <input id="password" className="form-input" type="password" autoComplete="new-password" minLength={8} value={password} onChange={e => setPassword(e.target.value)} required />
+                  </div>
+                  <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: 'var(--space-3)' }} disabled={submitting}>
+                    {submitting ? 'Skapar konto…' : 'Skapa konto'}
+                  </button>
+                  <p className="admin-login-hint">Konton aktiveras av en superadministratör.</p>
+                </form>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )

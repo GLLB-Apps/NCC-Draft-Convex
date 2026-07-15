@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import PageHeader from '../../components/public/PageHeader'
 import type { DocumentItem } from '../../lib/types'
 import { supabase } from '../../lib/supabase'
 import { formatDateShort, senderTypeLabel, senderTypeBadge } from '../../lib/utils'
@@ -24,8 +25,7 @@ export default function DocumentsPage() {
   return (
     <div className="container fade-in">
       <div className="page-header">
-        <h1>Dokumentarkiv</h1>
-        <p>Handlingar, brev, kartor och underlag kopplade till planerna.</p>
+        <PageHeader slug="dokument" />
       </div>
 
       <div className="filter-bar">

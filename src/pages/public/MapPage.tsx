@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
+import PageHeader from '../../components/public/PageHeader'
 import type { MapLocation } from '../../lib/types'
 import { supabase } from '../../lib/supabase'
 import MapPreview from '../../components/public/MapPreview'
 import { mapPointTypeLabel, mapPointTypeIcon } from '../../lib/utils'
+import { usePage } from '../../lib/usePage'
 
 const COLORS: Record<string, string> = {
   work_area: '#b94a3d',
@@ -21,6 +23,7 @@ export default function MapPage() {
   const [points, setPoints] = useState<MapLocation[]>([])
   const [loading, setLoading] = useState(true)
   const [activeTypes, setActiveTypes] = useState<Set<string>>(new Set())
+  const page = usePage('karta')
 
   useEffect(() => {
     supabase
@@ -49,8 +52,7 @@ export default function MapPage() {
   return (
     <div className="container fade-in">
       <div className="page-header">
-        <h1>Karta</h1>
-        <p>Det planerade området och intressanta punkter.</p>
+        <PageHeader slug="karta" />
       </div>
 
       {loading ? (
@@ -67,8 +69,8 @@ export default function MapPage() {
 
           {uniqueTypes.length > 0 && (
             <aside className="map-filters">
-              <h2 className="map-filters-title">Kartlager</h2>
-              <p className="map-filters-hint">Tryck på en punkttyp för att visa eller dölja den på kartan.</p>
+              <h2 className="map-filters-title">{page.text('layers_heading')}</h2>
+              <p className="map-filters-hint">{page.text('layers_hint')}</p>
               {uniqueTypes.map(type => {
                 const active = activeTypes.size === 0 || activeTypes.has(type)
                 const count = points.filter(p => p.point_type === type).length
