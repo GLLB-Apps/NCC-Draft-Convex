@@ -2,18 +2,32 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { MapLocation } from '../../lib/types'
 import { supabase } from '../../lib/supabase'
+import { useToast } from '../../lib/toast'
 import { mapPointTypeLabel, statusLabel, statusBadgeClass } from '../../lib/utils'
 
 export default function AdminMap() {
   const [points, setPoints] = useState<MapLocation[]>([])
   const [loading, setLoading] = useState(true)
+  const { show } = useToast()
 
   useEffect(() => {
+    load()
+  }, [])
+
+  function load() {
+    setLoading(true)
     supabase.from('map_locations').select('*').order('updated_at', { ascending: false }).then(({ data }) => {
       setPoints(data as MapLocation[] ?? [])
       setLoading(false)
     })
-  }, [])
+  }
+
+  async function remove(id: string) {
+    if (!confirm('Ta bort denna kartpunkt?')) return
+    const { error } = await supabase.from('map_locations').delete().eq('id', id)
+    if (error) show('Kunde inte ta bort: ' + error.message, 'error')
+    else { show('Kartpunkt borttagen', 'success'); load() }
+  }
 
   if (loading) return <div className="loading"><div className="spinner"></div></div>
 
@@ -39,6 +53,7 @@ export default function AdminMap() {
               </div>
               <div className="admin-table-actions">
                 <Link to={`/admin/karta/${p.id}`} className="btn btn-secondary btn-sm">Redigera</Link>
+                <button className="btn btn-danger btn-sm" onClick={() => remove(p.id)}>Ta bort</button>
               </div>
             </div>
           ))}

@@ -1,7 +1,8 @@
 git /* Admin */
 .admin-layout {
   display: flex;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
   background: var(--bg-alt);
 }
 
@@ -84,14 +85,13 @@ git /* Admin */
 
 .admin-topbar {
   height: 56px;
+  flex-shrink: 0;
   background: var(--bg-card);
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
   padding: 0 var(--space-5);
   gap: var(--space-4);
-  position: sticky;
-  top: 0;
   z-index: 100;
 }
 
@@ -135,6 +135,7 @@ git /* Admin */
 
 .admin-content {
   flex: 1;
+  min-height: 0;
   padding: var(--space-6);
   overflow-y: auto;
 }

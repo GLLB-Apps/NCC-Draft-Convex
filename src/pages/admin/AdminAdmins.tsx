@@ -69,12 +69,16 @@ export default function AdminAdmins() {
     else { show('Roll uppdaterad', 'success'); load() }
   }
 
-  async function removeRole(userId: string) {
-    if (userId === currentUser?.id) { show('Du kan inte ta bort din egen roll', 'error'); return }
-    if (!confirm('Ta bort administratörsrollen? Användaren förlorar all åtkomst.')) return
-    const { error } = await supabase.from('user_roles').delete().eq('user_id', userId)
+  async function removeUser(userId: string) {
+    if (userId === currentUser?.id) { show('Du kan inte ta bort dig själv', 'error'); return }
+    if (!confirm('Ta bort användaren helt ur systemet? Både roll och profil raderas.')) return
+    const [roleRes, profileRes] = await Promise.all([
+      supabase.from('user_roles').delete().eq('user_id', userId),
+      supabase.from('profiles').delete().eq('id', userId),
+    ])
+    const error = roleRes.error || profileRes.error
     if (error) show('Kunde inte ta bort: ' + error.message, 'error')
-    else { show('Roll borttagen', 'success'); load() }
+    else { show('Användaren borttagen ur systemet', 'success'); load() }
   }
 
   if (loading) return <div className="loading"><div className="spinner"></div></div>
@@ -114,6 +118,7 @@ export default function AdminAdmins() {
                     <option value="redaktor">Redaktör</option>
                     <option value="skribent">Skribent</option>
                   </select>
+                  <button className="btn btn-danger btn-sm" onClick={() => removeUser(u.id)}>Ta bort</button>
                 </div>
               </div>
             ))}
@@ -156,7 +161,7 @@ export default function AdminAdmins() {
                   <option value="skribent">Skribent</option>
                 </select>
                 {a.user_id !== currentUser?.id && (
-                  <button className="btn btn-danger btn-sm" onClick={() => removeRole(a.user_id)}>Ta bort</button>
+                  <button className="btn btn-danger btn-sm" onClick={() => removeUser(a.user_id)}>Ta bort</button>
                 )}
               </div>
             </div>
