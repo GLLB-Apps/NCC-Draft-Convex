@@ -16,11 +16,22 @@ const BROWSER_HEADERS = {
   'Cache-Control': 'no-cache',
 }
 
+// The petition's Cloudflare blocks datacenter IPs (Vercel), so a direct fetch
+// often 403s in the cloud. If a scraping API key is provided it routes through
+// a residential IP that gets through; otherwise it falls back to a direct fetch.
+async function fetchPetitionHtml() {
+  const key = process.env.SCRAPERAPI_KEY
+  const target = key
+    ? `https://api.scraperapi.com/?api_key=${key}&country_code=se&url=${encodeURIComponent(PETITION_URL)}`
+    : PETITION_URL
+  const resp = await fetch(target, key ? {} : { headers: BROWSER_HEADERS })
+  if (!resp.ok) throw new Error(`petition fetch failed (${resp.status})`)
+  return await resp.text()
+}
+
 export default async function handler(req, res) {
   try {
-    const resp = await fetch(PETITION_URL, { headers: BROWSER_HEADERS })
-    if (!resp.ok) return res.status(502).json({ error: `petition fetch failed (${resp.status})` })
-    const html = await resp.text()
+    const html = await fetchPetitionHtml()
 
     // <span class="signatureAmount badge ...">718</span>  (may use spaces/nbsp as thousands sep)
     const m = html.match(/class="[^"]*signatureAmount[^"]*"[^>]*>([\d\s., ]+)</i)
