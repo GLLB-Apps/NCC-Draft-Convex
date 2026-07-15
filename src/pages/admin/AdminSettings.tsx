@@ -49,6 +49,21 @@ export default function AdminSettings() {
     else show('Inställningar sparade', 'success')
   }
 
+  async function syncSignatures() {
+    try {
+      const r = await fetch('/api/sync-signatures')
+      const j = await r.json()
+      if (r.ok && typeof j.count === 'number') {
+        update('signature_count', j.count)
+        show(`Hämtade ${j.count} underskrifter från Skrivunder`, 'success')
+      } else {
+        show('Kunde inte hämta: ' + (j.error ?? r.status), 'error')
+      }
+    } catch {
+      show('Kunde inte hämta (fungerar bara i den publicerade versionen)', 'error')
+    }
+  }
+
   if (loading || !settings) return <div className="loading"><div className="spinner"></div></div>
 
   return (
@@ -113,7 +128,13 @@ export default function AdminSettings() {
           </div>
           <div className="form-group">
             <label className="form-label" htmlFor="signature_count">Antal underskrifter</label>
-            <input id="signature_count" className="form-input" type="number" value={settings.signature_count} onChange={e => update('signature_count', Number(e.target.value))} />
+            <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+              <input id="signature_count" className="form-input" type="number" value={settings.signature_count} onChange={e => update('signature_count', Number(e.target.value))} />
+              <button type="button" className="btn btn-secondary" style={{ flexShrink: 0 }} onClick={syncSignatures}>Hämta från Skrivunder</button>
+            </div>
+            <p className="text-muted" style={{ fontSize: '0.8rem', marginTop: 'var(--space-2)' }}>
+              Hämtas automatiskt en gång per dygn från kampanjsidan. Knappen uppdaterar direkt (fungerar i den publicerade versionen).
+            </p>
           </div>
         </div>
       </div>

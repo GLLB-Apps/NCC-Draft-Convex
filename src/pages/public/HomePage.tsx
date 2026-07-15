@@ -4,6 +4,7 @@ import type { SiteSettings, Topic, Post } from '../../lib/types'
 import { supabase } from '../../lib/supabase'
 import { formatDate, formatDateShort, truncate } from '../../lib/utils'
 import TopicIcon from '../../components/public/TopicIcon'
+import CountUp from '../../components/public/CountUp'
 import { usePage } from '../../lib/usePage'
 
 export default function HomePage() {
@@ -45,7 +46,7 @@ export default function HomePage() {
       </section>
 
       {/* Status */}
-      <section className="section">
+      <section className="section status-highlight">
         <div className="container">
           <div className="section-header">
             <h2>{page.text('status_heading')}</h2>
@@ -66,11 +67,11 @@ export default function HomePage() {
             </div>
             <div className="status-item">
               <span className="status-label">Underskrifter</span>
-              <span className="status-value">{settings?.signature_count ?? 0}</span>
+              <span className="status-value status-value-count"><CountUp value={settings?.signature_count ?? 0} /></span>
             </div>
             <div className="status-item">
               <span className="status-label">Namninsamling</span>
-              <a href={settings?.petition_url ?? '#'} target="_blank" rel="noopener noreferrer" className="status-value" style={{ color: 'var(--primary)' }}>
+              <a href={settings?.petition_url ?? '#'} target="_blank" rel="noopener noreferrer" className="status-value status-value-link">
                 Skrivunder.com →
               </a>
             </div>

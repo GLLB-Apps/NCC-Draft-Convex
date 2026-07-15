@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Outlet } from 'react-router-dom'
 import Header from './Header'
 import Footer from './Footer'
+import VoteWidget from './VoteWidget'
 import type { SiteSettings } from '../../lib/types'
 import { supabase } from '../../lib/supabase'
 
@@ -19,6 +20,7 @@ export default function PublicLayout() {
   return (
     <div className="public-layout">
       <Header settings={settings} />
+      <VoteWidget settings={settings} />
       <main className="public-main">
         <Outlet context={{ settings }} />
       </main>

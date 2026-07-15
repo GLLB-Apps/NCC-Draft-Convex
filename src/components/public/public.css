@@ -627,6 +627,84 @@
   color: var(--text-heading);
 }
 
+.status-value-count {
+  font-family: var(--font-heading);
+  font-size: 1.9rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+/* Prominent white-on-green status section */
+.section.status-highlight {
+  background: linear-gradient(160deg, #2d5a3d 0%, #1e3f2a 100%);
+  color: #fff;
+}
+.status-highlight .section-header h2 { color: #fff; }
+.status-highlight .section-header p { color: rgba(255, 255, 255, 0.8); }
+.status-highlight .status-card {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+.status-highlight .status-label { color: rgba(255, 255, 255, 0.7); }
+.status-highlight .status-value { color: #fff; }
+.status-highlight .status-value-link { color: #fff; text-decoration: underline; }
+
+/* Floating vote widget (desktop) */
+.vote-widget {
+  display: none;
+  position: fixed;
+  top: 104px;
+  right: var(--space-5);
+  z-index: 90;
+  width: 208px;
+  padding: var(--space-5);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(165deg, #2d5a3d 0%, #1e3f2a 100%);
+  color: #fff;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.22);
+  text-align: center;
+}
+
+.vote-widget-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.vote-widget-count {
+  display: block;
+  font-family: var(--font-heading);
+  font-size: 2.6rem;
+  font-weight: 700;
+  line-height: 1.05;
+  margin: var(--space-1) 0 var(--space-2);
+}
+
+.vote-widget-text {
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.85);
+  margin-bottom: var(--space-4);
+}
+
+.vote-widget-btn {
+  display: block;
+  width: 100%;
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: #fff;
+  color: var(--primary-dark);
+  font-weight: 600;
+  text-decoration: none;
+  transition: background var(--transition), transform var(--transition);
+}
+.vote-widget-btn:hover { background: rgba(255, 255, 255, 0.88); transform: translateY(-1px); }
+
+@media (min-width: 1200px) {
+  .vote-widget { display: block; }
+}
+
 /* Topic card */
 .topic-card {
   display: flex;
