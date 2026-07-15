@@ -7,16 +7,23 @@ import { Client, Databases } from 'node-appwrite'
 
 const PETITION_URL = process.env.PETITION_URL || 'https://www.skrivunder.com/stoppa_ncc_i_skrylle'
 
+// Look like a real browser — the site's bot protection returns 403 for
+// obvious bot/unknown user agents.
+const BROWSER_HEADERS = {
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+  'Accept-Language': 'sv-SE,sv;q=0.9,en;q=0.8',
+  'Cache-Control': 'no-cache',
+}
+
 export default async function handler(req, res) {
   try {
-    const resp = await fetch(PETITION_URL, {
-      headers: { 'User-Agent': 'RogleskogenBot/1.0 (+https://ncc-draft-rs.vercel.app)' },
-    })
+    const resp = await fetch(PETITION_URL, { headers: BROWSER_HEADERS })
     if (!resp.ok) return res.status(502).json({ error: `petition fetch failed (${resp.status})` })
     const html = await resp.text()
 
     // <span class="signatureAmount badge ...">718</span>  (may use spaces/nbsp as thousands sep)
-    const m = html.match(/class="[^"]*signatureAmount[^"]*"[^>]*>([\d\s .,]+)</i)
+    const m = html.match(/class="[^"]*signatureAmount[^"]*"[^>]*>([\d\s., ]+)</i)
     if (!m) return res.status(502).json({ error: 'signature count not found on page' })
     const count = parseInt(m[1].replace(/[^\d]/g, ''), 10)
     if (!Number.isFinite(count)) return res.status(502).json({ error: 'could not parse count' })
