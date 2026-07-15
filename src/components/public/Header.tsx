@@ -72,7 +72,7 @@ export default function Header({ settings }: { settings: SiteSettings | null }) 
                   to={item.url}
                   className={location.pathname === item.url ? 'nav-link active' : 'nav-link'}
                 >
-                  {item.label}
+                  <NavIcon path={item.url} />{item.label}
                 </Link>
               ) : null
             }
@@ -95,7 +95,7 @@ export default function Header({ settings }: { settings: SiteSettings | null }) 
                       to={c.url}
                       className={location.pathname === c.url ? 'nav-dropdown-link active' : 'nav-dropdown-link'}
                     >
-                      {c.label}
+                      <NavIcon path={c.url} />{c.label}
                     </Link>
                   ))}
                 </div>
