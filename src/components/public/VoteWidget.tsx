@@ -15,7 +15,10 @@ function Bullhorn() {
 // Floating call-to-action (desktop): live signature count + a "sign" button.
 // Can be folded into a small bullhorn tab at the screen edge and slid back out.
 export default function VoteWidget({ settings }: { settings: SiteSettings | null }) {
-  const [collapsed, setCollapsed] = useState(false)
+  // Start folded (just the bullhorn tab) on small screens so it doesn't cover content.
+  const [collapsed, setCollapsed] = useState(() =>
+    typeof window !== 'undefined' && window.matchMedia('(max-width: 900px)').matches,
+  )
   const count = settings?.signature_count ?? 0
   const petition = settings?.petition_url ?? '#'
 

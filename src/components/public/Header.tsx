@@ -4,6 +4,7 @@ import { Link, useLocation } from 'react-router-dom'
 import type { SiteSettings, NavigationItem } from '../../lib/types'
 import { supabase } from '../../lib/supabase'
 import NavIcon from './NavIcon'
+import CountUp from './CountUp'
 
 export default function Header({ settings }: { settings: SiteSettings | null }) {
   const [navItems, setNavItems] = useState<NavigationItem[]>([])
@@ -177,15 +178,20 @@ export default function Header({ settings }: { settings: SiteSettings | null }) 
             )
           })}
         </ul>
-        <a
-          href={settings?.petition_url ?? '#'}
-          className="btn btn-primary mobile-nav-cta"
-          target="_blank"
-          rel="noopener noreferrer"
-          tabIndex={mobileOpen ? 0 : -1}
-        >
-          Skriv under
-        </a>
+        <div className="mobile-nav-widget">
+          <span className="vote-widget-label">Underskrifter</span>
+          <span className="vote-widget-count"><CountUp value={settings?.signature_count ?? 0} /></span>
+          <p className="vote-widget-text">Var med och gör skillnad – skriv under du också.</p>
+          <a
+            href={settings?.petition_url ?? '#'}
+            className="vote-widget-btn"
+            target="_blank"
+            rel="noopener noreferrer"
+            tabIndex={mobileOpen ? 0 : -1}
+          >
+            Skriv under
+          </a>
+        </div>
       </nav>
     </>
   )

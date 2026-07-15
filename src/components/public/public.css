@@ -324,6 +324,18 @@
   justify-content: center;
 }
 
+/* Vote widget inside the mobile drawer */
+.mobile-nav-widget {
+  margin-top: var(--space-5);
+  padding: var(--space-4) var(--space-4) var(--space-5);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(165deg, #2d5a3d 0%, #1e3f2a 100%);
+  color: #fff;
+  text-align: center;
+}
+.mobile-nav-widget .vote-widget-count { font-size: 2rem; }
+.mobile-nav-widget .vote-widget-text { margin-bottom: var(--space-3); }
+
 @media (prefers-reduced-motion: reduce) {
   .mobile-nav { transition: none; }
   .mobile-nav.open .mobile-nav-list > li { animation: none; opacity: 1; transform: none; }
@@ -658,14 +670,15 @@
 .status-highlight .status-value { color: #fff; }
 .status-highlight .status-value-link { color: #fff; text-decoration: underline; }
 
-/* Floating vote widget (desktop) */
+/* Floating vote widget (all sizes; folds to a bullhorn tab) */
 .vote-widget {
-  display: none;
+  display: block;
   position: fixed;
   top: 100px;
   right: var(--space-5);
   z-index: 91;
   width: 208px;
+  animation: voteWidgetIn 0.45s cubic-bezier(0.22, 1, 0.36, 1);
   padding: var(--space-5);
   border-radius: var(--radius-lg);
   background: linear-gradient(165deg, #2d5a3d 0%, #1e3f2a 100%);
@@ -679,6 +692,7 @@
   transform: translateX(calc(100% + var(--space-6)));
   opacity: 0;
   pointer-events: none;
+  animation: none;
 }
 
 .vote-widget-fold {
@@ -703,7 +717,7 @@
 
 /* Collapsed tab (bullhorn) docked at the screen edge */
 .vote-widget-tab {
-  display: none;
+  display: flex;
   position: fixed;
   top: 116px;
   right: 0;
@@ -760,14 +774,15 @@
 }
 .vote-widget-btn:hover { background: rgba(255, 255, 255, 0.88); transform: translateY(-1px); }
 
-@media (min-width: 1200px) {
-  .vote-widget { display: block; animation: voteWidgetIn 0.45s cubic-bezier(0.22, 1, 0.36, 1); }
-  .vote-widget-tab { display: flex; }
-}
-
 @keyframes voteWidgetIn {
   from { opacity: 0; transform: translateX(26px); }
   to { opacity: 1; transform: translateX(0); }
+}
+
+/* On mobile the floating widget sits at the bottom instead of the top */
+@media (max-width: 900px) {
+  .vote-widget { top: auto; bottom: var(--space-4); }
+  .vote-widget-tab { top: auto; bottom: var(--space-6); }
 }
 
 @media (prefers-reduced-motion: reduce) {
