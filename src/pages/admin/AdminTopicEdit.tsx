@@ -5,7 +5,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../lib/auth'
 import { useToast } from '../../lib/toast'
 import { slugify } from '../../lib/utils'
-import BlockEditor from '../../components/admin/BlockEditor'
+import TapEditor from '../../components/admin/TapEditor'
 
 export default function AdminTopicEdit() {
   const { id } = useParams<{ id: string }>()
@@ -98,56 +98,64 @@ export default function AdminTopicEdit() {
         <Link to="/admin/amnen" className="btn btn-ghost btn-sm">← Tillbaka</Link>
       </div>
 
-      <div className="admin-form-card">
-        <div className="form-group">
-          <label className="form-label" htmlFor="title">Titel *</label>
-          <input id="title" className="form-input" type="text" value={title} onChange={e => handleTitleChange(e.target.value)} />
+      <div className="editor-layout">
+        <div className="editor-main">
+          <input
+            className="editor-title-input"
+            type="text"
+            placeholder="Lägg till titel"
+            value={title}
+            onChange={e => handleTitleChange(e.target.value)}
+          />
+          <textarea
+            className="editor-excerpt-input"
+            rows={2}
+            placeholder="Skriv en kort ingress (valfritt)"
+            value={intro}
+            onChange={e => setIntro(e.target.value)}
+          />
+          <TapEditor blocks={content} onChange={setContent} />
         </div>
 
-        <div className="form-group">
-          <label className="form-label" htmlFor="slug">URL-slug</label>
-          <input id="slug" className="form-input" type="text" value={slug} onChange={e => setSlug(e.target.value)} />
-        </div>
-
-        <div className="form-group">
-          <label className="form-label" htmlFor="intro">Ingress</label>
-          <textarea id="intro" className="form-textarea" rows={2} value={intro} onChange={e => setIntro(e.target.value)} />
-        </div>
-
-        <div className="form-group">
-          <label className="form-label" htmlFor="featuredImage">Huvudbild (URL)</label>
-          <input id="featuredImage" className="form-input" type="url" value={featuredImage} onChange={e => setFeaturedImage(e.target.value)} />
-        </div>
-
-        <div className="form-group">
-          <label className="form-label">Innehållsblock</label>
-          <BlockEditor blocks={content} onChange={setContent} />
-        </div>
-
-        <div className="grid grid-2">
-          <div className="form-group">
-            <label className="form-label" htmlFor="status">Status</label>
-            <select id="status" className="form-select" value={status} onChange={e => setStatus(e.target.value as ContentStatus)}>
-              <option value="draft">Utkast</option>
-              <option value="review">Väntar på granskning</option>
-              <option value="published">Publicerad</option>
-              <option value="archived">Arkiverad</option>
-            </select>
+        <aside className="editor-sidebar">
+          <div className="editor-panel">
+            <h3>Publicering</h3>
+            <div className="form-group">
+              <label className="form-label" htmlFor="status">Status</label>
+              <select id="status" className="form-select" value={status} onChange={e => setStatus(e.target.value as ContentStatus)}>
+                <option value="draft">Utkast</option>
+                <option value="review">Väntar på granskning</option>
+                <option value="published">Publicerad</option>
+                <option value="archived">Arkiverad</option>
+              </select>
+            </div>
+            <div className="editor-panel-actions">
+              <button type="button" className="btn btn-primary" onClick={() => save(false)} disabled={saving}>
+                {saving ? 'Sparar…' : 'Spara som utkast'}
+              </button>
+              <button type="button" className="btn btn-secondary" onClick={() => save(true)} disabled={saving}>
+                Publicera
+              </button>
+            </div>
           </div>
-          <div className="form-group">
-            <label className="form-label" htmlFor="sortOrder">Sorteringsordning</label>
-            <input id="sortOrder" className="form-input" type="number" value={sortOrder} onChange={e => setSortOrder(Number(e.target.value))} />
-          </div>
-        </div>
 
-        <div className="admin-form-actions">
-          <button type="button" className="btn btn-primary" onClick={() => save(false)} disabled={saving}>
-            {saving ? 'Sparar…' : 'Spara som utkast'}
-          </button>
-          <button type="button" className="btn btn-secondary" onClick={() => save(true)} disabled={saving}>
-            Publicera
-          </button>
-        </div>
+          <div className="editor-panel">
+            <h3>Detaljer</h3>
+            <div className="form-group">
+              <label className="form-label" htmlFor="slug">URL-slug</label>
+              <input id="slug" className="form-input" type="text" value={slug} onChange={e => setSlug(e.target.value)} />
+            </div>
+            <div className="form-group">
+              <label className="form-label" htmlFor="featuredImage">Huvudbild (URL)</label>
+              <input id="featuredImage" className="form-input" type="url" value={featuredImage} onChange={e => setFeaturedImage(e.target.value)} />
+              {featuredImage && <img src={featuredImage} alt="" className="editor-image-preview" />}
+            </div>
+            <div className="form-group">
+              <label className="form-label" htmlFor="sortOrder">Sorteringsordning</label>
+              <input id="sortOrder" className="form-input" type="number" value={sortOrder} onChange={e => setSortOrder(Number(e.target.value))} />
+            </div>
+          </div>
+        </aside>
       </div>
     </div>
   )

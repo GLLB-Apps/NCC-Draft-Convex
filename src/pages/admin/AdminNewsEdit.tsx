@@ -5,7 +5,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../lib/auth'
 import { useToast } from '../../lib/toast'
 import { slugify } from '../../lib/utils'
-import BlockEditor from '../../components/admin/BlockEditor'
+import TapEditor from '../../components/admin/TapEditor'
 
 export default function AdminNewsEdit() {
   const { id } = useParams<{ id: string }>()
@@ -15,8 +15,7 @@ export default function AdminNewsEdit() {
   const isNew = id === 'ny' || !id
 
   const [form, setForm] = useState({
-    title: '', slug: '', excerpt: '', author: '', featured_image: '', image_caption: '',
-    seo_title: '', seo_description: '', is_pinned: false,
+    title: '', slug: '', excerpt: '', author: '', featured_image: '', image_caption: '', is_pinned: false,
   })
   const [content, setContent] = useState<ContentBlock[]>([])
   const [status, setStatus] = useState<ContentStatus>('draft')
@@ -30,8 +29,7 @@ export default function AdminNewsEdit() {
         const p = data as Post
         setForm({
           title: p.title, slug: p.slug, excerpt: p.excerpt ?? '', author: p.author ?? '',
-          featured_image: p.featured_image ?? '', image_caption: p.image_caption ?? '',
-          seo_title: p.seo_title ?? '', seo_description: p.seo_description ?? '', is_pinned: p.is_pinned,
+          featured_image: p.featured_image ?? '', image_caption: p.image_caption ?? '', is_pinned: p.is_pinned,
         })
         setContent(Array.isArray(p.content) ? p.content : [])
         setStatus(p.status)
@@ -43,9 +41,7 @@ export default function AdminNewsEdit() {
   function update(key: string, value: string | boolean) {
     setForm(prev => {
       const next = { ...prev, [key]: value }
-      if (key === 'title' && (isNew || !prev.slug)) {
-        next.slug = slugify(value as string)
-      }
+      if (key === 'title' && (isNew || !prev.slug)) next.slug = slugify(value as string)
       return next
     })
   }
@@ -64,8 +60,6 @@ export default function AdminNewsEdit() {
       author: form.author || null,
       status: saveStatus,
       is_pinned: form.is_pinned,
-      seo_title: form.seo_title || null,
-      seo_description: form.seo_description || null,
       updated_by: user?.id,
       published_at: publish ? new Date().toISOString() : null,
     }
@@ -90,69 +84,73 @@ export default function AdminNewsEdit() {
         <h1>{isNew ? 'Ny nyhet' : 'Redigera nyhet'}</h1>
         <Link to="/admin/nyheter" className="btn btn-ghost btn-sm">← Tillbaka</Link>
       </div>
-      <div className="admin-form-card">
-        <div className="form-group">
-          <label className="form-label" htmlFor="title">Titel *</label>
-          <input id="title" className="form-input" type="text" value={form.title} onChange={e => update('title', e.target.value)} />
+
+      <div className="editor-layout">
+        <div className="editor-main">
+          <input
+            className="editor-title-input"
+            type="text"
+            placeholder="Lägg till titel"
+            value={form.title}
+            onChange={e => update('title', e.target.value)}
+          />
+          <textarea
+            className="editor-excerpt-input"
+            rows={2}
+            placeholder="Skriv en kort ingress (valfritt)"
+            value={form.excerpt}
+            onChange={e => update('excerpt', e.target.value)}
+          />
+          <TapEditor blocks={content} onChange={setContent} />
         </div>
-        <div className="form-group">
-          <label className="form-label" htmlFor="slug">URL-slug</label>
-          <input id="slug" className="form-input" type="text" value={form.slug} onChange={e => update('slug', e.target.value)} />
-        </div>
-        <div className="form-group">
-          <label className="form-label" htmlFor="excerpt">Ingress</label>
-          <textarea id="excerpt" className="form-textarea" rows={2} value={form.excerpt} onChange={e => update('excerpt', e.target.value)} />
-        </div>
-        <div className="form-group">
-          <label className="form-label" htmlFor="author">Författare</label>
-          <input id="author" className="form-input" type="text" value={form.author} onChange={e => update('author', e.target.value)} />
-        </div>
-        <div className="form-group">
-          <label className="form-label" htmlFor="featured_image">Huvudbild (URL)</label>
-          <input id="featured_image" className="form-input" type="url" value={form.featured_image} onChange={e => update('featured_image', e.target.value)} />
-        </div>
-        <div className="form-group">
-          <label className="form-label" htmlFor="image_caption">Bildtext</label>
-          <input id="image_caption" className="form-input" type="text" value={form.image_caption} onChange={e => update('image_caption', e.target.value)} />
-        </div>
-        <div className="form-group">
-          <label className="form-label">Innehållsblock</label>
-          <BlockEditor blocks={content} onChange={setContent} />
-        </div>
-        <div className="grid grid-2">
-          <div className="form-group">
-            <label className="form-label" htmlFor="status">Status</label>
-            <select id="status" className="form-select" value={status} onChange={e => setStatus(e.target.value as ContentStatus)}>
-              <option value="draft">Utkast</option>
-              <option value="review">Väntar på granskning</option>
-              <option value="published">Publicerad</option>
-              <option value="archived">Arkiverad</option>
-            </select>
-          </div>
-          <div className="form-group">
-            <label className="form-label">Fäst högst upp</label>
+
+        <aside className="editor-sidebar">
+          <div className="editor-panel">
+            <h3>Publicering</h3>
+            <div className="form-group">
+              <label className="form-label" htmlFor="status">Status</label>
+              <select id="status" className="form-select" value={status} onChange={e => setStatus(e.target.value as ContentStatus)}>
+                <option value="draft">Utkast</option>
+                <option value="review">Väntar på granskning</option>
+                <option value="published">Publicerad</option>
+                <option value="archived">Arkiverad</option>
+              </select>
+            </div>
             <div className="checkbox-group">
               <input id="is_pinned" type="checkbox" checked={form.is_pinned} onChange={e => update('is_pinned', e.target.checked)} />
-              <label htmlFor="is_pinned" className="form-label" style={{ margin: 0 }}>Fäst nyheten</label>
+              <label htmlFor="is_pinned" className="form-label" style={{ margin: 0 }}>Fäst högst upp</label>
+            </div>
+            <div className="editor-panel-actions">
+              <button type="button" className="btn btn-primary" onClick={() => save(false)} disabled={saving}>
+                {saving ? 'Sparar…' : 'Spara utkast'}
+              </button>
+              <button type="button" className="btn btn-secondary" onClick={() => save(true)} disabled={saving}>
+                Publicera
+              </button>
             </div>
           </div>
-        </div>
-        <div className="form-group">
-          <label className="form-label" htmlFor="seo_title">SEO-titel</label>
-          <input id="seo_title" className="form-input" type="text" value={form.seo_title} onChange={e => update('seo_title', e.target.value)} />
-        </div>
-        <div className="form-group">
-          <label className="form-label" htmlFor="seo_description">SEO-beskrivning</label>
-          <textarea id="seo_description" className="form-textarea" rows={2} value={form.seo_description} onChange={e => update('seo_description', e.target.value)} />
-        </div>
-        <div className="admin-form-actions">
-          <button type="button" className="btn btn-primary" onClick={() => save(false)} disabled={saving}>
-            {saving ? 'Sparar…' : 'Spara utkast'}
-          </button>
-          <button type="button" className="btn btn-secondary" onClick={() => save(true)} disabled={saving}>
-            Publicera
-          </button>
-        </div>
+
+          <div className="editor-panel">
+            <h3>Detaljer</h3>
+            <div className="form-group">
+              <label className="form-label" htmlFor="slug">URL-slug</label>
+              <input id="slug" className="form-input" type="text" value={form.slug} onChange={e => update('slug', e.target.value)} />
+            </div>
+            <div className="form-group">
+              <label className="form-label" htmlFor="author">Författare</label>
+              <input id="author" className="form-input" type="text" value={form.author} onChange={e => update('author', e.target.value)} />
+            </div>
+            <div className="form-group">
+              <label className="form-label" htmlFor="featured_image">Huvudbild (URL)</label>
+              <input id="featured_image" className="form-input" type="url" value={form.featured_image} onChange={e => update('featured_image', e.target.value)} />
+              {form.featured_image && <img src={form.featured_image} alt="" className="editor-image-preview" />}
+            </div>
+            <div className="form-group">
+              <label className="form-label" htmlFor="image_caption">Bildtext</label>
+              <input id="image_caption" className="form-input" type="text" value={form.image_caption} onChange={e => update('image_caption', e.target.value)} />
+            </div>
+          </div>
+        </aside>
       </div>
     </div>
   )

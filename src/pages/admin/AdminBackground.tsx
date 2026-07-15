@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import type { SiteSettings, ContentBlock } from '../../lib/types'
 import { supabase } from '../../lib/supabase'
 import { useToast } from '../../lib/toast'
-import BlockEditor from '../../components/admin/BlockEditor'
+import TapEditor from '../../components/admin/TapEditor'
 
 export default function AdminBackground() {
   const [settings, setSettings] = useState<SiteSettings | null>(null)
@@ -57,12 +57,12 @@ export default function AdminBackground() {
 
       <div className="admin-form-card">
         <p className="text-muted" style={{ marginBottom: 'var(--space-5)', fontSize: '0.9rem' }}>
-          Redigera innehållet på <strong>/bakgrund</strong>. Sidrubriken och ingångsparagrafen är fasta. 
-          Lägg till innehållsblock nedan för att bygga ut sidan.
+          Redigera innehållet på <strong>/bakgrund</strong>. Sidrubriken och ingångsparagrafen är fasta.
+          Skriv fritt nedan för att bygga ut sidan.
         </p>
         <div className="form-group">
-          <label className="form-label">Innehållsblock</label>
-          <BlockEditor blocks={blocks} onChange={setBlocks} />
+          <label className="form-label">Innehåll</label>
+          <TapEditor blocks={blocks} onChange={setBlocks} />
         </div>
         <div className="admin-form-actions">
           <button className="btn btn-primary" onClick={save} disabled={saving}>
