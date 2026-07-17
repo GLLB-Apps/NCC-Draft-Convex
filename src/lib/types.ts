@@ -6,7 +6,7 @@ export type MediaType = 'image' | 'video' | 'map' | 'graphic' | 'press_image'
 export type MapPointType = 'work_area' | 'quarry_area' | 'property_border' | 'transport_route' | 'residence_distance' | 'nature_value' | 'walking_trail' | 'observation_point' | 'photo_point' | 'testimony_point'
 
 export interface ContentBlock {
-  type: 'heading' | 'paragraph' | 'quote' | 'factbox' | 'warning' | 'image' | 'gallery' | 'video' | 'document_list' | 'links' | 'divider' | 'button' | 'related' | 'sources' | 'comparison' | 'faq'
+  type: 'heading' | 'paragraph' | 'quote' | 'factbox' | 'warning' | 'image' | 'gallery' | 'video' | 'document_list' | 'links' | 'divider' | 'button' | 'related' | 'sources' | 'comparison' | 'faq' | 'list' | 'cta'
   text?: string
   title?: string
   url?: string
@@ -104,6 +104,7 @@ export interface Testimony {
   status: TestimonyStatus
   consent_publish: boolean
   consent_contact: boolean
+  consent_marketing: boolean
   internal_note: string | null
   published_at: string | null
   created_at: string
@@ -142,6 +143,7 @@ export interface MediaItem {
   video_url: string | null
   rights_info: string | null
   is_press_allowed: boolean
+  marketing_ok: boolean
   status: ContentStatus
   published_at: string | null
   created_by: string | null
@@ -222,10 +224,33 @@ export interface ContactMessage {
   updated_at: string
 }
 
+export interface InternalDocCategory {
+  id: string
+  name: string
+  sort_order: number
+}
+
+export interface InternalDocument {
+  id: string
+  title: string
+  description: string | null
+  file_url: string | null
+  file_name: string | null
+  file_type: string | null
+  file_size: number | null
+  category_id: string | null
+  owner: string | null
+  uploaded_by: string | null
+  uploaded_by_id: string | null
+  created_at: string
+  updated_at: string
+}
+
 export interface NavigationItem {
   id: string
   label: string
   url: string
+  icon: string | null
   sort_order: number
   is_active: boolean
   parent_id: string | null

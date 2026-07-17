@@ -75,7 +75,7 @@ export default function AdminTimelineEdit() {
   return (
     <div className="fade-in">
       <div className="admin-page-header">
-        <h1>{isNew ? 'Ny tidslinjehändelse' : 'Redigera händelse'}</h1>
+        <h1>{isNew ? 'Ny tidslinjehändelse' : 'Redigera händelse'}{!isNew && form.title && <span className="admin-edit-subject"> — {form.title}</span>}</h1>
         <Link to="/admin/tidslinje" className="btn btn-ghost btn-sm">← Tillbaka</Link>
       </div>
       <div className="admin-form-card">

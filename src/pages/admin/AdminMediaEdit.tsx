@@ -82,7 +82,7 @@ export default function AdminMediaEdit() {
   return (
     <div className="fade-in">
       <div className="admin-page-header">
-        <h1>{isNew ? 'Ny media' : 'Redigera media'}</h1>
+        <h1>{isNew ? 'Ny media' : 'Redigera media'}{!isNew && form.title && <span className="admin-edit-subject"> — {form.title}</span>}</h1>
         <Link to="/admin/media" className="btn btn-ghost btn-sm">← Tillbaka</Link>
       </div>
       <div className="admin-form-card">

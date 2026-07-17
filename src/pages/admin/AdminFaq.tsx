@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import type { FaqCategory, FaqItem, ContentStatus } from '../../lib/types'
 import { supabase } from '../../lib/supabase'
 import { useToast } from '../../lib/toast'
+import { useConfirm } from '../../lib/confirm'
 import { statusLabel, statusBadgeClass } from '../../lib/utils'
 
 export default function AdminFaq() {
@@ -11,6 +12,7 @@ export default function AdminFaq() {
   const [editing, setEditing] = useState<FaqItem | null>(null)
   const [newCategory, setNewCategory] = useState('')
   const { show } = useToast()
+  const { confirm } = useConfirm()
 
   useEffect(() => {
     Promise.all([
@@ -58,6 +60,15 @@ export default function AdminFaq() {
     setEditing(null)
     const { data } = await supabase.from('faq_items').select('*').order('sort_order')
     setItems(data as FaqItem[] ?? [])
+  }
+
+  async function removeItem(item: FaqItem) {
+    if (!(await confirm({ message: `Ta bort frågan "${item.question}" permanent?`, confirmText: 'Ta bort', danger: true }))) return
+    const { error } = await supabase.from('faq_items').delete().eq('id', item.id)
+    if (error) { show('Kunde inte ta bort: ' + error.message, 'error'); return }
+    show('Frågan borttagen', 'success')
+    if (editing?.id === item.id) setEditing(null)
+    setItems(prev => prev.filter(i => i.id !== item.id))
   }
 
   if (loading) return <div className="loading"><div className="spinner"></div></div>
@@ -130,6 +141,7 @@ export default function AdminFaq() {
               </div>
               <div className="admin-table-actions">
                 <button className="btn btn-secondary btn-sm" onClick={() => setEditing(item)}>Redigera</button>
+                <button className="btn btn-danger btn-sm" onClick={() => removeItem(item)}>Ta bort</button>
               </div>
             </div>
           ))}

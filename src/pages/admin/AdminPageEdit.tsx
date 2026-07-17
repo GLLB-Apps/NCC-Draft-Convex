@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
+import type { ContentBlock } from '../../lib/types'
 import { supabase } from '../../lib/supabase'
 import { useToast } from '../../lib/toast'
 import { pageBySlug } from '../../lib/pages'
+import TapEditor from '../../components/admin/TapEditor'
 
 export default function AdminPageEdit() {
   const { slug } = useParams<{ slug: string }>()
@@ -11,25 +13,29 @@ export default function AdminPageEdit() {
   const [title, setTitle] = useState('')
   const [intro, setIntro] = useState('')
   const [texts, setTexts] = useState<Record<string, string>>({})
+  const [blocks, setBlocks] = useState<ContentBlock[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     if (!slug) return
     supabase.from('pages').select('*').eq('slug', slug).maybeSingle().then(({ data }) => {
-      const d = data as { title?: string; intro?: string; texts?: Record<string, string> } | null
+      const d = data as { title?: string; intro?: string; texts?: Record<string, string>; blocks?: ContentBlock[] } | null
       setTitle(d?.title ?? cfg?.defaultTitle ?? '')
       setIntro(d?.intro ?? cfg?.defaultIntro ?? '')
       const base: Record<string, string> = {}
       for (const f of cfg?.fields ?? []) base[f.key] = d?.texts?.[f.key] ?? f.default
       setTexts(base)
+      setBlocks(Array.isArray(d?.blocks) ? d.blocks : [])
       setLoading(false)
     })
   }, [slug])
 
   async function save() {
     setSaving(true)
-    const { error } = await supabase.from('pages').upsert({ id: slug, slug, title, intro, texts })
+    const payload: Record<string, unknown> = { id: slug, slug, title, intro, texts }
+    if (cfg?.hasBlocks) payload.blocks = blocks
+    const { error } = await supabase.from('pages').upsert(payload)
     setSaving(false)
     if (error) show('Kunde inte spara: ' + error.message, 'error')
     else show('Sparat', 'success')
@@ -41,7 +47,7 @@ export default function AdminPageEdit() {
   return (
     <div className="fade-in">
       <div className="admin-page-header">
-        <h1>{cfg.label}</h1>
+        <h1>Redigera sida<span className="admin-edit-subject"> — {cfg.label}</span></h1>
         <Link to="/admin/sidor" className="btn btn-ghost btn-sm">← Alla sidor</Link>
       </div>
 
@@ -74,6 +80,13 @@ export default function AdminPageEdit() {
                     )}
                   </div>
                 ))}
+              </>
+            )}
+
+            {cfg.hasBlocks && (
+              <>
+                <h3 style={{ margin: 'var(--space-5) 0 var(--space-3)', fontSize: '0.95rem' }}>Sidans innehåll</h3>
+                <TapEditor blocks={blocks} onChange={setBlocks} />
               </>
             )}
 

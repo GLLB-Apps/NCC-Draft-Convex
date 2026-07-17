@@ -3,12 +3,16 @@ import { useParams, Link } from 'react-router-dom'
 import type { Post, ContentBlock } from '../../lib/types'
 import { supabase } from '../../lib/supabase'
 import { formatDate } from '../../lib/utils'
+import { BlockList, BlockCta } from '../../components/public/blocks'
+import { useRegisterEditLink } from '../../lib/editLink'
 
 function ContentBlockRenderer({ block }: { block: ContentBlock }) {
   switch (block.type) {
     case 'heading': return <h2 className="block-heading">{block.text}</h2>
     case 'paragraph': return <p className="block-paragraph">{block.text}</p>
     case 'quote': return <blockquote className="block-quote">{block.text}</blockquote>
+    case 'list': return <BlockList block={block} />
+    case 'cta': return <BlockCta block={block} />
     case 'factbox': return <div className="block-factbox">{block.title && <h4>{block.title}</h4>}<p>{block.text}</p></div>
     case 'warning': return <div className="block-warning">{block.title && <h4>{block.title}</h4>}<p>{block.text}</p></div>
     case 'image': return <figure className="block-image">{block.image_url && <img src={block.image_url} alt={block.alt_text ?? ''} />}{block.text && <figcaption className="block-image-caption">{block.text}</figcaption>}</figure>
@@ -46,6 +50,8 @@ export default function NewsDetailPage() {
         setLoading(false)
       })
   }, [slug])
+
+  useRegisterEditLink(post ? `/admin/nyheter/${post.id}` : null)
 
   if (loading) return <div className="loading"><div className="spinner"></div></div>
 

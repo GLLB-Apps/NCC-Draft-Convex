@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import type { SiteSettings, ContentBlock } from '../../lib/types'
 import { supabase } from '../../lib/supabase'
 import { useToast } from '../../lib/toast'
@@ -39,8 +40,9 @@ export default function AdminBackground() {
   return (
     <div className="fade-in">
       <div className="admin-page-header">
-        <h1>Bakgrundssidan</h1>
+        <h1>Bakgrund · innehåll</h1>
         <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+          <Link to="/admin/sidor/bakgrund" className="btn btn-ghost btn-sm">← Sidan</Link>
           <a
             href="/bakgrund"
             target="_blank"
@@ -57,8 +59,8 @@ export default function AdminBackground() {
 
       <div className="admin-form-card">
         <p className="text-muted" style={{ marginBottom: 'var(--space-5)', fontSize: '0.9rem' }}>
-          Redigera innehållet på <strong>/bakgrund</strong>. Sidrubriken och ingångsparagrafen är fasta.
-          Skriv fritt nedan för att bygga ut sidan.
+          Bygg innehållet på <strong>/bakgrund</strong> med block – text, rubriker, punktlistor, uppmaningar (CTA) m.m.
+          Sidans rubrik och ingress redigeras under <Link to="/admin/sidor/bakgrund">Sidor → Bakgrund</Link>.
         </p>
         <div className="form-group">
           <label className="form-label">Innehåll</label>

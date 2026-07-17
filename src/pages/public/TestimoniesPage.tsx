@@ -8,6 +8,7 @@ import { usePage } from '../../lib/usePage'
 export default function TestimoniesPage() {
   const [testimonies, setTestimonies] = useState<Testimony[]>([])
   const [loading, setLoading] = useState(true)
+  const [tab, setTab] = useState<'published' | 'submit'>('published')
   const { show } = useToast()
   const page = usePage('vittnesmal')
 
@@ -32,8 +33,12 @@ export default function TestimoniesPage() {
       email: data.email,
       location: data.location,
       area_usage: data.area_usage,
+      featured_image: data.featured_image || null,
+      map_lat: data.map_lat ?? null,
+      map_lng: data.map_lng ?? null,
       consent_publish: data.consent_publish,
       consent_contact: data.consent_contact,
+      consent_marketing: data.consent_marketing,
       status: 'pending',
     })
     if (error) {
@@ -50,8 +55,17 @@ export default function TestimoniesPage() {
         {page.intro && <p>{page.intro}</p>}
       </div>
 
-      <section style={{ marginBottom: 'var(--space-9)' }}>
-        <h2 style={{ marginBottom: 'var(--space-5)' }}>{page.text('list_heading')}</h2>
+      <div className="tabs" role="tablist">
+        <button role="tab" aria-selected={tab === 'published'} className={tab === 'published' ? 'tab active' : 'tab'} onClick={() => setTab('published')}>
+          {page.text('list_heading')}
+        </button>
+        <button role="tab" aria-selected={tab === 'submit'} className={tab === 'submit' ? 'tab active' : 'tab'} onClick={() => setTab('submit')}>
+          {page.text('form_heading')}
+        </button>
+      </div>
+
+      {tab === 'published' ? (
+      <section className="fade-in" style={{ marginBottom: 'var(--space-9)' }}>
         {loading ? (
           <div className="loading"><div className="spinner"></div></div>
         ) : testimonies.length === 0 ? (
@@ -77,14 +91,14 @@ export default function TestimoniesPage() {
           </div>
         )}
       </section>
-
-      <section style={{ marginBottom: 'var(--space-9)' }}>
-        <h2 style={{ marginBottom: 'var(--space-3)' }}>{page.text('form_heading')}</h2>
-        <p className="text-muted" style={{ marginBottom: 'var(--space-5)' }}>
+      ) : (
+      <section className="fade-in" style={{ marginBottom: 'var(--space-9)' }}>
+        <p className="text-muted" style={{ marginBottom: 'var(--space-5)', maxWidth: '60ch' }}>
           {page.text('form_intro')}
         </p>
         <TestimonyForm onSubmit={handleSubmit} />
       </section>
+      )}
     </div>
   )
 }

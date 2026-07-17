@@ -3,8 +3,10 @@ import { Outlet, useLocation } from 'react-router-dom'
 import Header from './Header'
 import Footer from './Footer'
 import VoteWidget from './VoteWidget'
+import EditPageButton from './EditPageButton'
 import type { SiteSettings } from '../../lib/types'
 import { supabase } from '../../lib/supabase'
+import { EditLinkProvider } from '../../lib/editLink'
 
 export default function PublicLayout() {
   const [settings, setSettings] = useState<SiteSettings | null>(null)
@@ -19,14 +21,17 @@ export default function PublicLayout() {
   }, [])
 
   return (
-    <div className="public-layout">
-      <Header settings={settings} />
-      {/* On the start page the widget lives inline beside the summary section instead */}
-      {!isHome && <VoteWidget settings={settings} />}
-      <main className="public-main">
-        <Outlet context={{ settings }} />
-      </main>
-      <Footer settings={settings} />
-    </div>
+    <EditLinkProvider>
+      <div className="public-layout">
+        <Header settings={settings} />
+        {/* On the start page the widget lives inline beside the summary section instead */}
+        {!isHome && <VoteWidget settings={settings} />}
+        <main className="public-main">
+          <Outlet context={{ settings }} />
+        </main>
+        <Footer settings={settings} />
+        <EditPageButton />
+      </div>
+    </EditLinkProvider>
   )
 }

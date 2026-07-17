@@ -1,5 +1,8 @@
 import { useState } from 'react'
 import { usePage } from '../../lib/usePage'
+import Dropzone from '../admin/Dropzone'
+import MapPicker from './MapPicker'
+
 interface TestimonyFormProps {
   onSubmit: (data: Record<string, unknown>) => Promise<void>
 }
@@ -8,6 +11,7 @@ export default function TestimonyForm({ onSubmit }: TestimonyFormProps) {
   const page = usePage('vittnesmal')
   const [submitting, setSubmitting] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [showMap, setShowMap] = useState(false)
   const [form, setForm] = useState({
     title: '',
     story: '',
@@ -16,8 +20,12 @@ export default function TestimonyForm({ onSubmit }: TestimonyFormProps) {
     email: '',
     location: '',
     area_usage: '',
+    featured_image: '',
+    map_lat: null as number | null,
+    map_lng: null as number | null,
     consent_publish: false,
     consent_contact: false,
+    consent_marketing: false,
     website: '',
   })
 
@@ -39,10 +47,11 @@ export default function TestimonyForm({ onSubmit }: TestimonyFormProps) {
     await onSubmit(form)
     setSubmitting(false)
     setForm({
-      title: '', story: '', author_name: '', is_anonymous: false,
-      email: '', location: '', area_usage: '',
-      consent_publish: false, consent_contact: false, website: '',
+      title: '', story: '', author_name: '', is_anonymous: false, email: '', location: '', area_usage: '',
+      featured_image: '', map_lat: null, map_lng: null,
+      consent_publish: false, consent_contact: false, consent_marketing: false, website: '',
     })
+    setShowMap(false)
   }
 
   function update(key: string, value: string | boolean) {
@@ -53,97 +62,99 @@ export default function TestimonyForm({ onSubmit }: TestimonyFormProps) {
     <form onSubmit={handleSubmit} className="card" noValidate>
       <div className="form-group">
         <label className="form-label" htmlFor="title">{page.text('label_title')}</label>
-        <input
-          id="title"
-          className="form-input"
-          type="text"
-          value={form.title}
-          onChange={e => update('title', e.target.value)}
-        />
+        <input id="title" className="form-input" type="text" value={form.title} onChange={e => update('title', e.target.value)} />
       </div>
 
       <div className="form-group">
         <label className="form-label" htmlFor="story">{page.text('label_story')} *</label>
-        <textarea
-          id="story"
-          className="form-textarea"
-          rows={6}
-          value={form.story}
-          onChange={e => update('story', e.target.value)}
-          aria-invalid={!!errors.story}
-        />
+        <textarea id="story" className="form-textarea" rows={6} value={form.story} onChange={e => update('story', e.target.value)} aria-invalid={!!errors.story} />
         {errors.story && <p className="form-error">{errors.story}</p>}
       </div>
 
       <div className="form-group">
         <label className="form-label" htmlFor="area_usage">{page.text('label_area')}</label>
-        <input
-          id="area_usage"
-          className="form-input"
-          type="text"
-          placeholder="T.ex. promenader, hundrastning, naturupplevelser"
-          value={form.area_usage}
-          onChange={e => update('area_usage', e.target.value)}
-        />
+        <input id="area_usage" className="form-input" type="text" placeholder="T.ex. promenader, hundrastning, naturupplevelser" value={form.area_usage} onChange={e => update('area_usage', e.target.value)} />
       </div>
+
+      {/* Image */}
+      <div className="form-group">
+        <label className="form-label">Bild (valfritt)</label>
+        {form.featured_image ? (
+          <div className="testimony-image-preview">
+            <img src={form.featured_image} alt="" />
+            <button type="button" className="btn btn-ghost btn-sm" onClick={() => { update('featured_image', ''); update('consent_marketing', false) }}>Ta bort bild</button>
+          </div>
+        ) : (
+          <Dropzone
+            compact
+            label="Dra och släpp en bild här"
+            hint="eller klicka för att välja / ta ett foto"
+            onUploaded={url => update('featured_image', url)}
+            onError={m => setErrors(e => ({ ...e, image: m }))}
+          />
+        )}
+        {errors.image && <p className="form-error">{errors.image}</p>}
+      </div>
+
+      {form.featured_image && (
+        <div className="checkbox-group">
+          <input id="consent_marketing" type="checkbox" checked={form.consent_marketing} onChange={e => update('consent_marketing', e.target.checked)} />
+          <label htmlFor="consent_marketing" className="form-label" style={{ margin: 0 }}>
+            Jag godkänner att bilden får användas i initiativets marknadsföring
+          </label>
+        </div>
+      )}
+
+      {/* Map location */}
+      <div className="checkbox-group">
+        <input
+          id="show_map"
+          type="checkbox"
+          checked={showMap}
+          onChange={e => { setShowMap(e.target.checked); if (!e.target.checked) setForm(p => ({ ...p, map_lat: null, map_lng: null })) }}
+        />
+        <label htmlFor="show_map" className="form-label" style={{ margin: 0 }}>Jag vill markera var det hände på kartan</label>
+      </div>
+
+      {showMap && (
+        <div className="form-group testimony-map-reveal">
+          <p className="form-hint">Klicka på kartan för att sätta en markering (dra i kartan för att flytta).</p>
+          <MapPicker lat={form.map_lat} lng={form.map_lng} onChange={(la, ln) => setForm(p => ({ ...p, map_lat: la, map_lng: ln }))} />
+          {form.map_lat != null && form.map_lng != null && (
+            <div className="testimony-map-chosen">
+              <span className="form-hint">Vald plats: {form.map_lat.toFixed(4)}, {form.map_lng.toFixed(4)}</span>
+              <button type="button" className="btn btn-ghost btn-sm" onClick={() => setForm(p => ({ ...p, map_lat: null, map_lng: null }))}>Rensa markering</button>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="grid grid-2">
         <div className="form-group">
           <label className="form-label" htmlFor="author_name">{page.text('label_name')}</label>
-          <input
-            id="author_name"
-            className="form-input"
-            type="text"
-            value={form.author_name}
-            onChange={e => update('author_name', e.target.value)}
-          />
+          <input id="author_name" className="form-input" type="text" value={form.author_name} onChange={e => update('author_name', e.target.value)} />
         </div>
         <div className="form-group">
           <label className="form-label" htmlFor="location">{page.text('label_location')}</label>
-          <input
-            id="location"
-            className="form-input"
-            type="text"
-            placeholder="T.ex. Södra Sandby"
-            value={form.location}
-            onChange={e => update('location', e.target.value)}
-          />
+          <input id="location" className="form-input" type="text" placeholder="T.ex. Södra Sandby" value={form.location} onChange={e => update('location', e.target.value)} />
         </div>
       </div>
 
       <div className="form-group">
         <label className="form-label" htmlFor="email">{page.text('label_email')} *</label>
-        <input
-          id="email"
-          className="form-input"
-          type="email"
-          value={form.email}
-          onChange={e => update('email', e.target.value)}
-          aria-invalid={!!errors.email}
-        />
+        <input id="email" className="form-input" type="email" value={form.email} onChange={e => update('email', e.target.value)} aria-invalid={!!errors.email} />
         {errors.email ? <p className="form-error">{errors.email}</p> : <p className="form-hint">{page.text('email_hint')}</p>}
       </div>
 
       <div className="checkbox-group">
-        <input
-          id="is_anonymous"
-          type="checkbox"
-          checked={form.is_anonymous}
-          onChange={e => update('is_anonymous', e.target.checked)}
-        />
+        <input id="is_anonymous" type="checkbox" checked={form.is_anonymous} onChange={e => update('is_anonymous', e.target.checked)} />
         <label htmlFor="is_anonymous" className="form-label" style={{ margin: 0 }}>
           {page.text('anonymous')}
         </label>
       </div>
 
       <div className="checkbox-group">
-        <input
-          id="consent_publish"
-          type="checkbox"
-          checked={form.consent_publish}
-          onChange={e => update('consent_publish', e.target.checked)}
-          aria-invalid={!!errors.consent_publish}
-        />
+        <input id="consent_publish" type="checkbox" checked={form.consent_publish} onChange={e => update('consent_publish', e.target.checked)} aria-invalid={!!errors.consent_publish} />
         <label htmlFor="consent_publish" className="form-label" style={{ margin: 0 }}>
           {page.text('consent_publish')} *
         </label>
@@ -151,12 +162,7 @@ export default function TestimonyForm({ onSubmit }: TestimonyFormProps) {
       {errors.consent_publish && <p className="form-error">{errors.consent_publish}</p>}
 
       <div className="checkbox-group">
-        <input
-          id="consent_contact"
-          type="checkbox"
-          checked={form.consent_contact}
-          onChange={e => update('consent_contact', e.target.checked)}
-        />
+        <input id="consent_contact" type="checkbox" checked={form.consent_contact} onChange={e => update('consent_contact', e.target.checked)} />
         <label htmlFor="consent_contact" className="form-label" style={{ margin: 0 }}>
           {page.text('consent_contact')}
         </label>

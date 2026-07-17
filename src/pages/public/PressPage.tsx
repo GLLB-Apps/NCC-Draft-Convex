@@ -3,6 +3,7 @@ import type { Post, DocumentItem, MediaItem, Contact } from '../../lib/types'
 import { supabase } from '../../lib/supabase'
 import { formatDate, formatDateShort, senderTypeLabel, senderTypeBadge } from '../../lib/utils'
 import { usePage } from '../../lib/usePage'
+import { ContentBlocks } from '../../components/public/blocks'
 
 export default function PressPage() {
   const page = usePage('press')
@@ -35,6 +36,12 @@ export default function PressPage() {
         <h1>{page.title}</h1>
         {page.intro && <p>{page.intro}</p>}
       </div>
+
+      {page.blocks.length > 0 && (
+        <div style={{ marginBottom: 'var(--space-7)' }}>
+          <ContentBlocks blocks={page.blocks} />
+        </div>
+      )}
 
       <div className="press-grid" style={{ marginBottom: 'var(--space-9)' }}>
         <div>

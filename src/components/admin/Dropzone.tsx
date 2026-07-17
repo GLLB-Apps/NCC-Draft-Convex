@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { uploadFile } from '../../lib/storage'
+import { useToast } from '../../lib/toast'
 
 interface Props {
   onUploaded: (url: string, file: File) => void | Promise<void>
@@ -14,6 +15,7 @@ interface Props {
 
 export default function Dropzone({ onUploaded, onComplete, onError, multiple = false, accept = 'image/*', label, hint, compact }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
+  const { show } = useToast()
   const [over, setOver] = useState(false)
   const [busy, setBusy] = useState(false)
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null)
@@ -33,7 +35,7 @@ export default function Dropzone({ onUploaded, onComplete, onError, multiple = f
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e)
       if (onError) onError(msg)
-      else alert('Uppladdning misslyckades: ' + msg)
+      else show('Uppladdning misslyckades: ' + msg, 'error')
     } finally {
       setBusy(false)
       setProgress(null)

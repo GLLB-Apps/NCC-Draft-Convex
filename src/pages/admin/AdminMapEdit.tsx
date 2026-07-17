@@ -104,7 +104,7 @@ export default function AdminMapEdit() {
   return (
     <div className="fade-in">
       <div className="admin-page-header">
-        <h1>{isNew ? 'Ny kartpunkt' : 'Redigera kartpunkt'}</h1>
+        <h1>{isNew ? 'Ny kartpunkt' : 'Redigera kartpunkt'}{!isNew && form.title && <span className="admin-edit-subject"> — {form.title}</span>}</h1>
         <Link to="/admin/karta" className="btn btn-ghost btn-sm">← Tillbaka</Link>
       </div>
       <div className="admin-form-card">

@@ -3,12 +3,14 @@ import { Link } from 'react-router-dom'
 import type { Post } from '../../lib/types'
 import { supabase } from '../../lib/supabase'
 import { useToast } from '../../lib/toast'
+import { useConfirm } from '../../lib/confirm'
 import { formatDateShort, statusLabel, statusBadgeClass } from '../../lib/utils'
 
 export default function AdminNews() {
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
   const { show } = useToast()
+  const { confirm } = useConfirm()
 
   function load() {
     setLoading(true)
@@ -24,7 +26,7 @@ export default function AdminNews() {
   useEffect(() => { load() }, [])
 
   async function remove(id: string, title: string) {
-    if (!confirm(`Ta bort nyheten "${title}" permanent?`)) return
+    if (!(await confirm({ message: `Ta bort nyheten "${title}" permanent?`, confirmText: 'Ta bort', danger: true }))) return
     const { error } = await supabase.from('posts').delete().eq('id', id)
     if (error) show('Kunde inte ta bort: ' + error.message, 'error')
     else { show('Nyheten borttagen', 'success'); load() }

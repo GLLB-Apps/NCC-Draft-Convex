@@ -15,6 +15,7 @@ export interface PageConfig {
   manage: PageManageLink[]
   fields?: PageField[]
   headerless?: boolean  // page has no title/intro header (e.g. the start page)
+  hasBlocks?: boolean   // page renders free-form block content (pages.blocks)
 }
 
 export const PAGES: PageConfig[] = [
@@ -37,6 +38,11 @@ export const PAGES: PageConfig[] = [
       { key: 'cta_heading', label: 'Uppmaning: rubrik', default: 'Hjälp till att sprida informationen' },
       { key: 'cta_text', label: 'Uppmaning: text', multiline: true, default: 'Skriv under namninsamlingen, dela informationen eller lämna ditt vittnesmål.' },
     ],
+  },
+  {
+    slug: 'bakgrund', label: 'Bakgrund', route: '/bakgrund', defaultTitle: 'Bakgrund',
+    defaultIntro: 'Hur detta initiativ kom till och varför informationen samlas.',
+    manage: [{ label: 'Redigera sidans innehåll (block)', to: '/admin/bakgrund' }],
   },
   { slug: 'nyheter', label: 'Nyheter', route: '/nyheter', defaultTitle: 'Nyheter', defaultIntro: 'Senaste information och uppdateringar om planerna.', manage: [{ label: 'Hantera nyheter', to: '/admin/nyheter' }] },
   { slug: 'amnen', label: 'Ämnesområden', route: '/amnen', defaultTitle: 'Ämnesområden', defaultIntro: 'Olika aspekter av den planerade bergtäkten, från naturvärden till buller och trafik.', manage: [{ label: 'Hantera ämnen', to: '/admin/amnen' }] },
@@ -95,7 +101,7 @@ export const PAGES: PageConfig[] = [
   },
   {
     slug: 'press', label: 'Press', route: '/press', defaultTitle: 'Press', defaultIntro: 'Information och material för journalister och media.',
-    manage: [],
+    manage: [], hasBlocks: true,
     fields: [
       { key: 'facts_heading', label: 'Rubrik: fakta', default: 'Fakta i korthet' },
       { key: 'facts', label: 'Fakta (en rad per punkt)', multiline: true, default: 'NCC planerar en ny bergtäkt i Rögleskogen mellan Södra Sandby och Dalby i Lunds kommun.\nProcessen befinner sig i informations- och samrådsskedet.\nEtt medborgarinitiativ har bildats för att samla information och frågor.\nAll information på denna webbplats är exempeldata om inte annat anges.' },
@@ -108,3 +114,21 @@ export const PAGES: PageConfig[] = [
 ]
 
 export const pageBySlug = (slug: string) => PAGES.find(p => p.slug === slug)
+
+// Site pages that can be linked directly from the menu, with a suggested
+// icon (Lucide name). Used by the menu editor to offer pages that are not
+// yet in the menu, so the label + link don't have to be typed by hand.
+export const MENU_PAGES: { label: string; url: string; icon: string }[] = [
+  { label: 'Startsida', url: '/', icon: 'house' },
+  { label: 'Bakgrund', url: '/bakgrund', icon: 'info' },
+  { label: 'Ämnesområden', url: '/amnen', icon: 'layers' },
+  { label: 'Nyheter', url: '/nyheter', icon: 'newspaper' },
+  { label: 'Karta', url: '/karta', icon: 'map-pin' },
+  { label: 'Tidslinje', url: '/tidslinje', icon: 'clock' },
+  { label: 'Dokument', url: '/dokument', icon: 'file-text' },
+  { label: 'Media', url: '/media', icon: 'image' },
+  { label: 'Vittnesmål', url: '/vittnesmal', icon: 'message-circle' },
+  { label: 'Frågor och svar', url: '/fragor-och-svar', icon: 'help-circle' },
+  { label: 'Kontakt', url: '/kontakt', icon: 'mail' },
+  { label: 'Press', url: '/press', icon: 'file-text' },
+]

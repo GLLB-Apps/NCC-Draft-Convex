@@ -16,6 +16,8 @@ const INSERTS: { type: ContentBlock['type']; label: string }[] = [
   { type: 'image', label: 'Bild' },
   { type: 'factbox', label: 'Faktaruta' },
   { type: 'warning', label: 'Varningsruta' },
+  { type: 'list', label: 'Punktlista' },
+  { type: 'cta', label: 'Uppmaning' },
   { type: 'video', label: 'Video' },
   { type: 'button', label: 'Knapp' },
   { type: 'sources', label: 'Källor' },
@@ -30,6 +32,8 @@ function blankBlock(type: ContentBlock['type']): ContentBlock {
   if (type === 'video') { b.video_url = ''; b.title = '' }
   if (type === 'button') { b.text = ''; b.url = '' }
   if (type === 'sources') { b.sources = [] }
+  if (type === 'list') { b.title = ''; b.items = [''] }
+  if (type === 'cta') { b.title = ''; b.links = [] }
   return b
 }
 
@@ -201,6 +205,39 @@ export default function TapEditor({ blocks, onChange }: Props) {
                     <input className="form-input" type="text" value={block.text ?? ''} onChange={e => set(i, { text: e.target.value })} placeholder="Knapptext" />
                     <input className="form-input" type="url" value={block.url ?? ''} onChange={e => set(i, { url: e.target.value })} placeholder="Länk (URL)" />
                   </>
+                )}
+
+                {block.type === 'list' && (
+                  <div className="tap-sources">
+                    <input className="form-input" type="text" value={block.title ?? ''} onChange={e => set(i, { title: e.target.value })} placeholder="Rubrik (valfritt)" />
+                    {(block.items ?? []).map((it, li) => (
+                      <div key={li} className="tap-source-row">
+                        <input className="form-input" type="text" value={it} onChange={e => {
+                          const items = [...(block.items ?? [])]; items[li] = e.target.value; set(i, { items })
+                        }} placeholder="Punkt" />
+                        <button type="button" className="tap-source-remove" onClick={() => set(i, { items: (block.items ?? []).filter((_, j) => j !== li) })} aria-label="Ta bort punkt">✕</button>
+                      </div>
+                    ))}
+                    <button type="button" className="btn btn-ghost btn-sm" onClick={() => set(i, { items: [...(block.items ?? []), ''] })}>+ Lägg till punkt</button>
+                  </div>
+                )}
+
+                {block.type === 'cta' && (
+                  <div className="tap-sources">
+                    <input className="form-input" type="text" value={block.title ?? ''} onChange={e => set(i, { title: e.target.value })} placeholder="Rubrik (valfritt)" />
+                    {(block.links ?? []).map((lnk, li) => (
+                      <div key={li} className="tap-source-row">
+                        <input className="form-input" type="text" value={lnk.label} onChange={e => {
+                          const links = [...(block.links ?? [])]; links[li] = { ...links[li], label: e.target.value }; set(i, { links })
+                        }} placeholder="Knapptext" />
+                        <input className="form-input" type="text" value={lnk.url} onChange={e => {
+                          const links = [...(block.links ?? [])]; links[li] = { ...links[li], url: e.target.value }; set(i, { links })
+                        }} placeholder="Länk (URL eller /sida)" />
+                        <button type="button" className="tap-source-remove" onClick={() => set(i, { links: (block.links ?? []).filter((_, j) => j !== li) })} aria-label="Ta bort knapp">✕</button>
+                      </div>
+                    ))}
+                    <button type="button" className="btn btn-ghost btn-sm" onClick={() => set(i, { links: [...(block.links ?? []), { label: '', url: '' }] })}>+ Lägg till knapp</button>
+                  </div>
                 )}
 
                 {block.type === 'sources' && (

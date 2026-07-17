@@ -147,6 +147,16 @@
   gap: var(--space-3);
 }
 
+.header-logout {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+/* Collapse to an icon-only button on narrow screens */
+@media (max-width: 640px) {
+  .header-logout-label { display: none; }
+}
+
 .mobile-toggle {
   display: none;
   flex-direction: column;
@@ -671,6 +681,46 @@
 .status-highlight .status-value-link { color: #fff; text-decoration: underline; }
 
 /* Floating vote widget (all sizes; folds to a bullhorn tab) */
+/* Admin "edit this page" floating button (desktop, logged-in admins) */
+.edit-page-fab {
+  position: fixed;
+  bottom: var(--space-6);
+  right: var(--space-6);
+  z-index: 92;
+  display: inline-flex;
+  align-items: center;
+  height: 60px;
+  padding: 0 17px;
+  border-radius: 999px;
+  background: var(--primary);
+  color: #fff;
+  font-weight: 600;
+  text-decoration: none;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+  animation: editFabIn 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.edit-page-fab:hover {
+  background: var(--primary-dark);
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+}
+.edit-page-fab svg { flex-shrink: 0; }
+.edit-page-fab-label {
+  max-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  transition: max-width 0.3s ease, margin-left 0.3s ease;
+}
+.edit-page-fab:hover .edit-page-fab-label { max-width: 160px; margin-left: 10px; }
+@keyframes editFabIn {
+  from { transform: translateY(16px) scale(0.9); opacity: 0; }
+  to { transform: translateY(0) scale(1); opacity: 1; }
+}
+@media (max-width: 900px) { .edit-page-fab { display: none; } }
+@media (prefers-reduced-motion: reduce) { .edit-page-fab { animation: none; } }
+
 .vote-widget {
   display: block;
   position: fixed;
@@ -1082,6 +1132,53 @@
   font-size: 0.9rem;
 }
 
+/* Testimony card modal (media page → Vittnesmål) */
+.testimony-modal {
+  position: relative;
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  max-width: 600px;
+  width: 100%;
+  max-height: 88vh;
+  overflow-y: auto;
+  animation: mapReveal 0.28s ease;
+}
+.testimony-modal .testimony-modal-img {
+  width: 100%;
+  max-width: none;
+  max-height: 320px;
+  object-fit: cover;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  display: block;
+}
+.testimony-modal-body {
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.testimony-modal-author { color: var(--text-muted); font-size: 0.9rem; }
+.testimony-modal-story { font-style: italic; line-height: 1.6; }
+.testimony-modal-close {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-3);
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  border: none;
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.testimony-modal-close:hover { background: rgba(0, 0, 0, 0.7); }
+
 /* CTA section */
 .cta-section {
   background: var(--primary-bg);
@@ -1105,6 +1202,38 @@
 
 .block-heading { margin-top: var(--space-4); }
 .block-paragraph { line-height: 1.7; }
+
+/* Bullet-list block (card with check bullets) */
+.block-list {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+}
+.block-list-title { margin: 0 0 var(--space-4); font-size: 1.15rem; }
+.block-list-items {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.block-list-items li {
+  position: relative;
+  padding-left: var(--space-6);
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+.block-list-items li::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  top: 0;
+  font-weight: 700;
+  color: var(--primary);
+}
+.block-cta { margin-top: 0; }
 .block-quote {
   border-left: 3px solid var(--primary);
   padding: var(--space-3) var(--space-5);
@@ -1225,36 +1354,97 @@
 .page-header p { color: var(--text-muted); font-size: 1.05rem; max-width: 700px; }
 
 /* FAQ */
-.faq-category {
-  margin-bottom: var(--space-7);
-}
+.faq-wrap { margin-bottom: var(--space-9); }
 
-.faq-category h3 { margin-bottom: var(--space-4); }
+.faq-category { margin-bottom: var(--space-8); }
+
+.faq-category-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+.faq-category-head h3 { margin: 0; }
+.faq-count {
+  font-size: 0.78rem;
+  font-weight: 600;
+  background: rgba(45, 90, 61, 0.1);
+  color: var(--primary);
+  padding: 2px 10px;
+  border-radius: 999px;
+  line-height: 1.6;
+}
 
 .faq-item {
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   margin-bottom: var(--space-3);
+  background: var(--bg-card);
   overflow: hidden;
+  transition: border-color var(--transition), box-shadow var(--transition);
 }
+.faq-item:hover { border-color: var(--primary); }
+.faq-item.open { border-color: var(--primary); box-shadow: var(--shadow-sm); }
 
 .faq-question {
+  width: 100%;
   padding: var(--space-4) var(--space-5);
-  font-weight: 500;
+  font-weight: 600;
+  font-size: 1.02rem;
   cursor: pointer;
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  background: var(--bg-card);
-  transition: background var(--transition);
+  gap: var(--space-3);
+  background: transparent;
+  border: none;
+  text-align: left;
+  color: var(--text-heading);
+  transition: color var(--transition);
+}
+.faq-question:hover { color: var(--primary); }
+.faq-q-icon { color: var(--primary); flex-shrink: 0; }
+.faq-q-text { flex: 1; }
+.faq-chevron {
+  color: var(--text-light);
+  flex-shrink: 0;
+  transition: transform var(--transition), color var(--transition);
+}
+.faq-item.open .faq-chevron { transform: rotate(180deg); color: var(--primary); }
+
+/* Smoothly collapsing answer (grid 0fr → 1fr) */
+.faq-answer-wrap {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.3s ease;
+}
+.faq-item.open .faq-answer-wrap { grid-template-rows: 1fr; }
+.faq-answer { overflow: hidden; }
+.faq-answer-inner {
+  padding: 0 var(--space-5) var(--space-5) calc(var(--space-5) + 20px + var(--space-3));
+  color: var(--text-muted);
+  line-height: 1.7;
+  white-space: pre-line;
 }
 
-.faq-question:hover { background: var(--bg-alt); }
+.faq-cta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  border-radius: var(--radius-lg);
+  background: var(--bg-alt);
+  border: 1px solid var(--border-light);
+  margin-top: var(--space-7);
+  flex-wrap: wrap;
+}
+.faq-cta-icon { color: var(--primary); flex-shrink: 0; }
+.faq-cta-text { flex: 1; min-width: 200px; }
+.faq-cta-text h3 { margin: 0 0 var(--space-1); }
+.faq-cta-text p { margin: 0; color: var(--text-muted); }
 
-.faq-answer {
-  padding: 0 var(--space-5) var(--space-4);
-  color: var(--text-muted);
-  line-height: 1.6;
+@media (prefers-reduced-motion: reduce) {
+  .faq-answer-wrap { transition: none; }
+  .faq-chevron { transition: color var(--transition); }
 }
 
 /* Contact */
@@ -1292,6 +1482,60 @@
   align-items: start;
 }
 
+/* Filters moved to the left */
+.map-layout.map-layout-left { grid-template-columns: 300px 1fr; }
+
+/* Testimony map tab: list on the left, map on the right */
+.testimony-map-layout {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  gap: var(--space-5);
+  align-items: start;
+}
+
+.testimony-map {
+  height: 520px;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+.testimony-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-height: 520px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.testimony-list-item {
+  display: flex;
+  gap: var(--space-3);
+  text-align: left;
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  cursor: pointer;
+  transition: border-color var(--transition), background var(--transition);
+}
+.testimony-list-item:hover { background: var(--bg-alt); }
+.testimony-list-item.is-active { border-color: var(--primary); box-shadow: inset 0 0 0 1px var(--primary); }
+
+.testimony-list-thumb { width: 56px; height: 56px; object-fit: cover; border-radius: var(--radius-sm); flex-shrink: 0; }
+.testimony-list-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.testimony-list-title { font-weight: 500; font-size: 0.9rem; }
+.testimony-list-snippet { font-size: 0.82rem; color: var(--text-muted); line-height: 1.4; }
+.testimony-list-loc { font-size: 0.78rem; color: var(--primary); }
+
+@media (max-width: 900px) {
+  .map-layout.map-layout-left,
+  .testimony-map-layout { grid-template-columns: 1fr; }
+  .testimony-list { max-height: 300px; }
+  .testimony-map { height: 420px; }
+}
+
 .map-container {
   height: 520px;
   border-radius: var(--radius-lg);
@@ -1301,6 +1545,83 @@
 
 .map-preview {
   height: 350px;
+}
+
+/* Interactive map picker (testimony form + CMS) */
+.map-picker {
+  width: 100%;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  cursor: crosshair;
+}
+.map-picker .leaflet-container { cursor: crosshair; }
+
+.testimony-image-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+.testimony-image-preview img {
+  max-width: 100%;
+  max-height: 220px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  object-fit: cover;
+}
+
+.testimony-map-chosen {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  margin-top: var(--space-2);
+}
+
+.testimony-admin-image {
+  display: block;
+  max-width: 100%;
+  max-height: 240px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  object-fit: cover;
+  margin-bottom: var(--space-3);
+}
+
+/* Tab control */
+.tabs {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-6);
+}
+.tab {
+  padding: var(--space-2) var(--space-4);
+  border: none;
+  background: none;
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition);
+}
+.tab:hover { color: var(--text); }
+.tab.active { background: var(--bg-card); color: var(--primary); box-shadow: var(--shadow-sm); }
+
+/* Reveal animation for the map picker in the form */
+.testimony-map-reveal { animation: mapReveal 0.35s ease; }
+@keyframes mapReveal {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .testimony-map-reveal { animation: none; }
 }
 
 /* Clickable point-type filters, shown to the right of the map */

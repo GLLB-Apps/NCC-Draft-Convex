@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { ChevronDown, HelpCircle, MessagesSquare } from 'lucide-react'
 import PageHeader from '../../components/public/PageHeader'
 import type { FaqCategory, FaqItem } from '../../lib/types'
 import { supabase } from '../../lib/supabase'
@@ -31,7 +33,27 @@ export default function FaqPage() {
     })
   }
 
+  function renderItem(item: FaqItem) {
+    const open = openItems.has(item.id)
+    return (
+      <div key={item.id} className={open ? 'faq-item open' : 'faq-item'}>
+        <button className="faq-question" onClick={() => toggle(item.id)} aria-expanded={open}>
+          <HelpCircle className="faq-q-icon" size={20} aria-hidden="true" />
+          <span className="faq-q-text">{item.question}</span>
+          <ChevronDown className="faq-chevron" size={20} aria-hidden="true" />
+        </button>
+        <div className="faq-answer-wrap">
+          <div className="faq-answer">
+            <div className="faq-answer-inner">{item.answer}</div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   if (loading) return <div className="loading"><div className="spinner"></div></div>
+
+  const uncategorized = items.filter(i => !i.category_id)
 
   return (
     <div className="container container-narrow fade-in">
@@ -44,50 +66,39 @@ export default function FaqPage() {
           <p>Inga frågor har publicerats ännu.</p>
         </div>
       ) : (
-        <div style={{ marginBottom: 'var(--space-9)' }}>
+        <div className="faq-wrap">
           {categories.map(cat => {
             const catItems = items.filter(i => i.category_id === cat.id)
             if (catItems.length === 0) return null
             return (
               <div key={cat.id} className="faq-category">
-                <h3>{cat.name}</h3>
-                {catItems.map(item => (
-                  <div key={item.id} className="faq-item">
-                    <button
-                      className="faq-question"
-                      onClick={() => toggle(item.id)}
-                      aria-expanded={openItems.has(item.id)}
-                    >
-                      <span>{item.question}</span>
-                      <span aria-hidden="true">{openItems.has(item.id) ? '−' : '+'}</span>
-                    </button>
-                    {openItems.has(item.id) && (
-                      <div className="faq-answer">{item.answer}</div>
-                    )}
-                  </div>
-                ))}
+                <div className="faq-category-head">
+                  <h3>{cat.name}</h3>
+                  <span className="faq-count">{catItems.length}</span>
+                </div>
+                {catItems.map(renderItem)}
               </div>
             )
           })}
-          {/* Uncategorized items */}
-          {items.filter(i => !i.category_id).length > 0 && (
+
+          {uncategorized.length > 0 && (
             <div className="faq-category">
-              <h3>{page.text('uncategorized_heading')}</h3>
-              {items.filter(i => !i.category_id).map(item => (
-                <div key={item.id} className="faq-item">
-                  <button
-                    className="faq-question"
-                    onClick={() => toggle(item.id)}
-                    aria-expanded={openItems.has(item.id)}
-                  >
-                    <span>{item.question}</span>
-                    <span aria-hidden="true">{openItems.has(item.id) ? '−' : '+'}</span>
-                  </button>
-                  {openItems.has(item.id) && <div className="faq-answer">{item.answer}</div>}
-                </div>
-              ))}
+              <div className="faq-category-head">
+                <h3>{page.text('uncategorized_heading')}</h3>
+                <span className="faq-count">{uncategorized.length}</span>
+              </div>
+              {uncategorized.map(renderItem)}
             </div>
           )}
+
+          <div className="faq-cta">
+            <MessagesSquare className="faq-cta-icon" size={32} aria-hidden="true" />
+            <div className="faq-cta-text">
+              <h3>Hittade du inte svaret?</h3>
+              <p>Hör av dig så återkommer vi så snart vi kan.</p>
+            </div>
+            <Link to="/kontakt" className="btn btn-primary">Kontakta oss</Link>
+          </div>
         </div>
       )}
     </div>

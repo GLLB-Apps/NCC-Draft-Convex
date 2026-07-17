@@ -3,7 +3,9 @@ import { useParams, Link } from 'react-router-dom'
 import type { Topic, ContentBlock } from '../../lib/types'
 import { supabase } from '../../lib/supabase'
 import { formatDate } from '../../lib/utils'
-import TopicIcon from '../../components/public/TopicIcon'
+import LucideIcon from '../../lib/lucide'
+import { BlockList, BlockCta } from '../../components/public/blocks'
+import { useRegisterEditLink } from '../../lib/editLink'
 
 function ContentBlockRenderer({ block }: { block: ContentBlock }) {
   switch (block.type) {
@@ -13,6 +15,10 @@ function ContentBlockRenderer({ block }: { block: ContentBlock }) {
       return <p className="block-paragraph">{block.text}</p>
     case 'quote':
       return <blockquote className="block-quote">{block.text}</blockquote>
+    case 'list':
+      return <BlockList block={block} />
+    case 'cta':
+      return <BlockCta block={block} />
     case 'factbox':
       return (
         <div className="block-factbox">
@@ -123,6 +129,8 @@ export default function TopicDetailPage() {
       })
   }, [slug])
 
+  useRegisterEditLink(topic ? `/admin/amnen/${topic.id}` : null)
+
   if (loading) return <div className="loading"><div className="spinner"></div></div>
 
   if (!topic) {
@@ -141,7 +149,7 @@ export default function TopicDetailPage() {
         <Link to="/amnen" className="section-link" style={{ marginBottom: 'var(--space-3)' }}>← Alla ämnen</Link>
         {topic.icon && (
           <div className="topic-detail-icon" aria-hidden="true">
-            <TopicIcon icon={topic.icon} />
+            <LucideIcon icon={topic.icon} className="topic-icon-svg" />
           </div>
         )}
         <h1>{topic.title}</h1>

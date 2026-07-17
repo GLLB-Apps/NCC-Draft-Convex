@@ -81,7 +81,7 @@ export default function AdminNewsEdit() {
   return (
     <div className="fade-in">
       <div className="admin-page-header">
-        <h1>{isNew ? 'Ny nyhet' : 'Redigera nyhet'}</h1>
+        <h1>{isNew ? 'Ny nyhet' : 'Redigera nyhet'}{!isNew && form.title && <span className="admin-edit-subject"> — {form.title}</span>}</h1>
         <Link to="/admin/nyheter" className="btn btn-ghost btn-sm">← Tillbaka</Link>
       </div>
 

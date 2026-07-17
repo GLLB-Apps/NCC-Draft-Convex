@@ -3,12 +3,16 @@ import { Link } from 'react-router-dom'
 import type { Topic } from '../../lib/types'
 import { supabase } from '../../lib/supabase'
 import { useToast } from '../../lib/toast'
+import { useConfirm } from '../../lib/confirm'
 import { formatDateShort, statusLabel, statusBadgeClass } from '../../lib/utils'
+import { TOPIC_TEMPLATES } from '../../lib/topicTemplates'
+import LucideIcon from '../../lib/lucide'
 
 export default function AdminTopics() {
   const [topics, setTopics] = useState<Topic[]>([])
   const [loading, setLoading] = useState(true)
   const { show } = useToast()
+  const { confirm } = useConfirm()
 
   function load() {
     setLoading(true)
@@ -21,7 +25,7 @@ export default function AdminTopics() {
   useEffect(() => { load() }, [])
 
   async function remove(id: string, title: string) {
-    if (!confirm(`Ta bort ämnet "${title}" permanent?`)) return
+    if (!(await confirm({ message: `Ta bort ämnet "${title}" permanent?`, confirmText: 'Ta bort', danger: true }))) return
     const { error } = await supabase.from('topics').delete().eq('id', id)
     if (error) show('Kunde inte ta bort: ' + error.message, 'error')
     else { show('Ämnet borttaget', 'success'); load() }
@@ -34,6 +38,24 @@ export default function AdminTopics() {
       <div className="admin-page-header">
         <h1>Ämnesområden</h1>
         <Link to="/admin/amnen/ny" className="btn btn-primary btn-sm">Nytt ämne</Link>
+      </div>
+
+      <div className="template-picker">
+        <h2 className="template-picker-title">Skapa nytt ämne från mall</h2>
+        <p className="text-muted" style={{ fontSize: '0.9rem', margin: '0 0 var(--space-3)' }}>
+          Välj en mall för att börja med färdig rubrik, ingress och innehållsstruktur som du kan fylla i.
+        </p>
+        <div className="template-grid">
+          {TOPIC_TEMPLATES.map(t => (
+            <Link key={t.key} to={`/admin/amnen/ny?mall=${t.key}`} className="template-card">
+              <span className="template-card-icon">
+                {t.icon ? <LucideIcon icon={t.icon} size={24} /> : <span className="template-card-blank" aria-hidden="true">+</span>}
+              </span>
+              <span className="template-card-name">{t.name}</span>
+              <span className="template-card-desc">{t.description}</span>
+            </Link>
+          ))}
+        </div>
       </div>
 
       {topics.length === 0 ? (

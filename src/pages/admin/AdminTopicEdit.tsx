@@ -1,15 +1,17 @@
 import { useEffect, useState } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom'
 import type { Topic, ContentBlock, ContentStatus } from '../../lib/types'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../lib/auth'
 import { useToast } from '../../lib/toast'
 import { slugify } from '../../lib/utils'
 import TapEditor from '../../components/admin/TapEditor'
-import TopicIcon, { TOPIC_ICONS } from '../../components/public/TopicIcon'
+import IconPicker from '../../components/admin/IconPicker'
+import { topicTemplateByKey } from '../../lib/topicTemplates'
 
 export default function AdminTopicEdit() {
   const { id } = useParams<{ id: string }>()
+  const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const { user } = useAuth()
   const { show } = useToast()
@@ -48,6 +50,19 @@ export default function AdminTopicEdit() {
         setLoading(false)
       })
   }, [id, isNew])
+
+  // Prefill from a template when creating a new topic via "Skapa ny från mall".
+  useEffect(() => {
+    if (!isNew) return
+    const tpl = topicTemplateByKey(searchParams.get('mall') ?? '')
+    if (!tpl || tpl.key === 'blank') return
+    setTitle(tpl.title)
+    setSlug(slugify(tpl.title))
+    setIntro(tpl.intro)
+    setContent(tpl.content)
+    setIcon(tpl.icon)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isNew])
 
   function handleTitleChange(value: string) {
     setTitle(value)
@@ -98,7 +113,7 @@ export default function AdminTopicEdit() {
   return (
     <div className="fade-in">
       <div className="admin-page-header">
-        <h1>{isNew ? 'Nytt ämne' : 'Redigera ämne'}</h1>
+        <h1>{isNew ? 'Nytt ämne' : 'Redigera ämne'}{!isNew && title && <span className="admin-edit-subject"> — {title}</span>}</h1>
         <Link to="/admin/amnen" className="btn btn-ghost btn-sm">← Tillbaka</Link>
       </div>
 
@@ -147,23 +162,9 @@ export default function AdminTopicEdit() {
             <h3>Detaljer</h3>
             <div className="form-group">
               <label className="form-label">Ikon</label>
-              <div className="icon-picker">
-                {TOPIC_ICONS.map(ic => (
-                  <button
-                    key={ic.key}
-                    type="button"
-                    className={icon === ic.key ? 'icon-picker-btn active' : 'icon-picker-btn'}
-                    title={ic.label}
-                    aria-label={ic.label}
-                    aria-pressed={icon === ic.key}
-                    onClick={() => setIcon(icon === ic.key ? '' : ic.key)}
-                  >
-                    <TopicIcon icon={ic.key} />
-                  </button>
-                ))}
-              </div>
+              <IconPicker value={icon || null} onChange={n => setIcon(n ?? '')} />
               <p className="text-muted" style={{ fontSize: '0.78rem', marginTop: 'var(--space-2)' }}>
-                Ikonen visas på ämnessidan och i ämneskorten. Tryck igen för att avmarkera.
+                Ikonen visas på ämnessidan och i ämneskorten.
               </p>
             </div>
             <div className="form-group">

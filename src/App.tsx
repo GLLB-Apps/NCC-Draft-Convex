@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './lib/auth'
 import { ToastProvider } from './lib/toast'
+import { ConfirmProvider } from './lib/confirm'
 import './index.css'
 import './components/public/public.css'
 import './components/admin/admin.css'
@@ -51,6 +52,7 @@ const AdminMessages = lazy(() => import('./pages/admin/AdminMessages'))
 const AdminSettings = lazy(() => import('./pages/admin/AdminSettings'))
 const AdminAdmins = lazy(() => import('./pages/admin/AdminAdmins'))
 const AdminBackground = lazy(() => import('./pages/admin/AdminBackground'))
+const AdminInternalDocs = lazy(() => import('./pages/admin/AdminInternalDocs'))
 
 function PageSpinner() {
   return <div className="loading"><div className="spinner" /></div>
@@ -71,6 +73,7 @@ export default function App() {
     <BrowserRouter>
       <AuthProvider>
         <ToastProvider>
+          <ConfirmProvider>
           <Suspense fallback={<PageSpinner />}>
             <Routes>
               {/* Public routes */}
@@ -117,6 +120,7 @@ export default function App() {
                 <Route path="faq" element={<AdminFaq />} />
                 <Route path="kontakter" element={<AdminContacts />} />
                 <Route path="meny" element={<AdminNavigation />} />
+                <Route path="interna-dokument" element={<AdminInternalDocs />} />
                 <Route path="sidor" element={<AdminPages />} />
                 <Route path="sidor/:slug" element={<AdminPageEdit />} />
                 <Route path="meddelanden" element={<AdminMessages />} />
@@ -128,6 +132,7 @@ export default function App() {
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
+          </ConfirmProvider>
         </ToastProvider>
       </AuthProvider>
     </BrowserRouter>

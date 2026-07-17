@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import type { ContactMessage } from '../../lib/types'
 import { supabase } from '../../lib/supabase'
 import { useToast } from '../../lib/toast'
+import { useConfirm } from '../../lib/confirm'
 import { formatDateShort, statusLabel, statusBadgeClass } from '../../lib/utils'
 
 export default function AdminMessages() {
@@ -10,6 +11,7 @@ export default function AdminMessages() {
   const [selected, setSelected] = useState<ContactMessage | null>(null)
   const [note, setNote] = useState('')
   const { show } = useToast()
+  const { confirm } = useConfirm()
 
   useEffect(() => {
     load()
@@ -47,7 +49,7 @@ export default function AdminMessages() {
   }
 
   async function remove(id: string) {
-    if (!confirm('Ta bort detta meddelande permanent?')) return
+    if (!(await confirm({ message: 'Ta bort detta meddelande permanent?', confirmText: 'Ta bort', danger: true }))) return
     const { error } = await supabase.from('contact_messages').delete().eq('id', id)
     if (error) show('Kunde inte ta bort', 'error')
     else { show('Borttaget', 'success'); setSelected(null); load() }

@@ -1,15 +1,19 @@
 import { useState, useEffect } from 'react'
 import type { CSSProperties } from 'react'
 import { Link, useLocation } from 'react-router-dom'
+import { LogOut } from 'lucide-react'
 import type { SiteSettings, NavigationItem } from '../../lib/types'
 import { supabase } from '../../lib/supabase'
+import { useAuth } from '../../lib/auth'
 import NavIcon from './NavIcon'
+import LucideIcon, { resolveIconName } from '../../lib/lucide'
 import CountUp from './CountUp'
 
 export default function Header({ settings }: { settings: SiteSettings | null }) {
   const [navItems, setNavItems] = useState<NavigationItem[]>([])
   const [mobileOpen, setMobileOpen] = useState(false)
   const location = useLocation()
+  const { user, signOut } = useAuth()
 
   useEffect(() => {
     supabase
@@ -73,7 +77,7 @@ export default function Header({ settings }: { settings: SiteSettings | null }) 
                   to={item.url}
                   className={location.pathname === item.url ? 'nav-link active' : 'nav-link'}
                 >
-                  <NavIcon path={item.url} />{item.label}
+                  {resolveIconName(item.icon) ? <LucideIcon icon={item.icon} className="nav-drawer-icon" /> : <NavIcon path={item.url} />}{item.label}
                 </Link>
               ) : null
             }
@@ -96,7 +100,7 @@ export default function Header({ settings }: { settings: SiteSettings | null }) 
                       to={c.url}
                       className={location.pathname === c.url ? 'nav-dropdown-link active' : 'nav-dropdown-link'}
                     >
-                      <NavIcon path={c.url} />{c.label}
+                      {resolveIconName(c.icon) ? <LucideIcon icon={c.icon} className="nav-drawer-icon" /> : <NavIcon path={c.url} />}{c.label}
                     </Link>
                   ))}
                 </div>
@@ -106,6 +110,18 @@ export default function Header({ settings }: { settings: SiteSettings | null }) 
         </nav>
 
         <div className="header-actions">
+          {user && (
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm header-logout"
+              onClick={() => signOut()}
+              title="Logga ut"
+              aria-label="Logga ut"
+            >
+              <LogOut size={16} aria-hidden="true" />
+              <span className="header-logout-label">Logga ut</span>
+            </button>
+          )}
           <a
             href={settings?.petition_url ?? '#'}
             className="btn btn-primary btn-sm"
@@ -150,7 +166,7 @@ export default function Header({ settings }: { settings: SiteSettings | null }) 
                     className={location.pathname === item.url ? 'mobile-nav-link active' : 'mobile-nav-link'}
                     tabIndex={mobileOpen ? 0 : -1}
                   >
-                    <span className="mobile-nav-link-icon"><NavIcon path={item.url} /></span>
+                    <span className="mobile-nav-link-icon">{resolveIconName(item.icon) ? <LucideIcon icon={item.icon} className="nav-drawer-icon" /> : <NavIcon path={item.url} />}</span>
                     <span className="mobile-nav-link-label">{item.label}</span>
                     <span className="mobile-nav-link-arrow" aria-hidden="true">→</span>
                   </Link>
@@ -166,7 +182,7 @@ export default function Header({ settings }: { settings: SiteSettings | null }) 
                           className={location.pathname === c.url ? 'mobile-nav-link mobile-nav-sublink active' : 'mobile-nav-link mobile-nav-sublink'}
                           tabIndex={mobileOpen ? 0 : -1}
                         >
-                          <span className="mobile-nav-link-icon"><NavIcon path={c.url} /></span>
+                          <span className="mobile-nav-link-icon">{resolveIconName(c.icon) ? <LucideIcon icon={c.icon} className="nav-drawer-icon" /> : <NavIcon path={c.url} />}</span>
                           <span className="mobile-nav-link-label">{c.label}</span>
                           <span className="mobile-nav-link-arrow" aria-hidden="true">→</span>
                         </Link>

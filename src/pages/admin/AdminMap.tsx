@@ -3,12 +3,14 @@ import { Link } from 'react-router-dom'
 import type { MapLocation } from '../../lib/types'
 import { supabase } from '../../lib/supabase'
 import { useToast } from '../../lib/toast'
+import { useConfirm } from '../../lib/confirm'
 import { mapPointTypeLabel, statusLabel, statusBadgeClass } from '../../lib/utils'
 
 export default function AdminMap() {
   const [points, setPoints] = useState<MapLocation[]>([])
   const [loading, setLoading] = useState(true)
   const { show } = useToast()
+  const { confirm } = useConfirm()
 
   useEffect(() => {
     load()
@@ -23,7 +25,7 @@ export default function AdminMap() {
   }
 
   async function remove(id: string) {
-    if (!confirm('Ta bort denna kartpunkt?')) return
+    if (!(await confirm({ message: 'Ta bort denna kartpunkt?', confirmText: 'Ta bort', danger: true }))) return
     const { error } = await supabase.from('map_locations').delete().eq('id', id)
     if (error) show('Kunde inte ta bort: ' + error.message, 'error')
     else { show('Kartpunkt borttagen', 'success'); load() }

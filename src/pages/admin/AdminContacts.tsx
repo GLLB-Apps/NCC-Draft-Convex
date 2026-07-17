@@ -1,13 +1,16 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import type { Contact } from '../../lib/types'
 import { supabase } from '../../lib/supabase'
 import { useToast } from '../../lib/toast'
+import { useConfirm } from '../../lib/confirm'
 
 export default function AdminContacts() {
   const [contacts, setContacts] = useState<Contact[]>([])
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState<Contact | null>(null)
   const { show } = useToast()
+  const { confirm } = useConfirm()
 
   useEffect(() => {
     load()
@@ -46,7 +49,7 @@ export default function AdminContacts() {
   }
 
   async function remove(id: string) {
-    if (!confirm('Ta bort denna kontaktperson?')) return
+    if (!(await confirm({ message: 'Ta bort denna kontaktperson?', confirmText: 'Ta bort', danger: true }))) return
     const { error } = await supabase.from('contacts').delete().eq('id', id)
     if (error) show('Kunde inte ta bort: ' + error.message, 'error')
     else { show('Borttagen', 'success'); load() }
@@ -58,7 +61,10 @@ export default function AdminContacts() {
     <div className="fade-in">
       <div className="admin-page-header">
         <h1>Kontaktpersoner</h1>
-        <button className="btn btn-primary btn-sm" onClick={() => setEditing({ id: '', name: '', role: '', email: '', phone: '', is_public: true, sort_order: contacts.length, created_at: '', updated_at: '' } as Contact)}>Ny kontakt</button>
+        <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
+          <Link to="/admin/meddelanden" className="btn btn-ghost btn-sm">Meddelanden →</Link>
+          <button className="btn btn-primary btn-sm" onClick={() => setEditing({ id: '', name: '', role: '', email: '', phone: '', is_public: true, sort_order: contacts.length, created_at: '', updated_at: '' } as Contact)}>Ny kontakt</button>
+        </div>
       </div>
 
       {editing && (

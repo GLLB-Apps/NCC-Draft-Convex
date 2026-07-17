@@ -22,7 +22,6 @@ const MENU_GROUPS: { title: string | null; items: MenuItem[] }[] = [
       { label: 'Karta', path: '/admin/karta', roles: ['superadmin', 'redaktor'] },
       { label: 'Tidslinje', path: '/admin/tidslinje', roles: ['superadmin', 'redaktor'] },
       { label: 'FAQ', path: '/admin/faq', roles: ['superadmin', 'redaktor'] },
-      { label: 'Bakgrundssidan', path: '/admin/bakgrund', roles: ['superadmin', 'redaktor'] },
     ],
   },
   {
@@ -37,6 +36,7 @@ const MENU_GROUPS: { title: string | null; items: MenuItem[] }[] = [
     title: 'Webbplats',
     items: [
       { label: 'Meny', path: '/admin/meny', roles: ['superadmin', 'redaktor'] },
+      { label: 'Interna dokument', path: '/admin/interna-dokument', roles: ['superadmin', 'redaktor'] },
       { label: 'Inställningar', path: '/admin/inställningar', roles: ['superadmin'] },
       { label: 'Administratörer', path: '/admin/administratörer', roles: ['superadmin'] },
     ],

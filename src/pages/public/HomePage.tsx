@@ -3,7 +3,7 @@ import { Link, useOutletContext } from 'react-router-dom'
 import type { SiteSettings, Topic, Post } from '../../lib/types'
 import { supabase } from '../../lib/supabase'
 import { formatDate, formatDateShort, truncate } from '../../lib/utils'
-import TopicIcon from '../../components/public/TopicIcon'
+import LucideIcon from '../../lib/lucide'
 import CountUp from '../../components/public/CountUp'
 import VoteWidget from '../../components/public/VoteWidget'
 import { usePage } from '../../lib/usePage'
@@ -133,7 +133,7 @@ export default function HomePage() {
                     {topic.featured_image ? (
                       <img src={topic.featured_image} alt="" style={{ width: 48, height: 48, borderRadius: 'var(--radius-md)', objectFit: 'cover' }} />
                     ) : (
-                      <TopicIcon icon={topic.icon} />
+                      <LucideIcon icon={topic.icon} className="topic-icon-svg" />
                     )}
                   </div>
                   <h3>{topic.title}</h3>

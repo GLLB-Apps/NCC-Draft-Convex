@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../lib/auth'
 import { useToast } from '../../lib/toast'
+import { useConfirm } from '../../lib/confirm'
 import { roleLabel } from '../../lib/utils'
 import type { UserRole } from '../../lib/types'
 
@@ -21,6 +22,7 @@ interface PendingUser {
 export default function AdminAdmins() {
   const { user: currentUser, role: currentRole } = useAuth()
   const { show } = useToast()
+  const { confirm } = useConfirm()
   const [admins, setAdmins] = useState<AdminUser[]>([])
   const [pending, setPending] = useState<PendingUser[]>([])
   const [loading, setLoading] = useState(true)
@@ -71,7 +73,7 @@ export default function AdminAdmins() {
 
   async function removeUser(userId: string) {
     if (userId === currentUser?.id) { show('Du kan inte ta bort dig själv', 'error'); return }
-    if (!confirm('Ta bort användaren helt ur systemet? Både roll och profil raderas.')) return
+    if (!(await confirm({ message: 'Ta bort användaren helt ur systemet? Både roll och profil raderas.', confirmText: 'Ta bort', danger: true }))) return
     const [roleRes, profileRes] = await Promise.all([
       supabase.from('user_roles').delete().eq('user_id', userId),
       supabase.from('profiles').delete().eq('id', userId),

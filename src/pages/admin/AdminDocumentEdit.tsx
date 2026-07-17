@@ -4,6 +4,14 @@ import type { DocumentItem, ContentStatus, SenderType } from '../../lib/types'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../lib/auth'
 import { useToast } from '../../lib/toast'
+import Dropzone from '../../components/admin/Dropzone'
+
+// Derive a human file-type label (e.g. "PDF") from a filename or URL.
+function fileTypeFromName(name: string): string {
+  const clean = name.split(/[?#]/)[0]
+  const ext = clean.includes('.') ? clean.split('.').pop() ?? '' : ''
+  return ext ? ext.toUpperCase() : ''
+}
 
 export default function AdminDocumentEdit() {
   const { id } = useParams<{ id: string }>()
@@ -76,7 +84,7 @@ export default function AdminDocumentEdit() {
   return (
     <div className="fade-in">
       <div className="admin-page-header">
-        <h1>{isNew ? 'Nytt dokument' : 'Redigera dokument'}</h1>
+        <h1>{isNew ? 'Nytt dokument' : 'Redigera dokument'}{!isNew && form.title && <span className="admin-edit-subject"> — {form.title}</span>}</h1>
         <Link to="/admin/dokument" className="btn btn-ghost btn-sm">← Tillbaka</Link>
       </div>
       <div className="admin-form-card">
@@ -88,15 +96,30 @@ export default function AdminDocumentEdit() {
           <label className="form-label" htmlFor="description">Beskrivning</label>
           <textarea id="description" className="form-textarea" rows={3} value={form.description} onChange={e => update('description', e.target.value)} />
         </div>
-        <div className="grid grid-2">
-          <div className="form-group">
-            <label className="form-label" htmlFor="file_url">Fil-URL</label>
-            <input id="file_url" className="form-input" type="url" value={form.file_url} onChange={e => update('file_url', e.target.value)} placeholder="Länk till PDF etc." />
-          </div>
-          <div className="form-group">
-            <label className="form-label" htmlFor="external_url">Extern länk</label>
-            <input id="external_url" className="form-input" type="url" value={form.external_url} onChange={e => update('external_url', e.target.value)} />
-          </div>
+        <div className="form-group">
+          <label className="form-label">Dokumentfil</label>
+          {form.file_url ? (
+            <div className="doc-file-chip">
+              <span className="doc-file-type">{form.file_type || 'FIL'}</span>
+              <a href={form.file_url} target="_blank" rel="noopener noreferrer" className="doc-file-link">Öppna uppladdad fil</a>
+              <button type="button" className="btn btn-ghost btn-xs" onClick={() => setForm(prev => ({ ...prev, file_url: '', file_type: '' }))}>Ta bort</button>
+            </div>
+          ) : (
+            <Dropzone
+              accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.odt,.ods,.txt,.csv,.zip,application/pdf"
+              label="Dra och släpp dokumentet här"
+              hint="PDF, Word, Excel m.fl. – eller klicka för att välja"
+              onUploaded={(url, file) => setForm(prev => ({ ...prev, file_url: url, file_type: fileTypeFromName(file.name) }))}
+              onError={msg => show('Uppladdning misslyckades: ' + msg, 'error')}
+            />
+          )}
+          <p className="text-muted" style={{ fontSize: '0.78rem', marginTop: 'var(--space-2)' }}>
+            Filformatet känns igen automatiskt. Har dokumentet redan en adress på webben kan du i stället ange en extern länk nedan.
+          </p>
+        </div>
+        <div className="form-group">
+          <label className="form-label" htmlFor="external_url">Extern länk (om filen ligger på annan webbplats)</label>
+          <input id="external_url" className="form-input" type="url" value={form.external_url} onChange={e => update('external_url', e.target.value)} placeholder="https://…" />
         </div>
         <div className="grid grid-2">
           <div className="form-group">
@@ -122,13 +145,9 @@ export default function AdminDocumentEdit() {
             </select>
           </div>
           <div className="form-group">
-            <label className="form-label" htmlFor="file_type">Filtyp</label>
-            <input id="file_type" className="form-input" type="text" value={form.file_type} onChange={e => update('file_type', e.target.value)} placeholder="PDF, DOCX etc." />
+            <label className="form-label" htmlFor="source">Källa</label>
+            <input id="source" className="form-input" type="text" value={form.source} onChange={e => update('source', e.target.value)} />
           </div>
-        </div>
-        <div className="form-group">
-          <label className="form-label" htmlFor="source">Källa</label>
-          <input id="source" className="form-input" type="text" value={form.source} onChange={e => update('source', e.target.value)} />
         </div>
         <div className="form-group">
           <label className="form-label" htmlFor="status">Status</label>
