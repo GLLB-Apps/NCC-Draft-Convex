@@ -6,6 +6,7 @@ import { formatDate, formatDateShort, truncate } from '../../lib/utils'
 import LucideIcon from '../../lib/lucide'
 import CountUp from '../../components/public/CountUp'
 import VoteWidget from '../../components/public/VoteWidget'
+import SponsorTicker from '../../components/public/SponsorTicker'
 import { usePage } from '../../lib/usePage'
 
 export default function HomePage() {
@@ -16,6 +17,7 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true)
 
   const summaryRef = useRef<HTMLElement>(null)
+  const heroBgRef = useRef<HTMLDivElement>(null)
   const [showWidget, setShowWidget] = useState(false)
 
   useEffect(() => {
@@ -29,15 +31,24 @@ export default function HomePage() {
     })
   }, [])
 
-  // Reveal the floating widget once the summary section reaches the top; then it follows.
+  // Reveal the floating widget once the summary section reaches the top; then it
+  // follows. Also drives a subtle parallax on the hero image (rAF-throttled).
   useEffect(() => {
-    const onScroll = () => {
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    let raf = 0
+    const update = () => {
+      raf = 0
       const el = summaryRef.current
       if (el) setShowWidget(el.getBoundingClientRect().top <= 120)
+      if (!reduce && heroBgRef.current) {
+        const y = Math.min(window.scrollY * 0.35, 140)
+        heroBgRef.current.style.transform = `translate3d(0, ${y}px, 0) scale(1.5)`
+      }
     }
-    onScroll()
+    const onScroll = () => { if (!raf) raf = requestAnimationFrame(update) }
+    update()
     window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
+    return () => { window.removeEventListener('scroll', onScroll); if (raf) cancelAnimationFrame(raf) }
   }, [loading])
 
   if (loading) return <div className="loading"><div className="spinner"></div></div>
@@ -48,7 +59,7 @@ export default function HomePage() {
       {/* Hero / översikt */}
       <section className="hero">
         {settings?.hero_image && (
-          <div className="hero-bg" style={{ backgroundImage: `url(${settings.hero_image})` }} />
+          <div ref={heroBgRef} className="hero-bg" style={{ backgroundImage: `url(${settings.hero_image})` }} />
         )}
         <div className="hero-content">
           <h1>{settings?.hero_title ?? 'Ett nytt stenbrott planeras i Rögleskogen'}</h1>
@@ -169,6 +180,9 @@ export default function HomePage() {
           </div>
         </section>
       )}
+
+      {/* Sponsorer (ticker) ovanför CTA */}
+      <SponsorTicker />
 
       {/* Hjälp till / CTA */}
       <section className="section">

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { supabase } from '../../lib/supabase'
+import { supabase, createSessionJwt } from '../../lib/supabase'
 import { useAuth } from '../../lib/auth'
 import { useToast } from '../../lib/toast'
 import { useConfirm } from '../../lib/confirm'
@@ -26,6 +26,9 @@ export default function AdminAdmins() {
   const [admins, setAdmins] = useState<AdminUser[]>([])
   const [pending, setPending] = useState<PendingUser[]>([])
   const [loading, setLoading] = useState(true)
+  const [pwdFor, setPwdFor] = useState<string | null>(null)
+  const [pwdValue, setPwdValue] = useState('')
+  const [pwdBusy, setPwdBusy] = useState(false)
 
   useEffect(() => { load() }, [])
 
@@ -69,6 +72,27 @@ export default function AdminAdmins() {
     const { error } = await supabase.from('user_roles').update({ role }).eq('user_id', userId)
     if (error) show('Kunde inte uppdatera: ' + error.message, 'error')
     else { show('Roll uppdaterad', 'success'); load() }
+  }
+
+  async function setUserPassword(userId: string) {
+    if (pwdValue.length < 8) { show('Lösenordet måste vara minst 8 tecken', 'error'); return }
+    setPwdBusy(true)
+    try {
+      const jwt = await createSessionJwt()
+      const res = await fetch('/api/set-user-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${jwt}` },
+        body: JSON.stringify({ userId, password: pwdValue }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) { show('Kunde inte ändra lösenord: ' + (data.error || res.status), 'error'); return }
+      show('Lösenordet uppdaterat', 'success')
+      setPwdFor(null); setPwdValue('')
+    } catch (e) {
+      show('Kunde inte ändra lösenord: ' + (e instanceof Error ? e.message : String(e)), 'error')
+    } finally {
+      setPwdBusy(false)
+    }
   }
 
   async function removeUser(userId: string) {
@@ -136,7 +160,7 @@ export default function AdminAdmins() {
       ) : (
         <div className="admin-list">
           {admins.map(a => (
-            <div key={a.user_id} className="admin-list-item">
+            <div key={a.user_id} className="admin-list-item" style={{ flexWrap: 'wrap' }}>
               <div className="admin-list-item-info">
                 <div className="admin-list-item-title">
                   {a.display_name ?? 'Okänd användare'}
@@ -162,10 +186,33 @@ export default function AdminAdmins() {
                   <option value="redaktor">Redaktör</option>
                   <option value="skribent">Skribent</option>
                 </select>
+                <button
+                  className="btn btn-ghost btn-sm"
+                  onClick={() => { setPwdFor(pwdFor === a.user_id ? null : a.user_id); setPwdValue('') }}
+                >
+                  Byt lösenord
+                </button>
                 {a.user_id !== currentUser?.id && (
                   <button className="btn btn-danger btn-sm" onClick={() => removeUser(a.user_id)}>Ta bort</button>
                 )}
               </div>
+              {pwdFor === a.user_id && (
+                <div className="admin-pwd-row">
+                  <input
+                    className="form-input"
+                    type="text"
+                    autoComplete="new-password"
+                    placeholder="Nytt lösenord (minst 8 tecken)"
+                    value={pwdValue}
+                    onChange={e => setPwdValue(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') setUserPassword(a.user_id) }}
+                  />
+                  <button className="btn btn-primary btn-sm" onClick={() => setUserPassword(a.user_id)} disabled={pwdBusy}>
+                    {pwdBusy ? 'Sparar…' : 'Spara lösenord'}
+                  </button>
+                  <button className="btn btn-ghost btn-sm" onClick={() => { setPwdFor(null); setPwdValue('') }}>Avbryt</button>
+                </div>
+              )}
             </div>
           ))}
         </div>

@@ -20,18 +20,67 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--space-4) var(--space-5);
+  padding: var(--space-2) var(--space-5);
   gap: var(--space-5);
+  position: relative;
+  transition: padding 0.32s cubic-bezier(0.22, 1, 0.36, 1);
 }
+/* On the start page at the top the header breathes a little more */
+.site-header.header-expanded .header-inner { padding-top: var(--space-4); padding-bottom: var(--space-4); }
 
 .site-logo {
   text-decoration: none;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.site-logo-name {
+  display: none;
+  font-family: var(--font-heading);
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--text-heading);
+  line-height: 1.15;
 }
 
 .logo-img {
   height: 40px;
   width: auto;
+}
+
+/* Logo badge: a rounded panel with the logo. Compact by default (sits inside
+   the header); on the start page at the top it grows and hangs down over the
+   hero, then retracts to the header's height on scroll. */
+.site-logo-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 64px;
+  margin-bottom: 0;
+  padding: var(--space-2);
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  position: relative;
+  z-index: 2;
+  transition: height 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+              margin-bottom 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+              padding 0.32s ease;
+}
+.site-logo-badge .logo-img {
+  height: 100%;
+  width: auto;
+  display: block;
+}
+.site-header.header-expanded .site-logo-badge {
+  height: 144px;
+  margin-bottom: -64px;
+  padding: var(--space-3);
+}
+@media (prefers-reduced-motion: reduce) {
+  .header-inner, .site-logo-badge { transition: none; }
 }
 
 .logo-text {
@@ -208,7 +257,7 @@
   bottom: 0;
   z-index: 200;
   width: min(86vw, 340px);
-  padding: calc(var(--space-8) + var(--space-3)) var(--space-5) var(--space-6);
+  padding: calc(var(--space-9) + var(--space-2)) var(--space-5) var(--space-6);
   background: #ffffff;
   color: var(--text);
   border-left: 1px solid var(--border);
@@ -357,11 +406,15 @@
   .mobile-nav { display: flex; }
   .mobile-nav-backdrop { display: block; }
   .logo-subtitle { display: none; }
+  .site-logo-name { display: block; }
 }
 
 @media (max-width: 480px) {
-  .header-inner { padding: var(--space-3) var(--space-4); }
+  .header-inner { padding: var(--space-2) var(--space-4); }
   .logo-name { font-size: 1.2rem; }
+  .site-logo-badge { height: 56px; }
+  .site-header.header-expanded .site-logo-badge { height: 104px; margin-bottom: -44px; }
+  .public-main > .container { padding-top: var(--space-7); }
 }
 
 /* Footer */
@@ -369,6 +422,45 @@
   background: var(--primary);
   color: rgba(255, 255, 255, 0.75);
   margin-top: auto;
+  position: relative;
+  overflow: hidden;
+}
+.site-footer > .footer-cta,
+.site-footer > .footer-inner,
+.site-footer > .footer-bottom { position: relative; z-index: 1; }
+.site-footer > .footer-cta { overflow: visible; }
+.footer-cta-inner { position: relative; z-index: 1; }
+
+/* Decorative filled logo mark on the right. It lives inside the CTA band, so it
+   paints above that band's background and its bottom edge, then spills down
+   into the lighter body. The text sits above it (z-index 1), so the band edge
+   never shows across the mark. Static. */
+.footer-logo-mark {
+  position: absolute;
+  right: 120px;
+  top: 44px;
+  height: 360px;
+  aspect-ratio: 1373 / 1675;
+  z-index: 0;
+  opacity: 0.15;
+  pointer-events: none;
+}
+.footer-logo-mark svg { width: 100%; height: 100%; display: block; }
+.footer-logo-mark path {
+  fill: rgba(255, 255, 255, 0.85) !important;
+  stroke: rgba(255, 255, 255, 0.85) !important;
+  stroke-width: 6px !important;
+}
+/* On mobile, drop it entirely below the CTA band */
+@media (max-width: 768px) {
+  .footer-logo-mark {
+    top: calc(100% + 24px);
+    right: auto;
+    left: 50%;
+    transform: translateX(-50%);
+    height: 240px;
+    opacity: 0.14;
+  }
 }
 
 /* Call-to-action band at the top of the footer */
@@ -521,8 +613,10 @@
 }
 
 /* Breathing room before the footer on flow pages (news detail, map, topics …).
-   Section-based pages like the home page manage their own trailing spacing. */
+   Section-based pages like the home page manage their own trailing spacing.
+   The top padding also clears the logo badge that hangs below the header. */
 .public-main > .container {
+  padding-top: var(--space-8);
   padding-bottom: var(--space-9);
 }
 
@@ -543,6 +637,18 @@
   background-size: cover;
   background-position: center;
   opacity: 0.55;
+  transform: scale(1.5);
+  transform-origin: center;
+  will-change: transform;
+  animation: heroZoom 1.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+/* Gentle initial zoom-settle for the hero photo */
+@keyframes heroZoom {
+  from { transform: scale(1.62); opacity: 0; }
+  to { transform: scale(1.5); opacity: 0.55; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-bg { transform: none; animation: none; will-change: auto; }
 }
 
 /* Dark scrim over the photo so the white hero text stays readable */
@@ -1185,6 +1291,59 @@
   border-radius: var(--radius-xl);
   padding: var(--space-8);
   text-align: center;
+}
+
+/* Sponsor ticker */
+.sponsor-section { padding: var(--space-8) 0; }
+.sponsor-heading {
+  text-align: center;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--text-muted);
+  margin-bottom: var(--space-5);
+}
+.sponsor-ticker {
+  position: relative;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent);
+}
+.sponsor-track {
+  display: flex;
+  width: max-content;
+  animation-name: sponsorScroll;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+.sponsor-ticker:hover .sponsor-track,
+.sponsor-ticker:focus-within .sponsor-track { animation-play-state: paused; }
+.sponsor-item {
+  flex: 0 0 auto;
+  width: clamp(150px, 25vw, 260px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 var(--space-5);
+}
+.sponsor-item img {
+  max-width: 100%;
+  max-height: 56px;
+  width: auto;
+  object-fit: contain;
+  filter: grayscale(1);
+  opacity: 0.7;
+  transition: filter var(--transition), opacity var(--transition);
+}
+.sponsor-item:hover img,
+.sponsor-item a:focus-visible img { filter: grayscale(0); opacity: 1; }
+@keyframes sponsorScroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sponsor-track { animation: none; }
+  .sponsor-ticker { overflow-x: auto; }
 }
 
 .cta-section h2 { margin-bottom: var(--space-3); }

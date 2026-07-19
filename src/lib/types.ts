@@ -246,6 +246,17 @@ export interface InternalDocument {
   updated_at: string
 }
 
+export interface Sponsor {
+  id: string
+  name: string
+  image_url: string | null
+  link_url: string | null
+  sort_order: number
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
 export interface NavigationItem {
   id: string
   label: string

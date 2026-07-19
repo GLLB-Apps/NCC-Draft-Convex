@@ -401,5 +401,55 @@ input, textarea, select {
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* First-load intro loader */
+.intro-loader {
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  opacity: 1;
+  transition: opacity 0.45s ease;
+}
+.intro-loader.is-hiding { opacity: 0; }
+.intro-loader-logo {
+  height: min(84vh, 720px);
+  aspect-ratio: 1373 / 1675;
+  transform-origin: center center;
+  will-change: transform;
+}
+.intro-loader-logo.is-morphing {
+  transition: transform 0.85s cubic-bezier(0.65, 0, 0.35, 1);
+}
+/* Keep the logo fully drawn + filled while it flies, regardless of where the
+   internal SVG animation was (prevents it blanking/restarting on morph). */
+.intro-loader-logo.is-morphing .shape {
+  animation: none !important;
+  stroke-dashoffset: 0 !important;
+  fill-opacity: 1 !important;
+}
+.intro-loader-logo svg,
+.intro-loader-logo img {
+  height: 100%;
+  width: 100%;
+  display: block;
+}
+
+/* Scroll-reveal entrance (applied site-wide by useScrollReveal) */
+.reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1), transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .reveal { opacity: 1 !important; transform: none !important; transition: none !important; }
+}
+
 /* Leaflet */
 .leaflet-container { border-radius: var(--radius-lg); z-index: 1; }

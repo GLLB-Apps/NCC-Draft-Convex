@@ -4,6 +4,7 @@ import { useAuth } from '../../lib/auth'
 import type { UserRole } from '../../lib/types'
 import { roleLabel } from '../../lib/utils'
 import { PAGES } from '../../lib/pages'
+import MobileAdminNotice from './MobileAdminNotice'
 
 type MenuItem = { label: string; path: string; roles: UserRole[] }
 const MENU_GROUPS: { title: string | null; items: MenuItem[] }[] = [
@@ -30,6 +31,7 @@ const MENU_GROUPS: { title: string | null; items: MenuItem[] }[] = [
       { label: 'Vittnesmål', path: '/admin/vittnesmal', roles: ['superadmin', 'redaktor'] },
       { label: 'Meddelanden', path: '/admin/meddelanden', roles: ['superadmin', 'redaktor'] },
       { label: 'Kontakter', path: '/admin/kontakter', roles: ['superadmin', 'redaktor'] },
+      { label: 'Sponsorer', path: '/admin/sponsorer', roles: ['superadmin', 'redaktor'] },
     ],
   },
   {
@@ -39,6 +41,12 @@ const MENU_GROUPS: { title: string | null; items: MenuItem[] }[] = [
       { label: 'Interna dokument', path: '/admin/interna-dokument', roles: ['superadmin', 'redaktor'] },
       { label: 'Inställningar', path: '/admin/inställningar', roles: ['superadmin'] },
       { label: 'Administratörer', path: '/admin/administratörer', roles: ['superadmin'] },
+    ],
+  },
+  {
+    title: 'Hjälp',
+    items: [
+      { label: 'Handbok', path: '/admin/handbok', roles: ['superadmin', 'redaktor', 'skribent'] },
     ],
   },
 ]
@@ -77,6 +85,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <div className="admin-layout">
+      <MobileAdminNotice />
       <aside className={`admin-sidebar ${sidebarOpen ? 'open' : ''}`}>
         <div className="admin-sidebar-header">
           <Link to="/admin" className="admin-logo">Rögleskogen</Link>

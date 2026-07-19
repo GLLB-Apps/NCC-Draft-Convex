@@ -148,6 +148,124 @@
 /* Name of the item being edited, shown after the generic edit-page heading */
 .admin-edit-subject { color: var(--text-muted); font-weight: 400; }
 
+/* "Best on desktop" notice — only on small screens across the admin area */
+.admin-mobile-notice { display: none; }
+@media (max-width: 768px) {
+  .admin-mobile-notice {
+    display: flex;
+    position: fixed;
+    inset: 0;
+    z-index: 5000;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-5);
+    background: linear-gradient(160deg, #1e3f2a 0%, #2d5a3d 60%, #24492f 100%);
+  }
+}
+.admin-mobile-notice-card {
+  max-width: 420px;
+  text-align: center;
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  padding: var(--space-7) var(--space-6);
+  box-shadow: var(--shadow-lg);
+}
+.admin-mobile-notice-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: var(--primary-bg, rgba(45, 90, 61, 0.1));
+  color: var(--primary);
+  margin-bottom: var(--space-4);
+}
+.admin-mobile-notice-card h2 { margin: 0 0 var(--space-3); }
+.admin-mobile-notice-card p { color: var(--text-muted); line-height: 1.6; margin: 0 0 var(--space-5); }
+
+/* Handbook */
+.handbook-intro { max-width: 70ch; margin-bottom: var(--space-6); font-size: 0.95rem; line-height: 1.7; }
+.handbook-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: var(--space-4);
+  align-items: start;
+}
+.handbook-card h2 {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 1.05rem;
+  margin: 0 0 var(--space-3);
+}
+.handbook-card h2 svg { color: var(--primary); flex-shrink: 0; }
+.handbook-card p { color: var(--text-muted); line-height: 1.65; margin: 0 0 var(--space-3); }
+.handbook-card p:last-child { margin-bottom: 0; }
+.handbook-card ul { margin: 0; padding-left: var(--space-5); display: flex; flex-direction: column; gap: var(--space-2); }
+.handbook-card li { color: var(--text-muted); line-height: 1.55; }
+.handbook-card strong { color: var(--text); }
+.handbook-tip {
+  background: var(--bg-alt);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  font-size: 0.88rem;
+}
+.handbook-inline-icon { vertical-align: -2px; color: var(--primary); }
+.handbook-card kbd {
+  font-family: monospace;
+  font-size: 0.82em;
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 1px 5px;
+}
+
+/* Change-password inline row (Administratörer) */
+.admin-pwd-row {
+  flex-basis: 100%;
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-light);
+}
+.admin-pwd-row .form-input { flex: 1; }
+.admin-pwd-row .btn { flex-shrink: 0; }
+
+/* Sponsors admin */
+.sponsor-row-order { display: flex; flex-direction: column; gap: 2px; flex-shrink: 0; }
+.sponsor-row-logo {
+  width: 90px;
+  height: 48px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-alt);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.sponsor-row-logo img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.sponsor-row-noimg { font-size: 0.7rem; color: var(--text-light); }
+.admin-list-item.is-inactive { opacity: 0.6; }
+.sponsor-edit-image {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.sponsor-edit-image img {
+  max-height: 60px;
+  max-width: 200px;
+  object-fit: contain;
+  background: var(--bg-alt);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2);
+}
+
 /* Admin */
 .admin-layout {
   display: flex;
@@ -404,6 +522,25 @@
 }
 
 .admin-login-brand-inner { max-width: 440px; margin: auto 0; position: relative; z-index: 1; }
+
+/* Filled logo watermark as a design element on the brand panel */
+.admin-login-logo {
+  position: absolute;
+  right: 40px;
+  bottom: -30px;
+  height: 540px;
+  aspect-ratio: 1373 / 1675;
+  z-index: 0;
+  opacity: 0.13;
+  pointer-events: none;
+}
+.admin-login-logo svg { width: 100%; height: 100%; display: block; }
+.admin-login-logo path {
+  fill: #ffffff !important;
+  stroke: #ffffff !important;
+  stroke-width: 4px !important;
+}
+.admin-login-brand-foot { position: relative; z-index: 1; }
 
 .admin-login-eyebrow {
   display: inline-block;

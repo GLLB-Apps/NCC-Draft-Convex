@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { SiteSettings } from '../../lib/types'
 
@@ -5,10 +6,27 @@ export default function Footer({ settings }: { settings: SiteSettings | null }) 
   const petition = settings?.petition_url ?? '#'
   const social = settings?.social_links ? Object.entries(settings.social_links) : []
 
+  // Static white outline of the logo as a decorative mark on the right.
+  const [logoOutline, setLogoOutline] = useState('')
+  useEffect(() => {
+    let cancelled = false
+    fetch('/site_logo/ncc_rs_logo.svg')
+      .then(r => r.text())
+      .then(t => { if (!cancelled) setLogoOutline(t.slice(Math.max(0, t.indexOf('<svg')))) })
+      .catch(() => { /* decorative only */ })
+    return () => { cancelled = true }
+  }, [])
+
   return (
     <footer className="site-footer">
       {/* Call to action band */}
       <div className="footer-cta">
+        {/* Filled logo mark: lives inside the CTA band so it paints above that
+            band's background + bottom edge, then spills down into the lighter
+            body. Text sits above it, so the band edge never shows across it. */}
+        {logoOutline && (
+          <div className="footer-logo-mark" aria-hidden="true" dangerouslySetInnerHTML={{ __html: logoOutline }} />
+        )}
         <div className="container footer-cta-inner">
           <div>
             <h3>Var med och gör skillnad</h3>

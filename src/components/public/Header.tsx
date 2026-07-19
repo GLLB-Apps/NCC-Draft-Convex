@@ -12,8 +12,17 @@ import CountUp from './CountUp'
 export default function Header({ settings }: { settings: SiteSettings | null }) {
   const [navItems, setNavItems] = useState<NavigationItem[]>([])
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [scrolled, setScrolled] = useState(false)
   const location = useLocation()
   const { user, signOut } = useAuth()
+
+  // When scrolled, the logo badge retracts to the header's current height.
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8)
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
 
   useEffect(() => {
     supabase
@@ -30,6 +39,10 @@ export default function Header({ settings }: { settings: SiteSettings | null }) 
 
   const topLevel = navItems.filter(i => !i.parent_id)
   const childrenOf = (id: string) => navItems.filter(i => i.parent_id === id)
+  // The logo badge hangs down below the header at the top of any page, and
+  // retracts to a compact size once scrolled or when the mobile menu is open
+  // (so it doesn't cover the first drawer item).
+  const expanded = !scrolled && !mobileOpen
 
   // Lock body scroll while the drawer is open.
   useEffect(() => {
@@ -47,7 +60,7 @@ export default function Header({ settings }: { settings: SiteSettings | null }) 
 
   return (
     <>
-    <header className="site-header">
+    <header className={expanded ? 'site-header header-expanded' : 'site-header'}>
       {settings?.status_message && (
         <div className="status-bar">
           <div className="container">
@@ -58,7 +71,12 @@ export default function Header({ settings }: { settings: SiteSettings | null }) 
       <div className="container header-inner">
         <Link to="/" className="site-logo" aria-label={settings?.site_name ?? 'Rögleskogen'}>
           {settings?.logo_url ? (
-            <img src={settings.logo_url} alt={settings.site_name} className="logo-img" />
+            <>
+              <span className="site-logo-badge">
+                <img src={settings.logo_url} alt={settings.site_name} className="logo-img" />
+              </span>
+              <span className="site-logo-name">{settings?.site_name ?? 'Rögleskogen'}</span>
+            </>
           ) : (
             <span className="logo-text">
               <span className="logo-name">{settings?.site_name ?? 'Rögleskogen'}</span>

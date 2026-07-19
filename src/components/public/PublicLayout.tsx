@@ -7,10 +7,12 @@ import EditPageButton from './EditPageButton'
 import type { SiteSettings } from '../../lib/types'
 import { supabase } from '../../lib/supabase'
 import { EditLinkProvider } from '../../lib/editLink'
+import { useScrollReveal } from '../../lib/useScrollReveal'
 
 export default function PublicLayout() {
   const [settings, setSettings] = useState<SiteSettings | null>(null)
   const isHome = useLocation().pathname === '/'
+  useScrollReveal()
 
   useEffect(() => {
     supabase

@@ -35,6 +35,7 @@ export const PAGES: PageConfig[] = [
       { key: 'topics_heading', label: 'Ämnesområden: rubrik', default: 'Ämnesområden' },
       { key: 'topics_intro', label: 'Ämnesområden: text', default: 'Utforska olika aspekter av den planerade bergtäkten.' },
       { key: 'news_heading', label: 'Nyheter: rubrik', default: 'Senaste nytt' },
+      { key: 'sponsors_heading', label: 'Sponsorer: rubrik', default: 'Med stöd av' },
       { key: 'cta_heading', label: 'Uppmaning: rubrik', default: 'Hjälp till att sprida informationen' },
       { key: 'cta_text', label: 'Uppmaning: text', multiline: true, default: 'Skriv under namninsamlingen, dela informationen eller lämna ditt vittnesmål.' },
     ],

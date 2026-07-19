@@ -1,12 +1,23 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../lib/auth'
 import { useToast } from '../../lib/toast'
+import MobileAdminNotice from '../../components/admin/MobileAdminNotice'
 
 export default function AdminLogin() {
   const { session, loading } = useAuth()
   const { show } = useToast()
+
+  const [logo, setLogo] = useState('')
+  useEffect(() => {
+    let cancelled = false
+    fetch('/site_logo/ncc_rs_logo.svg')
+      .then(r => r.text())
+      .then(t => { if (!cancelled) setLogo(t.slice(Math.max(0, t.indexOf('<svg')))) })
+      .catch(() => { /* decorative only */ })
+    return () => { cancelled = true }
+  }, [])
 
   const [mode, setMode] = useState<'login' | 'signup'>('login')
   const [email, setEmail] = useState('')
@@ -45,8 +56,12 @@ export default function AdminLogin() {
 
   return (
     <div className="admin-login-page">
+      <MobileAdminNotice />
       <div className="admin-login-split">
         <aside className="admin-login-brand">
+          {logo && (
+            <div className="admin-login-logo" aria-hidden="true" dangerouslySetInnerHTML={{ __html: logo }} />
+          )}
           <div className="admin-login-brand-inner">
             <span className="admin-login-eyebrow">Medborgarinitiativ</span>
             <h1 className="admin-login-brand-title">Rögleskogen</h1>

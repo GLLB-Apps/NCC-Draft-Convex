@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './lib/auth'
 import { ToastProvider } from './lib/toast'
 import { ConfirmProvider } from './lib/confirm'
+import IntroLoader from './components/IntroLoader'
 import './index.css'
 import './components/public/public.css'
 import './components/admin/admin.css'
@@ -53,6 +54,8 @@ const AdminSettings = lazy(() => import('./pages/admin/AdminSettings'))
 const AdminAdmins = lazy(() => import('./pages/admin/AdminAdmins'))
 const AdminBackground = lazy(() => import('./pages/admin/AdminBackground'))
 const AdminInternalDocs = lazy(() => import('./pages/admin/AdminInternalDocs'))
+const AdminSponsors = lazy(() => import('./pages/admin/AdminSponsors'))
+const AdminHandbook = lazy(() => import('./pages/admin/AdminHandbook'))
 
 function PageSpinner() {
   return <div className="loading"><div className="spinner" /></div>
@@ -71,6 +74,7 @@ function NotFound() {
 export default function App() {
   return (
     <BrowserRouter>
+      <IntroLoader />
       <AuthProvider>
         <ToastProvider>
           <ConfirmProvider>
@@ -119,6 +123,7 @@ export default function App() {
                 <Route path="tidslinje/:id" element={<AdminTimelineEdit />} />
                 <Route path="faq" element={<AdminFaq />} />
                 <Route path="kontakter" element={<AdminContacts />} />
+                <Route path="sponsorer" element={<AdminSponsors />} />
                 <Route path="meny" element={<AdminNavigation />} />
                 <Route path="interna-dokument" element={<AdminInternalDocs />} />
                 <Route path="sidor" element={<AdminPages />} />
@@ -127,6 +132,7 @@ export default function App() {
                 <Route path="bakgrund" element={<AdminBackground />} />
                 <Route path="inställningar" element={<AdminSettings />} />
                 <Route path="administratörer" element={<AdminAdmins />} />
+                <Route path="handbok" element={<AdminHandbook />} />
               </Route>
 
               <Route path="*" element={<NotFound />} />

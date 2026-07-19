@@ -222,3 +222,10 @@ export const supabase = {
   from: (table: string) => new QueryBuilder(table),
   auth,
 }
+
+// Mint a short-lived JWT for the current session, so serverless functions can
+// verify the caller's identity/permissions (e.g. changing another user's password).
+export async function createSessionJwt(): Promise<string> {
+  const { jwt } = await account.createJWT()
+  return jwt
+}
