@@ -19,14 +19,14 @@ export default function Footer({ settings }: { settings: SiteSettings | null }) 
 
   return (
     <footer className="site-footer">
+      {/* Filled logo mark in the lighter footer body (not on the CTA band).
+          It sits behind the content; any part reaching the CTA is hidden by the
+          CTA's opaque background. */}
+      {logoOutline && (
+        <div className="footer-logo-mark" aria-hidden="true" dangerouslySetInnerHTML={{ __html: logoOutline }} />
+      )}
       {/* Call to action band */}
       <div className="footer-cta">
-        {/* Filled logo mark: lives inside the CTA band so it paints above that
-            band's background + bottom edge, then spills down into the lighter
-            body. Text sits above it, so the band edge never shows across it. */}
-        {logoOutline && (
-          <div className="footer-logo-mark" aria-hidden="true" dangerouslySetInnerHTML={{ __html: logoOutline }} />
-        )}
         <div className="container footer-cta-inner">
           <div>
             <h3>Var med och gör skillnad</h3>

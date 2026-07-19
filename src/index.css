@@ -415,7 +415,9 @@ input, textarea, select {
 }
 .intro-loader.is-hiding { opacity: 0; }
 .intro-loader-logo {
-  height: min(84vh, 720px);
+  /* Constrain by height AND width (portrait logo) so it never clips on narrow
+     screens. 76vw * 1.22 is the height at which the width is ~76vw. */
+  height: min(84vh, calc(76vw * 1.22), 720px);
   aspect-ratio: 1373 / 1675;
   transform-origin: center center;
   will-change: transform;

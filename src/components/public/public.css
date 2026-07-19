@@ -428,18 +428,16 @@
 .site-footer > .footer-cta,
 .site-footer > .footer-inner,
 .site-footer > .footer-bottom { position: relative; z-index: 1; }
-.site-footer > .footer-cta { overflow: visible; }
 .footer-cta-inner { position: relative; z-index: 1; }
 
-/* Decorative filled logo mark on the right. It lives inside the CTA band, so it
-   paints above that band's background and its bottom edge, then spills down
-   into the lighter body. The text sits above it (z-index 1), so the band edge
-   never shows across the mark. Static. */
+/* Decorative filled logo mark in the lighter footer body (not on the CTA).
+   z-index 0 keeps it behind the content; any part reaching the CTA is hidden by
+   the CTA's opaque background. Static. */
 .footer-logo-mark {
   position: absolute;
-  right: 120px;
-  top: 44px;
-  height: 360px;
+  right: 60px;
+  bottom: 64px;
+  height: 230px;
   aspect-ratio: 1373 / 1675;
   z-index: 0;
   opacity: 0.15;
@@ -451,15 +449,12 @@
   stroke: rgba(255, 255, 255, 0.85) !important;
   stroke-width: 6px !important;
 }
-/* On mobile, drop it entirely below the CTA band */
 @media (max-width: 768px) {
   .footer-logo-mark {
-    top: calc(100% + 24px);
     right: auto;
     left: 50%;
     transform: translateX(-50%);
-    height: 240px;
-    opacity: 0.14;
+    height: 170px;
   }
 }
 
