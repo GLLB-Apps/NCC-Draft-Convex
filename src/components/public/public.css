@@ -451,10 +451,11 @@
 }
 @media (max-width: 768px) {
   .footer-logo-mark {
-    right: auto;
-    left: 50%;
-    transform: translateX(-50%);
-    height: 170px;
+    right: 24px;
+    left: auto;
+    transform: none;
+    bottom: 140px;
+    height: 210px;
   }
 }
 
@@ -469,7 +470,8 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-5);
-  padding: var(--space-6) 0;
+  padding-top: var(--space-6);
+  padding-bottom: var(--space-6);
 }
 
 .footer-cta h3 { color: #fff; font-size: 1.25rem; margin-bottom: var(--space-1); }
