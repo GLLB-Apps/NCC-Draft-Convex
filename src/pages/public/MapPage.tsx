@@ -1,11 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import PageHeader from '../../components/public/PageHeader'
-import type { MapLocation, Testimony } from '../../lib/types'
+import type { MapLocation, MapArea, Testimony } from '../../lib/types'
 import { supabase } from '../../lib/supabase'
 import MapPreview from '../../components/public/MapPreview'
 import TestimonyMap from '../../components/public/TestimonyMap'
-import { mapPointTypeLabel, mapPointTypeIcon } from '../../lib/utils'
+import { mapPointTypeLabel, mapPointTypeIcon, areaBounds } from '../../lib/utils'
 import { usePage } from '../../lib/usePage'
 
 const COLORS: Record<string, string> = {
@@ -23,9 +23,11 @@ const COLORS: Record<string, string> = {
 
 export default function MapPage() {
   const [points, setPoints] = useState<MapLocation[]>([])
+  const [areas, setAreas] = useState<MapArea[]>([])
   const [testimonies, setTestimonies] = useState<Testimony[]>([])
   const [loading, setLoading] = useState(true)
   const [activeTypes, setActiveTypes] = useState<Set<string>>(new Set())
+  const [hiddenAreas, setHiddenAreas] = useState<Set<string>>(new Set())
   const [tab, setTab] = useState<'area' | 'testimonies'>('area')
   const [selectedT, setSelectedT] = useState<string | null>(null)
   const page = usePage('karta')
@@ -34,9 +36,11 @@ export default function MapPage() {
   useEffect(() => {
     Promise.all([
       supabase.from('map_locations').select('*').eq('status', 'published'),
+      supabase.from('map_areas').select('*').eq('status', 'published').order('sort_order'),
       supabase.from('testimonies').select('*').eq('status', 'approved').order('published_at', { ascending: false }),
-    ]).then(([p, t]) => {
+    ]).then(([p, a, t]) => {
       setPoints(p.data as MapLocation[] ?? [])
+      setAreas((a.data as MapArea[] ?? []).filter(x => Array.isArray(x.points) && x.points.length >= 3))
       setTestimonies((t.data as Testimony[] ?? []).filter(x => x.map_lat != null && x.map_lng != null))
       setLoading(false)
     })
@@ -49,6 +53,19 @@ export default function MapPage() {
   }, [searchParams])
 
   const filteredPoints = activeTypes.size === 0 ? points : points.filter(p => activeTypes.has(p.point_type))
+
+  // useMemo hindrar att polygonerna ritas om vid varje render.
+  const visibleAreas = useMemo(() => areas.filter(a => !hiddenAreas.has(a.id)), [areas, hiddenAreas])
+  const fitPoints = useMemo(() => areaBounds(areas), [areas])
+
+  function toggleArea(id: string) {
+    setHiddenAreas(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
 
   function toggleType(type: string) {
     setActiveTypes(prev => {
@@ -77,14 +94,35 @@ export default function MapPage() {
       {loading ? (
         <div className="loading"><div className="spinner"></div></div>
       ) : tab === 'area' ? (
-        points.length === 0 ? (
-          <div className="empty-state"><p>Inga kartpunkter har publicerats ännu.</p></div>
+        areas.length === 0 && points.length === 0 ? (
+          <div className="empty-state"><p>Inget kartinnehåll har publicerats ännu.</p></div>
         ) : (
           <div className="map-layout map-layout-left fade-in">
-            {uniqueTypes.length > 0 && (
-              <aside className="map-filters">
-                <h2 className="map-filters-title">{page.text('layers_heading')}</h2>
-                <p className="map-filters-hint">{page.text('layers_hint')}</p>
+            <aside className="map-filters">
+              <h2 className="map-filters-title">{page.text('layers_heading')}</h2>
+              <p className="map-filters-hint">{page.text('layers_hint')}</p>
+
+              {areas.map(area => {
+                const active = !hiddenAreas.has(area.id)
+                return (
+                  <button
+                    key={area.id}
+                    className={active ? 'map-filter' : 'map-filter is-off'}
+                    onClick={() => toggleArea(area.id)}
+                    aria-pressed={active}
+                  >
+                    <span
+                      className="map-area-swatch"
+                      style={{ borderColor: area.color, borderStyle: area.line_style === 'dashed' ? 'dashed' : 'solid' }}
+                      aria-hidden="true"
+                    />
+                    <span className="map-filter-label">{area.title}</span>
+                  </button>
+                )
+              })}
+
+              {uniqueTypes.length > 0 && (
+                <>
                 {uniqueTypes.map(type => {
                   const active = activeTypes.size === 0 || activeTypes.has(type)
                   const count = points.filter(p => p.point_type === type).length
@@ -99,10 +137,11 @@ export default function MapPage() {
                 {activeTypes.size > 0 && (
                   <button className="map-filter-reset" onClick={() => setActiveTypes(new Set())}>Visa alla punkter</button>
                 )}
-              </aside>
-            )}
+                </>
+              )}
+            </aside>
             <div className="map-container">
-              <MapPreview points={filteredPoints} height={520} />
+              <MapPreview points={filteredPoints} areas={visibleAreas} height={520} />
             </div>
           </div>
         )
@@ -128,7 +167,7 @@ export default function MapPage() {
               ))}
             </aside>
             <div className="testimony-map">
-              <TestimonyMap testimonies={testimonies} selectedId={selectedT} onSelect={setSelectedT} height={520} />
+              <TestimonyMap testimonies={testimonies} selectedId={selectedT} onSelect={setSelectedT} fitPoints={fitPoints} height={520} />
             </div>
           </div>
         )

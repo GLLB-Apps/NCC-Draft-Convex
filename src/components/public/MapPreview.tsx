@@ -1,8 +1,8 @@
 import { useEffect, useRef } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import type { MapLocation } from '../../lib/types'
-import { mapPointTypeLabel, distanceMeters, formatDistance } from '../../lib/utils'
+import type { MapLocation, MapArea } from '../../lib/types'
+import { mapPointTypeLabel, distanceMeters, formatDistance, MAP_FIT_PADDING, areaBounds } from '../../lib/utils'
 
 const COLORS: Record<string, string> = {
   work_area: '#b94a3d',
@@ -17,9 +17,20 @@ const COLORS: Record<string, string> = {
   testimony_point: '#2d5a3d',
 }
 
-export default function MapPreview({ points, height = 350 }: { points: MapLocation[]; height?: number }) {
+interface Props {
+  points: MapLocation[]
+  /** Områdespolygoner som ska ritas. Redan filtrerade av anroparen. */
+  areas?: MapArea[]
+  height?: number
+}
+
+export default function MapPreview({ points, areas = [], height = 350 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<L.Map | null>(null)
+  // Punkter och områden hålls i egna lagergrupper så att uppdatering av det ena
+  // inte rensar bort det andra (L.Polygon ärver från L.Polyline).
+  const pointLayerRef = useRef<L.LayerGroup | null>(null)
+  const areaLayerRef = useRef<L.LayerGroup | null>(null)
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return
@@ -35,20 +46,51 @@ export default function MapPreview({ points, height = 350 }: { points: MapLocati
     }).addTo(map)
 
     mapRef.current = map
+    areaLayerRef.current = L.layerGroup().addTo(map)
+    pointLayerRef.current = L.layerGroup().addTo(map)
+
+    // Utsnitt: visa samtliga områden vid start, oavsett vilka lager som är på.
+    const fit = areaBounds(areas)
+    if (fit.length) map.fitBounds(L.latLngBounds(fit), { padding: MAP_FIT_PADDING })
 
     return () => {
       map.remove()
       mapRef.current = null
+      pointLayerRef.current = null
+      areaLayerRef.current = null
     }
   }, [])
 
   useEffect(() => {
-    const map = mapRef.current
-    if (!map) return
+    const group = areaLayerRef.current
+    if (!group) return
+    group.clearLayers()
 
-    map.eachLayer(layer => {
-      if (layer instanceof L.Marker || layer instanceof L.Polyline) map.removeLayer(layer)
+    areas.forEach(area => {
+      if (area.points.length < 3) return
+      L.polygon(area.points, {
+        color: area.color,
+        weight: 3,
+        dashArray: area.line_style === 'dashed' ? '8 6' : undefined,
+        opacity: 0.95,
+        fillColor: area.color,
+        fillOpacity: area.fill_opacity,
+      })
+        .bindTooltip(area.title, { sticky: true })
+        .bindPopup(`
+          <strong>${area.title}</strong>
+          ${area.description ? `<br/><span style="font-size:0.85rem;">${area.description}</span>` : ''}
+        `)
+        .addTo(group)
     })
+  }, [areas])
+
+  useEffect(() => {
+    const map = mapRef.current
+    const group = pointLayerRef.current
+    if (!map || !group) return
+
+    group.clearLayers()
 
     // Reference point(s) for "distance to residence": nearest quarry/work area.
     const quarryPoints = points.filter(p => p.point_type === 'quarry_area' || p.point_type === 'work_area')
@@ -80,12 +122,12 @@ export default function MapPreview({ points, height = 350 }: { points: MapLocati
           L.polyline([[point.lat, point.lng], [nq.point.lat, nq.point.lng]], {
             color: '#b94a3d', weight: 2, dashArray: '6 6', opacity: 0.75,
           })
-            .addTo(map)
+            .addTo(group)
             .bindTooltip(`≈ ${formatDistance(nq.dist)} till planerat täktområde`, { sticky: true })
         }
       }
 
-      const marker = L.marker([point.lat, point.lng], { icon }).addTo(map)
+      const marker = L.marker([point.lat, point.lng], { icon }).addTo(group)
       marker.bindPopup(`
         <strong>${point.title}</strong><br/>
         <span style="font-size:0.85rem;color:#666;">${mapPointTypeLabel(point.point_type)}</span>

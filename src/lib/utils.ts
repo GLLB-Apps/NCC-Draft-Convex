@@ -1,3 +1,5 @@
+import type { LatLngTuple } from './types'
+
 export function slugify(text: string): string {
   return text
     .toLowerCase()
@@ -147,4 +149,48 @@ export function statusBadgeClass(status: string): string {
 export function truncate(text: string, maxLen: number): string {
   if (text.length <= maxLen) return text
   return text.substring(0, maxLen).replace(/\s+\S*$/, '') + '…'
+}
+
+/** Padding för fitBounds, delad så att kartorna ramas in likadant. */
+export const MAP_FIT_PADDING: [number, number] = [24, 24]
+
+/** Alla hörn från angivna områden, för att rama in en karta kring dem. */
+export function areaBounds(areas: { points: LatLngTuple[] }[]): LatLngTuple[] {
+  return areas.flatMap(a => a.points)
+}
+
+/**
+ * Tolkar inklistrade koordinater, en per rad som "latitud, longitud" — formatet
+ * man får när man kopierar en punkt från Google Maps. Rader som inte går att
+ * tolka rapporteras tillbaka så att redaktören kan rätta dem.
+ */
+export function parseCoordinateText(text: string): { points: LatLngTuple[]; errors: string[] } {
+  const points: LatLngTuple[] = []
+  const errors: string[] = []
+  text.split(/\r?\n/).forEach((raw, i) => {
+    const line = raw.trim()
+    if (!line) return
+    const m = line.match(/^\[?\s*(-?\d+(?:[.,]\d+)?)\s*[,;]\s*(-?\d+(?:[.,]\d+)?)\s*\]?,?$/)
+    if (!m) { errors.push(`Rad ${i + 1}: kunde inte tolkas — "${line}"`); return }
+    const lat = Number(m[1].replace(',', '.'))
+    const lng = Number(m[2].replace(',', '.'))
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) { errors.push(`Rad ${i + 1}: ogiltigt tal`); return }
+    if (lat < -90 || lat > 90) { errors.push(`Rad ${i + 1}: latitud ${lat} ligger utanför -90–90. Är lat och long omkastade?`); return }
+    if (lng < -180 || lng > 180) { errors.push(`Rad ${i + 1}: longitud ${lng} ligger utanför -180–180`); return }
+    points.push([lat, lng])
+  })
+  return { points, errors }
+}
+
+/** Ungefärlig area i km², för att visa storleken på ett ritat område. */
+export function polygonAreaKm2(points: LatLngTuple[]): number {
+  if (points.length < 3) return 0
+  const latRad = (points[0][0] * Math.PI) / 180
+  const x = (p: LatLngTuple) => p[1] * Math.cos(latRad)
+  let sum = 0
+  for (let i = 0; i < points.length; i++) {
+    const a = points[i], b = points[(i + 1) % points.length]
+    sum += x(a) * b[0] - x(b) * a[0]
+  }
+  return Math.abs(sum / 2) * 111.32 ** 2
 }

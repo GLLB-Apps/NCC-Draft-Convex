@@ -1507,3 +1507,339 @@
   gap: var(--space-3);
   flex-wrap: wrap;
 }
+
+/* Polygonredigerare (admin → Karta → Polygoner) */
+.map-editor-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.map-editor-stat {
+  margin-left: auto;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+/* Numrerat hörn på kartan. Pointer-events på barnet så att hela ytan är klickbar. */
+.map-vertex {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--bg-card);
+  border: 2px solid var(--primary);
+  color: var(--text);
+  font-size: 0.7rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+}
+
+.map-paste-panel {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  margin-bottom: var(--space-5);
+  background: var(--bg-alt);
+}
+
+.map-paste-errors {
+  margin: var(--space-2) 0 0;
+  padding-left: var(--space-5);
+  font-size: 0.85rem;
+  color: var(--error, #b94a3d);
+}
+
+.map-color-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.map-color-chip {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  transition: transform var(--transition), border-color var(--transition);
+}
+
+.map-color-chip:hover { transform: scale(1.08); }
+.map-color-chip.is-active { border-color: var(--text); }
+
+.map-color-custom {
+  width: 44px;
+  height: 32px;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  cursor: pointer;
+}
+
+.admin-area-swatch {
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: var(--space-2);
+}
+
+.form-hint-warning { color: var(--warning, #b8860b); }
+
+/* Notisklocka i topbaren */
+.admin-bell { position: relative; }
+
+.admin-bell-button {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background var(--transition);
+}
+
+.admin-bell-button:hover { background: var(--bg-alt); }
+
+.admin-bell-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--error, #b94a3d);
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+}
+
+.admin-bell-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: min(380px, calc(100vw - 2rem));
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg, 0 8px 30px rgba(0, 0, 0, 0.18));
+  z-index: 60;
+  overflow: hidden;
+}
+
+.admin-bell-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border);
+}
+
+.admin-bell-mark {
+  background: none;
+  border: none;
+  color: var(--primary);
+  font-size: 0.82rem;
+  cursor: pointer;
+  padding: 0;
+}
+
+.admin-bell-mark:hover { text-decoration: underline; }
+
+.admin-bell-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border);
+}
+
+.admin-bell-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 3px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-alt);
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.admin-bell-chip:hover { background: var(--bg-card); }
+
+.admin-bell-chip-count {
+  font-weight: 700;
+  color: var(--error, #b94a3d);
+}
+
+.admin-bell-list { overflow-y: auto; }
+
+.admin-bell-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  text-align: left;
+  padding: var(--space-3) var(--space-4);
+  border: none;
+  border-bottom: 1px solid var(--border);
+  background: none;
+  cursor: pointer;
+}
+
+.admin-bell-item:hover { background: var(--bg-alt); }
+.admin-bell-item.is-new { background: var(--bg-alt); }
+
+.admin-bell-item-top {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.admin-bell-item-title {
+  flex: 1;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.admin-bell-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--error, #b94a3d);
+  flex-shrink: 0;
+}
+
+.admin-bell-item-meta {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.admin-bell-empty {
+  padding: var(--space-5) var(--space-4);
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+
+/* Klickbara översiktskort med notis-badge */
+.admin-stat-card-link {
+  position: relative;
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  transition: border-color var(--transition), transform var(--transition);
+}
+
+.admin-stat-card-link:hover {
+  border-color: var(--primary);
+  transform: translateY(-1px);
+}
+
+.admin-stat-badge {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-3);
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--error, #b94a3d);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+/* Filterrad på utkastsidan */
+.admin-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin: var(--space-4) 0;
+}
+
+.admin-filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.admin-filter-field .form-select { min-width: 180px; }
+
+.admin-bell-error {
+  padding: var(--space-3) var(--space-4);
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--error, #b94a3d);
+  border-bottom: 1px solid var(--border);
+}
+
+/* Indikatorer på vittnesmål: bild, utpekad plats, marknadsföring */
+.testimony-flag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--text-muted);
+}
+
+.testimony-flag.is-ok { color: inherit; }
+
+.admin-bell-item-icon {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.admin-bell-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+/* Oläst-badge i sidomenyn */
+.admin-menu-link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.admin-menu-label { flex: 1; }
+
+.admin-menu-badge {
+  flex-shrink: 0;
+  min-width: 20px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--error, #b94a3d);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1.5;
+  text-align: center;
+}
+
+/* På aktiv (grön) rad blir röd mot grön rörigt — vitt på transparent läser bättre. */
+.admin-menu-link.active .admin-menu-badge {
+  background: rgba(255, 255, 255, 0.25);
+}

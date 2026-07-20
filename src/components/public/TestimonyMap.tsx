@@ -1,12 +1,15 @@
 import { useEffect, useRef } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import type { Testimony } from '../../lib/types'
+import type { Testimony, LatLngTuple } from '../../lib/types'
+import { MAP_FIT_PADDING } from '../../lib/utils'
 
 interface Props {
   testimonies: Testimony[]
   selectedId: string | null
   onSelect: (id: string) => void
+  /** Punkter att rama in vid start — områdenas hörn, så att båda flikarna visar samma plats. */
+  fitPoints?: LatLngTuple[]
   height?: number
 }
 
@@ -26,7 +29,7 @@ function popupHtml(t: Testimony) {
 
 // Map that shows testimony markers (with popups: image + story). Clicking a
 // marker (or selecting from the list) opens its popup and flies to it.
-export default function TestimonyMap({ testimonies, selectedId, onSelect, height = 500 }: Props) {
+export default function TestimonyMap({ testimonies, selectedId, onSelect, fitPoints = [], height = 500 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<L.Map | null>(null)
   const markersRef = useRef<Record<string, L.Marker>>({})
@@ -35,13 +38,13 @@ export default function TestimonyMap({ testimonies, selectedId, onSelect, height
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return
-    const first = testimonies.find(t => t.map_lat != null && t.map_lng != null)
-    const map = L.map(containerRef.current, {
-      center: first ? [first.map_lat as number, first.map_lng as number] : [55.7285, 13.321],
-      zoom: 13,
-      scrollWheelZoom: false,
-    })
+    const map = L.map(containerRef.current, { scrollWheelZoom: false })
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap' }).addTo(map)
+    // Samma utsnitt som områdeskartan, så att de två flikarna visar samma plats.
+    // Utan områden faller vi tillbaka på första vittnesmålet.
+    const first = testimonies.find(t => t.map_lat != null && t.map_lng != null)
+    if (fitPoints.length) map.fitBounds(L.latLngBounds(fitPoints), { padding: MAP_FIT_PADDING })
+    else map.setView(first ? [first.map_lat as number, first.map_lng as number] : [55.70, 13.345], 13)
     mapRef.current = map
     setTimeout(() => map.invalidateSize(), 60)
     return () => { map.remove(); mapRef.current = null; markersRef.current = {} }

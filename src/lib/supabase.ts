@@ -20,6 +20,8 @@ const JSON_FIELDS: Record<string, string[]> = {
   site_settings: ['social_links', 'background_blocks'],
   audit_log: ['details'],
   pages: ['texts', 'blocks'],
+  map_areas: ['points'],
+  profiles: ['notifications_seen'],
 }
 
 // App column -> Appwrite system attribute.

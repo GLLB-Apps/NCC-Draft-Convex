@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { useToast } from '../../lib/toast'
 import { useConfirm } from '../../lib/confirm'
 import { formatDateShort, statusLabel, statusBadgeClass } from '../../lib/utils'
+import { useMarkSourceRead } from '../../lib/notifications'
 
 export default function AdminMessages() {
   const [messages, setMessages] = useState<ContactMessage[]>([])
@@ -12,6 +13,7 @@ export default function AdminMessages() {
   const [note, setNote] = useState('')
   const { show } = useToast()
   const { confirm } = useConfirm()
+  useMarkSourceRead('messages', !loading)
 
   useEffect(() => {
     load()

@@ -4,13 +4,20 @@ import { useAuth } from '../../lib/auth'
 import type { UserRole } from '../../lib/types'
 import { roleLabel } from '../../lib/utils'
 import { PAGES } from '../../lib/pages'
+import { NotificationsProvider, useNotifications, type NotificationSource } from '../../lib/notifications'
 import MobileAdminNotice from './MobileAdminNotice'
+import NotificationBell from './NotificationBell'
 
-type MenuItem = { label: string; path: string; roles: UserRole[] }
+// `source` kopplar menyposten till en notiskälla: den får en badge med antalet
+// nya, och att öppna posten markerar just den källan som läst.
+type MenuItem = { label: string; path: string; roles: UserRole[]; source?: NotificationSource }
 const MENU_GROUPS: { title: string | null; items: MenuItem[] }[] = [
   {
     title: null,
-    items: [{ label: 'Översikt', path: '/admin', roles: ['superadmin', 'redaktor', 'skribent'] }],
+    items: [
+      { label: 'Översikt', path: '/admin', roles: ['superadmin', 'redaktor', 'skribent'] },
+      { label: 'Utkast', path: '/admin/utkast', roles: ['superadmin', 'redaktor', 'skribent'], source: 'drafts' },
+    ],
   },
   {
     title: 'Innehåll',
@@ -28,8 +35,8 @@ const MENU_GROUPS: { title: string | null; items: MenuItem[] }[] = [
   {
     title: 'Kommunikation',
     items: [
-      { label: 'Vittnesmål', path: '/admin/vittnesmal', roles: ['superadmin', 'redaktor'] },
-      { label: 'Meddelanden', path: '/admin/meddelanden', roles: ['superadmin', 'redaktor'] },
+      { label: 'Vittnesmål', path: '/admin/vittnesmal', roles: ['superadmin', 'redaktor'], source: 'testimonies' },
+      { label: 'Meddelanden', path: '/admin/meddelanden', roles: ['superadmin', 'redaktor'], source: 'messages' },
       { label: 'Kontakter', path: '/admin/kontakter', roles: ['superadmin', 'redaktor'] },
       { label: 'Sponsorer', path: '/admin/sponsorer', roles: ['superadmin', 'redaktor'] },
     ],
@@ -50,6 +57,53 @@ const MENU_GROUPS: { title: string | null; items: MenuItem[] }[] = [
     ],
   },
 ]
+
+/**
+ * Egen komponent eftersom AdminLayout själv tillhandahåller NotificationsProvider
+ * och därför inte kan konsumera den.
+ */
+function AdminMenu({ role, pathname, onNavigate }: {
+  role: UserRole | null
+  pathname: string
+  onNavigate: () => void
+}) {
+  // Badgen läses här, men nollställs inte av klicket — respektive sida markerar
+  // sin källa som läst först när den faktiskt visats en stund.
+  const { newBySource } = useNotifications()
+
+  return (
+    <nav className="admin-menu" aria-label="Adminmeny">
+      {MENU_GROUPS.map((group, gi) => {
+        const items = group.items.filter(item => role && item.roles.includes(role))
+        if (items.length === 0) return null
+        return (
+          <div className="admin-menu-group" key={gi}>
+            {group.title && <div className="admin-menu-group-title">{group.title}</div>}
+            {items.map(item => {
+              const isActive = item.path === '/admin'
+                ? pathname === '/admin'
+                : pathname.startsWith(item.path)
+              const count = item.source ? newBySource[item.source] : 0
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className={isActive ? 'admin-menu-link active' : 'admin-menu-link'}
+                  onClick={onNavigate}
+                >
+                  <span className="admin-menu-label">{item.label}</span>
+                  {count > 0 && (
+                    <span className="admin-menu-badge" aria-label={`${count} nya`}>{count > 99 ? '99+' : count}</span>
+                  )}
+                </Link>
+              )
+            })}
+          </div>
+        )
+      })}
+    </nav>
+  )
+}
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { user, role, signOut } = useAuth()
@@ -84,6 +138,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }
 
   return (
+    <NotificationsProvider>
     <div className="admin-layout">
       <MobileAdminNotice />
       <aside className={`admin-sidebar ${sidebarOpen ? 'open' : ''}`}>
@@ -91,32 +146,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <Link to="/admin" className="admin-logo">Rögleskogen</Link>
           <span className="admin-badge">Admin</span>
         </div>
-        <nav className="admin-menu" aria-label="Adminmeny">
-          {MENU_GROUPS.map((group, gi) => {
-            const items = group.items.filter(item => role && item.roles.includes(role))
-            if (items.length === 0) return null
-            return (
-              <div className="admin-menu-group" key={gi}>
-                {group.title && <div className="admin-menu-group-title">{group.title}</div>}
-                {items.map(item => {
-                  const isActive = item.path === '/admin'
-                    ? location.pathname === '/admin'
-                    : location.pathname.startsWith(item.path)
-                  return (
-                    <Link
-                      key={item.path}
-                      to={item.path}
-                      className={isActive ? 'admin-menu-link active' : 'admin-menu-link'}
-                      onClick={() => setSidebarOpen(false)}
-                    >
-                      {item.label}
-                    </Link>
-                  )
-                })}
-              </div>
-            )
-          })}
-        </nav>
+        <AdminMenu role={role} pathname={location.pathname} onNavigate={() => setSidebarOpen(false)} />
         <div className="admin-sidebar-footer">
           <Link to="/" className="admin-menu-link" target="_blank">Visa webbplats →</Link>
         </div>
@@ -173,6 +203,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             ))}
           </nav>
           <div className="admin-user-menu">
+            <NotificationBell />
             <span className="admin-user-name">
               {user?.email}
               {role && <span className="badge badge-muted" style={{ marginLeft: 'var(--space-2)' }}>{roleLabel(role)}</span>}
@@ -185,5 +216,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
       </div>
     </div>
+    </NotificationsProvider>
   )
 }

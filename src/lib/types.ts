@@ -167,6 +167,28 @@ export interface MapLocation {
   updated_at: string
 }
 
+/** Ett hörn i en polygon, [latitud, longitud] — samma ordning som Leaflet. */
+export type LatLngTuple = [number, number]
+
+export type MapAreaLineStyle = 'solid' | 'dashed'
+
+export interface MapArea {
+  id: string
+  title: string
+  description: string | null
+  /** Linjefärg som hex, t.ex. "#b94a3d". Fyllningen använder samma färg. */
+  color: string
+  line_style: MapAreaLineStyle
+  fill_opacity: number
+  /** Yttre ring i ritordning. Stängs automatiskt — upprepa inte första punkten. */
+  points: LatLngTuple[]
+  sort_order: number
+  status: ContentStatus
+  published_at: string | null
+  created_at: string
+  updated_at: string
+}
+
 export interface TimelineEvent {
   id: string
   event_date: string

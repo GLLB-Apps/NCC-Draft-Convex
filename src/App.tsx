@@ -31,6 +31,7 @@ const ContactPage = lazy(() => import('./pages/public/ContactPage'))
 const AdminLogin = lazy(() => import('./pages/admin/AdminLogin'))
 const AdminGuard = lazy(() => import('./pages/admin/AdminGuard'))
 const AdminOverview = lazy(() => import('./pages/admin/AdminOverview'))
+const AdminDrafts = lazy(() => import('./pages/admin/AdminDrafts'))
 const AdminTopics = lazy(() => import('./pages/admin/AdminTopics'))
 const AdminTopicEdit = lazy(() => import('./pages/admin/AdminTopicEdit'))
 const AdminNews = lazy(() => import('./pages/admin/AdminNews'))
@@ -42,6 +43,7 @@ const AdminMedia = lazy(() => import('./pages/admin/AdminMedia'))
 const AdminMediaEdit = lazy(() => import('./pages/admin/AdminMediaEdit'))
 const AdminMap = lazy(() => import('./pages/admin/AdminMap'))
 const AdminMapEdit = lazy(() => import('./pages/admin/AdminMapEdit'))
+const AdminMapAreaEdit = lazy(() => import('./pages/admin/AdminMapAreaEdit'))
 const AdminTimeline = lazy(() => import('./pages/admin/AdminTimeline'))
 const AdminTimelineEdit = lazy(() => import('./pages/admin/AdminTimelineEdit'))
 const AdminFaq = lazy(() => import('./pages/admin/AdminFaq'))
@@ -102,6 +104,7 @@ export default function App() {
               <Route path="/admin/login" element={<AdminLogin />} />
               <Route path="/admin" element={<AdminGuard />}>
                 <Route index element={<AdminOverview />} />
+                <Route path="utkast" element={<AdminDrafts />} />
                 <Route path="amnen" element={<AdminTopics />} />
                 <Route path="amnen/ny" element={<AdminTopicEdit />} />
                 <Route path="amnen/:id" element={<AdminTopicEdit />} />
@@ -116,6 +119,8 @@ export default function App() {
                 <Route path="media/ny" element={<AdminMediaEdit />} />
                 <Route path="media/:id" element={<AdminMediaEdit />} />
                 <Route path="karta" element={<AdminMap />} />
+                <Route path="karta/omrade/ny" element={<AdminMapAreaEdit />} />
+                <Route path="karta/omrade/:id" element={<AdminMapAreaEdit />} />
                 <Route path="karta/ny" element={<AdminMapEdit />} />
                 <Route path="karta/:id" element={<AdminMapEdit />} />
                 <Route path="tidslinje" element={<AdminTimeline />} />

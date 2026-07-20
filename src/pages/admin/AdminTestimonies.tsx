@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react'
+import { ImageIcon, MapPin, Megaphone } from 'lucide-react'
 import type { Testimony, TestimonyStatus } from '../../lib/types'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../lib/auth'
 import { useToast } from '../../lib/toast'
+import { useConfirm } from '../../lib/confirm'
+import { useMarkSourceRead } from '../../lib/notifications'
 import { formatDateShort, statusLabel, statusBadgeClass } from '../../lib/utils'
 import MapPicker from '../../components/public/MapPicker'
 
@@ -14,6 +17,8 @@ export default function AdminTestimonies() {
   const [note, setNote] = useState('')
   const { user } = useAuth()
   const { show } = useToast()
+  const { confirm } = useConfirm()
+  useMarkSourceRead('testimonies', !loading)
 
   useEffect(() => {
     loadTestimonies()
@@ -56,6 +61,24 @@ export default function AdminTestimonies() {
     setSelected(null)
   }
 
+  /**
+   * Endast avslagna vittnesmål går att ta bort. Väntande ska granskas och
+   * godkända ligger publicerade — båda avslutas via status, inte radering.
+   */
+  async function removeRejected(t: Testimony) {
+    if (t.status !== 'rejected') return
+    if (!(await confirm({
+      message: `Ta bort det avslagna vittnesmålet "${t.title || 'Utan titel'}" permanent? Det går inte att ångra.`,
+      confirmText: 'Ta bort',
+      danger: true,
+    }))) return
+    const { error } = await supabase.from('testimonies').delete().eq('id', t.id)
+    if (error) { show('Kunde inte ta bort: ' + error.message, 'error'); return }
+    show('Vittnesmål borttaget', 'success')
+    if (selected?.id === t.id) setSelected(null)
+    loadTestimonies()
+  }
+
   async function saveNote() {
     if (!selected) return
     const { error } = await supabase.from('testimonies').update({ internal_note: note }).eq('id', selected.id)
@@ -94,11 +117,17 @@ export default function AdminTestimonies() {
             {selected.location && <span>Ort: {selected.location}</span>}
             {selected.area_usage && <span>Användning: {selected.area_usage}</span>}
             <span>E-post: {selected.email}</span>
-            {selected.consent_marketing && <span className="badge badge-success">Godkänd för marknadsföring</span>}
+            {selected.consent_marketing && (
+              <span className="badge badge-success testimony-flag">
+                <Megaphone size={13} aria-hidden="true" /> Godkänd för marknadsföring
+              </span>
+            )}
           </div>
           {selected.map_lat != null && selected.map_lng != null && (
             <div className="form-group">
-              <label className="form-label">Markerad plats på kartan</label>
+              <label className="form-label testimony-flag">
+                <MapPin size={14} aria-hidden="true" /> Utpekad plats på kartan
+              </label>
               <MapPicker lat={selected.map_lat} lng={selected.map_lng} readOnly height={220} />
             </div>
           )}
@@ -109,7 +138,11 @@ export default function AdminTestimonies() {
           <div className="admin-form-actions">
             <button className="btn btn-primary btn-sm" onClick={saveNote}>Spara anteckning</button>
             <button className="btn btn-success btn-sm" onClick={() => updateStatus(selected, 'approved')}>Godkänn</button>
-            <button className="btn btn-danger btn-sm" onClick={() => updateStatus(selected, 'rejected')}>Avslå</button>
+            {selected.status === 'rejected' ? (
+              <button className="btn btn-danger btn-sm" onClick={() => removeRejected(selected)}>Ta bort permanent</button>
+            ) : (
+              <button className="btn btn-danger btn-sm" onClick={() => updateStatus(selected, 'rejected')}>Avslå</button>
+            )}
           </div>
         </div>
       )}
@@ -126,13 +159,28 @@ export default function AdminTestimonies() {
                   <span className={statusBadgeClass(t.status)}>{statusLabel(t.status)}</span>
                   <span>{t.is_anonymous ? 'Anonym' : t.author_name ?? 'Anonym'}</span>
                   <span>{formatDateShort(t.created_at)}</span>
-                  {t.featured_image && <span title="Har bild">📷</span>}
-                  {t.map_lat != null && <span title="Har kartposition">📍</span>}
-                  {t.consent_marketing && <span title="Godkänd för marknadsföring">📣</span>}
+                  {t.featured_image && (
+                    <span className="testimony-flag" title="Har bild">
+                      <ImageIcon size={14} aria-hidden="true" /><span className="sr-only">Har bild</span>
+                    </span>
+                  )}
+                  {t.map_lat != null && t.map_lng != null && (
+                    <span className="testimony-flag" title="Utpekad plats på kartan">
+                      <MapPin size={14} aria-hidden="true" /><span className="sr-only">Utpekad plats på kartan</span>
+                    </span>
+                  )}
+                  {t.consent_marketing && (
+                    <span className="testimony-flag is-ok" title="Godkänd för marknadsföring">
+                      <Megaphone size={14} aria-hidden="true" /><span className="sr-only">Godkänd för marknadsföring</span>
+                    </span>
+                  )}
                 </div>
               </div>
               <div className="admin-table-actions">
                 <button className="btn btn-secondary btn-sm" onClick={() => { setSelected(t); setNote(t.internal_note ?? '') }}>Granska</button>
+                {t.status === 'rejected' && (
+                  <button className="btn btn-danger btn-sm" onClick={() => removeRejected(t)}>Ta bort</button>
+                )}
               </div>
             </div>
           ))}

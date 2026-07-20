@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
+import { useNotifications } from '../../lib/notifications'
 
 interface Stats {
   publishedTopics: number
@@ -18,6 +19,8 @@ interface Stats {
 export default function AdminOverview() {
   const [stats, setStats] = useState<Stats | null>(null)
   const [recentEdits, setRecentEdits] = useState<{ table: string; title: string; updated_at: string }[]>([])
+  // Utkastsumman kommer från notiskällan, så kortet och klockan alltid är samstämmiga.
+  const { newBySource, draftTotal } = useNotifications()
 
   useEffect(() => {
     Promise.all([
@@ -76,6 +79,11 @@ export default function AdminOverview() {
       </div>
 
       <div className="admin-stats">
+        <Link to="/admin/utkast" className="admin-stat-card admin-stat-card-link">
+          {newBySource.drafts > 0 && <span className="admin-stat-badge">{newBySource.drafts} nya</span>}
+          <div className="admin-stat-label">Utkast totalt</div>
+          <div className="admin-stat-value">{draftTotal}</div>
+        </Link>
         <div className="admin-stat-card">
           <div className="admin-stat-label">Publicerade ämnen</div>
           <div className="admin-stat-value">{stats.publishedTopics}</div>
@@ -92,14 +100,16 @@ export default function AdminOverview() {
           <div className="admin-stat-label">Utkast nyheter</div>
           <div className="admin-stat-value">{stats.draftPosts}</div>
         </div>
-        <div className="admin-stat-card">
+        <Link to="/admin/vittnesmal" className="admin-stat-card admin-stat-card-link">
+          {newBySource.testimonies > 0 && <span className="admin-stat-badge">{newBySource.testimonies} nya</span>}
           <div className="admin-stat-label">Vittnesmål väntar</div>
           <div className="admin-stat-value" style={{ color: stats.pendingTestimonies > 0 ? 'var(--warning)' : undefined }}>{stats.pendingTestimonies}</div>
-        </div>
-        <div className="admin-stat-card">
+        </Link>
+        <Link to="/admin/meddelanden" className="admin-stat-card admin-stat-card-link">
+          {newBySource.messages > 0 && <span className="admin-stat-badge">{newBySource.messages} nya</span>}
           <div className="admin-stat-label">Olästa meddelanden</div>
           <div className="admin-stat-value" style={{ color: stats.unreadMessages > 0 ? 'var(--warning)' : undefined }}>{stats.unreadMessages}</div>
-        </div>
+        </Link>
         <div className="admin-stat-card">
           <div className="admin-stat-label">Dokument</div>
           <div className="admin-stat-value">{stats.documents}</div>
