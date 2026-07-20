@@ -52,7 +52,12 @@ export default function MapPage() {
     if (id) { setTab('testimonies'); setSelectedT(id) }
   }, [searchParams])
 
-  const filteredPoints = activeTypes.size === 0 ? points : points.filter(p => activeTypes.has(p.point_type))
+  // Vittnesmålspunkter som lagts in via admin hör hemma i vittnesmålsfliken,
+  // inte bland områdeslagren. Övriga punkttyper ligger kvar under "Området".
+  const testimonyPoints = useMemo(() => points.filter(p => p.point_type === 'testimony_point'), [points])
+  const areaPoints = useMemo(() => points.filter(p => p.point_type !== 'testimony_point'), [points])
+
+  const filteredPoints = activeTypes.size === 0 ? areaPoints : areaPoints.filter(p => activeTypes.has(p.point_type))
 
   // useMemo hindrar att polygonerna ritas om vid varje render.
   const visibleAreas = useMemo(() => areas.filter(a => !hiddenAreas.has(a.id)), [areas, hiddenAreas])
@@ -76,7 +81,7 @@ export default function MapPage() {
     })
   }
 
-  const uniqueTypes = Array.from(new Set(points.map(p => p.point_type)))
+  const uniqueTypes = Array.from(new Set(areaPoints.map(p => p.point_type)))
 
   return (
     <div className="container fade-in">
@@ -87,14 +92,14 @@ export default function MapPage() {
       <div className="tabs" role="tablist">
         <button role="tab" aria-selected={tab === 'area'} className={tab === 'area' ? 'tab active' : 'tab'} onClick={() => setTab('area')}>Området</button>
         <button role="tab" aria-selected={tab === 'testimonies'} className={tab === 'testimonies' ? 'tab active' : 'tab'} onClick={() => setTab('testimonies')}>
-          Vittnesmål{testimonies.length ? ` (${testimonies.length})` : ''}
+          Vittnesmål{testimonies.length + testimonyPoints.length ? ` (${testimonies.length + testimonyPoints.length})` : ''}
         </button>
       </div>
 
       {loading ? (
         <div className="loading"><div className="spinner"></div></div>
       ) : tab === 'area' ? (
-        areas.length === 0 && points.length === 0 ? (
+        areas.length === 0 && areaPoints.length === 0 ? (
           <div className="empty-state"><p>Inget kartinnehåll har publicerats ännu.</p></div>
         ) : (
           <div className="map-layout map-layout-left fade-in">
@@ -125,7 +130,7 @@ export default function MapPage() {
                 <>
                 {uniqueTypes.map(type => {
                   const active = activeTypes.size === 0 || activeTypes.has(type)
-                  const count = points.filter(p => p.point_type === type).length
+                  const count = areaPoints.filter(p => p.point_type === type).length
                   return (
                     <button key={type} className={active ? 'map-filter' : 'map-filter is-off'} onClick={() => toggleType(type)} aria-pressed={active}>
                       <span className="map-filter-icon" style={{ background: COLORS[type] ?? '#2d5a3d' }} aria-hidden="true">{mapPointTypeIcon(type)}</span>
@@ -146,11 +151,28 @@ export default function MapPage() {
           </div>
         )
       ) : (
-        testimonies.length === 0 ? (
+        testimonies.length === 0 && testimonyPoints.length === 0 ? (
           <div className="empty-state"><p>Inga vittnesmål med markerad plats ännu.</p></div>
         ) : (
           <div className="testimony-map-layout fade-in">
             <aside className="testimony-list">
+              {testimonyPoints.map(p => (
+                <button
+                  key={p.id}
+                  className={selectedT === p.id ? 'testimony-list-item is-active' : 'testimony-list-item'}
+                  onClick={() => setSelectedT(p.id)}
+                >
+                  {p.image_url && <img src={p.image_url} alt="" className="testimony-list-thumb" />}
+                  <span className="testimony-list-body">
+                    <span className="testimony-list-title">{p.title}</span>
+                    {p.description && (
+                      <span className="testimony-list-snippet">
+                        {p.description.length > 90 ? p.description.slice(0, 90) + '…' : p.description}
+                      </span>
+                    )}
+                  </span>
+                </button>
+              ))}
               {testimonies.map(t => (
                 <button
                   key={t.id}
@@ -167,7 +189,7 @@ export default function MapPage() {
               ))}
             </aside>
             <div className="testimony-map">
-              <TestimonyMap testimonies={testimonies} selectedId={selectedT} onSelect={setSelectedT} fitPoints={fitPoints} height={520} />
+              <TestimonyMap testimonies={testimonies} points={testimonyPoints} selectedId={selectedT} onSelect={setSelectedT} fitPoints={fitPoints} height={520} />
             </div>
           </div>
         )

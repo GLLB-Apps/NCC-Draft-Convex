@@ -1,11 +1,13 @@
 import { useEffect, useRef } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import type { Testimony, LatLngTuple } from '../../lib/types'
+import type { Testimony, MapLocation, LatLngTuple } from '../../lib/types'
 import { MAP_FIT_PADDING } from '../../lib/utils'
 
 interface Props {
   testimonies: Testimony[]
+  /** Vittnesmålspunkter inlagda via admin. Visas tillsammans med vittnesmålen. */
+  points?: MapLocation[]
   selectedId: string | null
   onSelect: (id: string) => void
   /** Punkter att rama in vid start — områdenas hörn, så att båda flikarna visar samma plats. */
@@ -29,7 +31,7 @@ function popupHtml(t: Testimony) {
 
 // Map that shows testimony markers (with popups: image + story). Clicking a
 // marker (or selecting from the list) opens its popup and flies to it.
-export default function TestimonyMap({ testimonies, selectedId, onSelect, fitPoints = [], height = 500 }: Props) {
+export default function TestimonyMap({ testimonies, points = [], selectedId, onSelect, fitPoints = [], height = 500 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<L.Map | null>(null)
   const markersRef = useRef<Record<string, L.Marker>>({})
@@ -66,7 +68,24 @@ export default function TestimonyMap({ testimonies, selectedId, onSelect, fitPoi
       marker.on('click', () => onSelectRef.current(t.id))
       markersRef.current[t.id] = marker
     })
-  }, [testimonies])
+
+    // Redaktionella vittnesmålspunkter: rund markör, till skillnad från
+    // vittnesmålens droppform, så att de går att skilja åt på kartan.
+    points.forEach(p => {
+      const icon = L.divIcon({
+        html: '<div style="width:16px;height:16px;border-radius:50%;background:#2d5a3d;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)"></div>',
+        className: '', iconSize: [16, 16], iconAnchor: [8, 8],
+      })
+      const marker = L.marker([p.lat, p.lng], { icon }).addTo(map)
+      marker.bindPopup(
+        `<strong>${escapeHtml(p.title)}</strong>` +
+        (p.description ? `<br/><span style="font-size:0.85rem">${escapeHtml(p.description)}</span>` : ''),
+        { maxWidth: 240 },
+      )
+      marker.on('click', () => onSelectRef.current(p.id))
+      markersRef.current[p.id] = marker
+    })
+  }, [testimonies, points])
 
   useEffect(() => {
     const map = mapRef.current
