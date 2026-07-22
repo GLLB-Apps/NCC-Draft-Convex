@@ -5,9 +5,12 @@ import React, { createContext, useContext, useCallback, useEffect, useState } fr
 import { supabase } from './supabase'
 import { useAuth } from './auth'
 import { DRAFT_SOURCES, DRAFT_STATUSES } from './drafts'
+import { INTRANET_SOURCES, INTRANET_KEYS, type IntranetSource } from './intranetSources'
 import type { ContentStatus } from './types'
 
-export type NotificationSource = 'messages' | 'testimonies' | 'drafts'
+// Adminpanelens klocka täcker både publikt inflöde (meddelanden, vittnesmål,
+// utkast) OCH intranätet, eftersom alla admin-roller har intranätsåtkomst.
+export type NotificationSource = 'messages' | 'testimonies' | 'drafts' | IntranetSource
 
 export interface NotificationSourceMeta {
   label: string
@@ -18,6 +21,10 @@ export const NOTIFICATION_SOURCES: Record<NotificationSource, NotificationSource
   messages: { label: 'Meddelande', path: '/admin/meddelanden' },
   testimonies: { label: 'Vittnesmål', path: '/admin/vittnesmal' },
   drafts: { label: 'Utkast', path: '/admin/utkast' },
+  notices: { label: 'Anslag', path: INTRANET_SOURCES.notices.path },
+  notes: { label: 'Anteckning', path: INTRANET_SOURCES.notes.path },
+  tasks: { label: 'Uppgift', path: INTRANET_SOURCES.tasks.path },
+  documents: { label: 'Dokument', path: INTRANET_SOURCES.documents.path },
 }
 
 export interface NotificationItem {
@@ -86,8 +93,12 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
       supabase.from('contact_messages').select('*').order('created_at', { ascending: false }).limit(RECENT_LIMIT),
       supabase.from('testimonies').select('*').order('created_at', { ascending: false }).limit(RECENT_LIMIT),
       ...DRAFT_SOURCES.map(s => supabase.from(s.table).select('*').order('updated_at', { ascending: false })),
-    ]).then(([profile, messages, testimonies, ...draftResults]) => {
+      ...INTRANET_KEYS.map(k => supabase.from(INTRANET_SOURCES[k].table).select('*').order(INTRANET_SOURCES[k].tsField, { ascending: false }).limit(RECENT_LIMIT)),
+    ]).then((all) => {
       if (cancelled) return
+      const [profile, messages, testimonies] = all
+      const draftResults = all.slice(3, 3 + DRAFT_SOURCES.length)
+      const intranetResults = all.slice(3 + DRAFT_SOURCES.length)
       // Shimmen sväljer fel och returnerar tom data — lyft fram dem i stället
       // för att visa en tom lista som om ingenting hade kommit in.
       const failed = [messages.error, testimonies.error].filter(Boolean)
@@ -147,6 +158,26 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
         }
       })
 
+      // Intranätet: alla admin-roller har åtkomst, så aktivitet där visas i
+      // adminpanelens klocka också. Samma seen-nycklar som intranätets egen
+      // klocka, så en läst notis är läst på båda ställena.
+      intranetResults.forEach((res, i) => {
+        const key = INTRANET_KEYS[i]
+        const cfg = INTRANET_SOURCES[key]
+        for (const row of (res.data ?? []) as Record<string, string>[]) {
+          const at = row[cfg.tsField]
+          list.push({
+            id: row.id,
+            source: key,
+            title: (row[cfg.titleField] || '').trim() || '(utan titel)',
+            subtitle: cfg.label,
+            created_at: at,
+            path: cfg.path,
+            isNew: isNew(key, at),
+          })
+        }
+      })
+
       list.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
 
       setDraftTotal(drafts)
@@ -176,8 +207,9 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
   const markAllRead = useCallback(async () => {
     const now = new Date().toISOString()
     const all = Object.keys(NOTIFICATION_SOURCES) as NotificationSource[]
-    await persistSeen(Object.fromEntries(all.map(s => [s, now])) as SeenMap, all)
-  }, [persistSeen])
+    // Sprid seenMap så intranätets nycklar i samma JSON inte skrivs över.
+    await persistSeen({ ...seenMap, ...Object.fromEntries(all.map(s => [s, now])) } as SeenMap, all)
+  }, [persistSeen, seenMap])
 
   const markSourceRead = useCallback(async (source: NotificationSource) => {
     const now = new Date().toISOString()
@@ -200,9 +232,9 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
   const visibleItems = items.filter(i => !isCleared(i))
   const clearableCount = visibleItems.filter(i => !i.isNew).length
 
-  const newBySource = { messages: 0, testimonies: 0, drafts: 0 } as Record<NotificationSource, number>
+  const newBySource = { messages: 0, testimonies: 0, drafts: 0, notices: 0, notes: 0, tasks: 0, documents: 0 } as Record<NotificationSource, number>
   for (const i of visibleItems) if (i.isNew) newBySource[i.source]++
-  const newCount = newBySource.messages + newBySource.testimonies + newBySource.drafts
+  const newCount = (Object.values(newBySource) as number[]).reduce((a, b) => a + b, 0)
 
   return (
     <NotificationsContext.Provider value={{

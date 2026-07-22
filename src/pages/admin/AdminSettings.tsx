@@ -29,6 +29,11 @@ export default function AdminSettings() {
       logo_url: settings.logo_url,
       favicon_url: settings.favicon_url,
       petition_url: settings.petition_url,
+      campaign_mode: settings.campaign_mode,
+      donate_url: settings.donate_url,
+      donate_title: settings.donate_title,
+      donate_text: settings.donate_text,
+      donate_button: settings.donate_button,
       default_share_image: settings.default_share_image,
       contact_email: settings.contact_email,
       contact_phone: settings.contact_phone,
@@ -137,6 +142,52 @@ export default function AdminSettings() {
             </p>
           </div>
         </div>
+      </div>
+
+      <div className="admin-form-card" style={{ marginTop: 'var(--space-5)' }}>
+        <h3 style={{ marginBottom: 'var(--space-3)' }}>Kampanjläge</h3>
+        <p className="text-muted" style={{ fontSize: '0.85rem', marginBottom: 'var(--space-4)' }}>
+          Styr webbplatsens uppmaningar. <strong>Namninsamling</strong> visar underskrifter och "Skriv under".
+          <strong> Donera</strong> döljer namninsamlingsdelarna och visar ett donationsflöde i stället. Går att växla fram och tillbaka.
+        </p>
+        <div className="form-group">
+          <label className="form-label" htmlFor="campaign_mode">Läge</label>
+          <select
+            id="campaign_mode"
+            className="form-select"
+            value={settings.campaign_mode ?? 'petition'}
+            onChange={e => update('campaign_mode', e.target.value)}
+          >
+            <option value="petition">Namninsamling (underskrifter)</option>
+            <option value="donate">Donera</option>
+          </select>
+        </div>
+        {settings.campaign_mode === 'donate' ? (
+          <>
+            <div className="form-group">
+              <label className="form-label" htmlFor="donate_url">Länk till donation</label>
+              <input id="donate_url" className="form-input" type="url" placeholder="https://…" value={settings.donate_url ?? ''} onChange={e => update('donate_url', e.target.value || null)} />
+            </div>
+            <div className="grid grid-2">
+              <div className="form-group">
+                <label className="form-label" htmlFor="donate_title">Rubrik</label>
+                <input id="donate_title" className="form-input" type="text" placeholder="Stöd initiativet" value={settings.donate_title ?? ''} onChange={e => update('donate_title', e.target.value || null)} />
+              </div>
+              <div className="form-group">
+                <label className="form-label" htmlFor="donate_button">Knapptext</label>
+                <input id="donate_button" className="form-input" type="text" placeholder="Donera" value={settings.donate_button ?? ''} onChange={e => update('donate_button', e.target.value || null)} />
+              </div>
+            </div>
+            <div className="form-group">
+              <label className="form-label" htmlFor="donate_text">Kort text</label>
+              <textarea id="donate_text" className="form-textarea" rows={2} placeholder="Ditt bidrag hjälper oss att bevaka planerna och nå ut med information." value={settings.donate_text ?? ''} onChange={e => update('donate_text', e.target.value || null)} />
+            </div>
+          </>
+        ) : (
+          <p className="text-muted" style={{ fontSize: '0.82rem' }}>
+            Donationsuppgifter (länk, rubrik, text) visas här när du väljer läget <strong>Donera</strong>.
+          </p>
+        )}
       </div>
 
       <div className="admin-form-card" style={{ marginTop: 'var(--space-5)' }}>

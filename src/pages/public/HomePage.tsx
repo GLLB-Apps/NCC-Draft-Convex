@@ -8,6 +8,7 @@ import CountUp from '../../components/public/CountUp'
 import VoteWidget from '../../components/public/VoteWidget'
 import SponsorTicker from '../../components/public/SponsorTicker'
 import { usePage } from '../../lib/usePage'
+import { getCampaign } from '../../lib/campaign'
 
 export default function HomePage() {
   const { settings } = useOutletContext<{ settings: SiteSettings | null }>()
@@ -53,6 +54,8 @@ export default function HomePage() {
 
   if (loading) return <div className="loading"><div className="spinner"></div></div>
 
+  const campaign = getCampaign(settings)
+
   return (
     <div className="fade-in">
       {showWidget && <VoteWidget settings={settings} />}
@@ -66,7 +69,7 @@ export default function HomePage() {
           <p className="hero-intro">{settings?.hero_intro}</p>
           <div className="hero-actions">
             <Link to="/amnen" className="btn btn-primary">Läs om planerna</Link>
-            <a href={settings?.petition_url ?? '#'} target="_blank" rel="noopener noreferrer" className="btn btn-secondary">Skriv under</a>
+            <a href={campaign.ctaUrl} target="_blank" rel="noopener noreferrer" className="btn btn-secondary">{campaign.ctaLabel}</a>
             <Link to="/karta" className="btn btn-secondary">Se området på karta</Link>
           </div>
         </div>
@@ -92,16 +95,27 @@ export default function HomePage() {
               <span className="status-label">Senast uppdaterad</span>
               <span className="status-value">{formatDate(new Date().toISOString())}</span>
             </div>
-            <div className="status-item">
-              <span className="status-label">Underskrifter</span>
-              <span className="status-value status-value-count"><CountUp value={settings?.signature_count ?? 0} /></span>
-            </div>
-            <div className="status-item">
-              <span className="status-label">Namninsamling</span>
-              <a href={settings?.petition_url ?? '#'} target="_blank" rel="noopener noreferrer" className="status-value status-value-link">
-                Skrivunder.com →
-              </a>
-            </div>
+            {campaign.showSignatures ? (
+              <>
+                <div className="status-item">
+                  <span className="status-label">Underskrifter</span>
+                  <span className="status-value status-value-count"><CountUp value={settings?.signature_count ?? 0} /></span>
+                </div>
+                <div className="status-item">
+                  <span className="status-label">Namninsamling</span>
+                  <a href={campaign.ctaUrl} target="_blank" rel="noopener noreferrer" className="status-value status-value-link">
+                    Skrivunder.com →
+                  </a>
+                </div>
+              </>
+            ) : (
+              <div className="status-item">
+                <span className="status-label">{campaign.headline}</span>
+                <a href={campaign.ctaUrl} target="_blank" rel="noopener noreferrer" className="status-value status-value-link">
+                  {campaign.ctaLabel} →
+                </a>
+              </div>
+            )}
           </div>
         </div>
       </section>
@@ -191,7 +205,7 @@ export default function HomePage() {
             <h2>{page.text('cta_heading')}</h2>
             <p className="text-muted">{page.text('cta_text')}</p>
             <div className="cta-actions">
-              <a href={settings?.petition_url ?? '#'} target="_blank" rel="noopener noreferrer" className="btn btn-primary">Skriv under</a>
+              <a href={campaign.ctaUrl} target="_blank" rel="noopener noreferrer" className="btn btn-primary">{campaign.ctaLabel}</a>
               <Link to="/vittnesmal" className="btn btn-secondary">Lämna ett vittnesmål</Link>
               <Link to="/kontakt" className="btn btn-secondary">Kontakta initiativet</Link>
             </div>

@@ -26,6 +26,12 @@ export interface SiteSettings {
   logo_url: string | null
   favicon_url: string | null
   petition_url: string
+  /** 'petition' visar namninsamling/underskrifter, 'donate' ersätter med ett donationsflöde. */
+  campaign_mode: 'petition' | 'donate'
+  donate_url: string | null
+  donate_title: string | null
+  donate_text: string | null
+  donate_button: string | null
   default_share_image: string | null
   contact_email: string | null
   contact_phone: string | null
@@ -163,6 +169,59 @@ export interface MapLocation {
   source: string | null
   status: ContentStatus
   published_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+// ---- Intranät -------------------------------------------------------------
+// Inloggningsskyddad yta för projektgrupper och aktiva. Åtkomst styrs av
+// Appwrite-labeln "member" (eller "admin"), inte av user_roles.
+
+export interface IntranetMember {
+  id: string
+  user_id: string
+  display_name: string | null
+  email: string | null
+  added_by: string | null
+  note: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface IntranetNote {
+  id: string
+  title: string
+  body: string | null
+  category: string | null
+  pinned: boolean
+  created_by: string | null
+  created_by_name: string | null
+  sort_order: number
+  created_at: string
+  updated_at: string
+}
+
+export interface IntranetTask {
+  id: string
+  text: string
+  done: boolean
+  list: string | null
+  assignee: string | null
+  due_date: string | null
+  created_by: string | null
+  done_by: string | null
+  sort_order: number
+  created_at: string
+  updated_at: string
+}
+
+export interface IntranetNotice {
+  id: string
+  title: string
+  body: string | null
+  author: string | null
+  author_id: string | null
+  pinned: boolean
   created_at: string
   updated_at: string
 }

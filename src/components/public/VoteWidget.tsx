@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { SiteSettings } from '../../lib/types'
+import { getCampaign } from '../../lib/campaign'
 import CountUp from './CountUp'
 
 function Bullhorn() {
@@ -20,23 +21,30 @@ export default function VoteWidget({ settings }: { settings: SiteSettings | null
     typeof window !== 'undefined' && window.matchMedia('(max-width: 900px)').matches,
   )
   const count = settings?.signature_count ?? 0
-  const petition = settings?.petition_url ?? '#'
+  const c = getCampaign(settings)
+  const asideLabel = c.isDonate ? 'Donera' : 'Namninsamling'
 
   return (
     <>
-      <aside className={collapsed ? 'vote-widget is-collapsed' : 'vote-widget'} aria-label="Namninsamling" aria-hidden={collapsed}>
+      <aside className={collapsed ? 'vote-widget is-collapsed' : 'vote-widget'} aria-label={asideLabel} aria-hidden={collapsed}>
         <button className="vote-widget-fold" onClick={() => setCollapsed(true)} aria-label="Fäll ihop" title="Fäll ihop">›</button>
-        <span className="vote-widget-label">Underskrifter</span>
-        <span className="vote-widget-count"><CountUp value={count} /></span>
-        <p className="vote-widget-text">Var med och gör skillnad – skriv under du också.</p>
-        <a href={petition} target="_blank" rel="noopener noreferrer" className="vote-widget-btn">Skriv under</a>
+        {c.showSignatures ? (
+          <>
+            <span className="vote-widget-label">Underskrifter</span>
+            <span className="vote-widget-count"><CountUp value={count} /></span>
+          </>
+        ) : (
+          <span className="vote-widget-label">{c.headline}</span>
+        )}
+        <p className="vote-widget-text">{c.showSignatures ? 'Var med och gör skillnad – skriv under du också.' : c.blurb}</p>
+        <a href={c.ctaUrl} target="_blank" rel="noopener noreferrer" className="vote-widget-btn">{c.ctaLabel}</a>
       </aside>
 
       <button
         className={collapsed ? 'vote-widget-tab is-visible' : 'vote-widget-tab'}
         onClick={() => setCollapsed(false)}
-        aria-label="Visa namninsamling"
-        title="Namninsamling"
+        aria-label={c.isDonate ? 'Visa donera' : 'Visa namninsamling'}
+        title={asideLabel}
       >
         <Bullhorn />
       </button>

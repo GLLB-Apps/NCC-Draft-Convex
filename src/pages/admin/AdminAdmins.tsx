@@ -1,31 +1,42 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { supabase, createSessionJwt } from '../../lib/supabase'
 import { useAuth } from '../../lib/auth'
 import { useToast } from '../../lib/toast'
 import { useConfirm } from '../../lib/confirm'
-import { roleLabel } from '../../lib/utils'
+import { formatDateShort } from '../../lib/utils'
 import type { UserRole } from '../../lib/types'
 
-interface AdminUser {
-  user_id: string
-  role: UserRole
-  display_name: string | null
-  created_at: string
-}
+// En behörighetsnivå per person. De tre första är admin-roller (user_roles);
+// "intranet" är intranätsåtkomst via Appwrite-labeln "member" och ger INGEN
+// åtkomst till adminpanelen. Nivåerna hålls isär mekaniskt men visas som en
+// gemensam lista här.
+type Level = UserRole | 'intranet'
 
-interface PendingUser {
-  id: string
+const LEVELS: { value: Level; label: string; desc: string }[] = [
+  { value: 'superadmin', label: 'Superadmin', desc: 'Full åtkomst: allt innehåll, inställningar och användarhantering.' },
+  { value: 'redaktor', label: 'Redaktör', desc: 'Allt innehåll och kommunikation. Inte inställningar eller användare.' },
+  { value: 'skribent', label: 'Skribent', desc: 'Skriver nyheter, ämnen, dokument och media.' },
+  { value: 'intranet', label: 'Intranät', desc: 'Endast det interna arbetsrummet – ingen åtkomst till adminpanelen.' },
+]
+const levelLabel = (l: Level) => LEVELS.find(x => x.value === l)?.label ?? l
+const isAdminLevel = (l: Level): l is UserRole => l !== 'intranet'
+
+interface Person {
+  user_id: string
+  level: Level
   display_name: string | null
   created_at: string
 }
+interface PendingUser { id: string; display_name: string | null; created_at: string }
 
 export default function AdminAdmins() {
   const { user: currentUser, role: currentRole } = useAuth()
   const { show } = useToast()
   const { confirm } = useConfirm()
-  const [admins, setAdmins] = useState<AdminUser[]>([])
+  const [people, setPeople] = useState<Person[]>([])
   const [pending, setPending] = useState<PendingUser[]>([])
   const [loading, setLoading] = useState(true)
+  const [busy, setBusy] = useState<string | null>(null)
   const [pwdFor, setPwdFor] = useState<string | null>(null)
   const [pwdValue, setPwdValue] = useState('')
   const [pwdBusy, setPwdBusy] = useState(false)
@@ -34,44 +45,125 @@ export default function AdminAdmins() {
 
   async function load() {
     setLoading(true)
-    const [rolesRes, profilesRes] = await Promise.all([
+    const [rolesRes, profilesRes, membersRes] = await Promise.all([
       supabase.from('user_roles').select('user_id, role, created_at').order('created_at'),
       supabase.from('profiles').select('id, display_name, created_at').order('created_at'),
+      supabase.from('intranet_members').select('user_id, display_name, created_at').order('created_at'),
     ])
+    const roleRows = (rolesRes.data ?? []) as Array<Record<string, unknown>>
+    const profileRows = (profilesRes.data ?? []) as Array<Record<string, unknown>>
+    const memberRows = (membersRes.data ?? []) as Array<Record<string, unknown>>
 
-    const roleRows = rolesRes.data ?? []
-    const profileRows = profilesRes.data ?? []
-    const assignedIds = new Set(roleRows.map((r: Record<string, unknown>) => r.user_id as string))
-    const nameById = new Map(
-      (profileRows as Array<Record<string, unknown>>).map(p => [p.id as string, (p.display_name as string | null) ?? null]),
-    )
+    const nameById = new Map(profileRows.map(p => [p.id as string, (p.display_name as string | null) ?? null]))
+    const adminIds = new Set(roleRows.map(r => r.user_id as string))
 
-    const adminList: AdminUser[] = roleRows.map((row: Record<string, unknown>) => ({
-      user_id: row.user_id as string,
-      role: row.role as UserRole,
-      display_name: nameById.get(row.user_id as string) ?? null,
-      created_at: row.created_at as string,
+    const list: Person[] = roleRows.map(r => ({
+      user_id: r.user_id as string,
+      level: r.role as Level,
+      display_name: nameById.get(r.user_id as string) ?? null,
+      created_at: r.created_at as string,
     }))
+    // Medlemmar som inte också är admins (admins har redan intranätsåtkomst).
+    for (const m of memberRows) {
+      if (adminIds.has(m.user_id as string)) continue
+      list.push({
+        user_id: m.user_id as string,
+        level: 'intranet',
+        display_name: nameById.get(m.user_id as string) ?? (m.display_name as string | null) ?? null,
+        created_at: m.created_at as string,
+      })
+    }
+    const accessIds = new Set(list.map(p => p.user_id))
 
-    const pendingList: PendingUser[] = (profileRows as Array<Record<string, unknown>>)
-      .filter(p => !assignedIds.has(p.id as string))
-      .map(p => ({ id: p.id as string, display_name: p.display_name as string | null, created_at: p.created_at as string }))
-
-    setAdmins(adminList)
-    setPending(pendingList)
+    setPeople(list)
+    setPending(profileRows.filter(p => !accessIds.has(p.id as string))
+      .map(p => ({ id: p.id as string, display_name: p.display_name as string | null, created_at: p.created_at as string })))
     setLoading(false)
   }
 
-  async function assignRole(userId: string, role: UserRole) {
-    const { error } = await supabase.from('user_roles').insert({ user_id: userId, role })
-    if (error) show('Kunde inte tilldela roll: ' + error.message, 'error')
-    else { show(`Roll ${roleLabel(role)} tilldelad`, 'success'); load() }
+  /**
+   * Sätter användarens åtkomstlabel server-side efter nivå. Detta är den
+   * faktiska säkerhetsgränsen: 'admin' ger skrivrätt + intranät, 'member' bara
+   * intranät, 'none' varken eller. Returnerar true vid framgång.
+   */
+  async function setAccess(userId: string, access: 'admin' | 'member' | 'none'): Promise<boolean> {
+    const jwt = await createSessionJwt()
+    const res = await fetch('/api/set-access', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${jwt}` },
+      body: JSON.stringify({ userId, access }),
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) { show('Kunde inte ändra åtkomst: ' + (data.error || res.status), 'error'); return false }
+    return true
   }
 
-  async function updateRole(userId: string, role: UserRole) {
-    const { error } = await supabase.from('user_roles').update({ role }).eq('user_id', userId)
-    if (error) show('Kunde inte uppdatera: ' + error.message, 'error')
-    else { show('Roll uppdaterad', 'success'); load() }
+  /** Ger en person utan åtkomst en startnivå. */
+  async function assignLevel(u: PendingUser, level: Level) {
+    setBusy(u.id)
+    try {
+      if (level === 'intranet') {
+        if (!(await setAccess(u.id, 'member'))) return
+        const { error } = await supabase.from('intranet_members').insert({ user_id: u.id, display_name: u.display_name, added_by: currentUser?.email ?? null })
+        if (error) { show('Åtkomst gavs, men raden kunde inte sparas: ' + error.message, 'error'); return }
+      } else {
+        const { error } = await supabase.from('user_roles').insert({ user_id: u.id, role: level })
+        if (error) { show('Kunde inte tilldela: ' + error.message, 'error'); return }
+        // Labeln "admin" är det som faktiskt ger skrivrätt — rollraden ensam räcker inte.
+        if (!(await setAccess(u.id, 'admin'))) { show('Roll tilldelad men admin-behörighet kunde inte sättas', 'error'); return }
+      }
+      show(`${u.display_name || 'Användaren'}: ${levelLabel(level)}`, 'success')
+      load()
+    } finally { setBusy(null) }
+  }
+
+  /**
+   * Byter nivå på en person med befintlig åtkomst. Vid byte mellan admin och
+   * intranät ges den nya åtkomsten FÖRST, så att ingen står helt utan under bytet.
+   */
+  async function changeLevel(p: Person, next: Level) {
+    if (next === p.level) return
+    setBusy(p.user_id)
+    try {
+      const curAdmin = isAdminLevel(p.level)
+      const nextAdmin = isAdminLevel(next)
+
+      if (curAdmin && nextAdmin) {
+        const { error } = await supabase.from('user_roles').update({ role: next }).eq('user_id', p.user_id)
+        if (error) { show('Kunde inte uppdatera: ' + error.message, 'error'); return }
+        // Säkerställ admin-labeln ifall den saknades (äldre konton).
+        await setAccess(p.user_id, 'admin')
+      } else if (curAdmin && !nextAdmin) {
+        // admin → intranät: byt labeln admin→member, lägg medlemsrad, ta bort rollen.
+        if (!(await setAccess(p.user_id, 'member'))) return
+        await supabase.from('intranet_members').insert({ user_id: p.user_id, display_name: p.display_name, added_by: currentUser?.email ?? null })
+        await supabase.from('user_roles').delete().eq('user_id', p.user_id)
+      } else if (!curAdmin && nextAdmin) {
+        // intranät → admin: byt labeln member→admin, lägg rollrad, ta bort medlemsrad.
+        if (!(await setAccess(p.user_id, 'admin'))) return
+        await supabase.from('user_roles').insert({ user_id: p.user_id, role: next })
+        await supabase.from('intranet_members').delete().eq('user_id', p.user_id)
+      }
+      show(`${p.display_name || 'Användaren'}: ${levelLabel(next)}`, 'success')
+      load()
+    } finally { setBusy(null) }
+  }
+
+  async function removeAccess(p: Person) {
+    if (p.user_id === currentUser?.id) { show('Du kan inte ta bort dig själv', 'error'); return }
+    if (!(await confirm({ message: `Ta bort all åtkomst för ${p.display_name || 'användaren'}?`, confirmText: 'Ta bort åtkomst', danger: true }))) return
+    setBusy(p.user_id)
+    try {
+      if (!(await setAccess(p.user_id, 'none'))) return
+      if (p.level === 'intranet') {
+        await supabase.from('intranet_members').delete().eq('user_id', p.user_id)
+      } else {
+        const { error } = await supabase.from('user_roles').delete().eq('user_id', p.user_id)
+        if (error) { show('Kunde inte ta bort: ' + error.message, 'error'); return }
+      }
+      show('Åtkomst borttagen', 'success')
+      load()
+    } finally { setBusy(null) }
   }
 
   async function setUserPassword(userId: string) {
@@ -90,36 +182,42 @@ export default function AdminAdmins() {
       setPwdFor(null); setPwdValue('')
     } catch (e) {
       show('Kunde inte ändra lösenord: ' + (e instanceof Error ? e.message : String(e)), 'error')
-    } finally {
-      setPwdBusy(false)
-    }
+    } finally { setPwdBusy(false) }
   }
 
-  async function removeUser(userId: string) {
-    if (userId === currentUser?.id) { show('Du kan inte ta bort dig själv', 'error'); return }
-    if (!(await confirm({ message: 'Ta bort användaren helt ur systemet? Både roll och profil raderas.', confirmText: 'Ta bort', danger: true }))) return
-    const [roleRes, profileRes] = await Promise.all([
-      supabase.from('user_roles').delete().eq('user_id', userId),
-      supabase.from('profiles').delete().eq('id', userId),
-    ])
-    const error = roleRes.error || profileRes.error
-    if (error) show('Kunde inte ta bort: ' + error.message, 'error')
-    else { show('Användaren borttagen ur systemet', 'success'); load() }
-  }
+  const adminCount = useMemo(() => people.filter(p => isAdminLevel(p.level)).length, [people])
+  const memberCount = people.length - adminCount
 
   if (loading) return <div className="loading"><div className="spinner"></div></div>
 
   return (
     <div className="fade-in">
       <div className="admin-page-header">
-        <h1>Administratörer</h1>
+        <h1>Behörigheter</h1>
       </div>
 
-      {/* Pending users */}
+      {/* Förklaring av nivåerna */}
+      <div className="card" style={{ marginBottom: 'var(--space-6)' }}>
+        <h2 style={{ fontSize: '1rem', marginTop: 0, marginBottom: 'var(--space-3)' }}>Nivåer</h2>
+        <ul className="admin-level-legend">
+          {LEVELS.map(l => (
+            <li key={l.value}>
+              <span className="badge badge-muted">{l.label}</span>
+              <span>{l.desc}</span>
+            </li>
+          ))}
+        </ul>
+        <p className="text-muted" style={{ fontSize: '0.82rem', marginTop: 'var(--space-3)', marginBottom: 0 }}>
+          Admin-nivåerna har alltid intranätsåtkomst också. Nivån <strong>Intranät</strong> ger däremot
+          bara det interna arbetsrummet.
+        </p>
+      </div>
+
+      {/* Väntar på nivå */}
       {pending.length > 0 && (
         <div style={{ marginBottom: 'var(--space-6)' }}>
           <h2 style={{ fontSize: '1.1rem', marginBottom: 'var(--space-3)', color: 'var(--warning)' }}>
-            Väntar på rolltilldelning ({pending.length})
+            Väntar på nivå ({pending.length})
           </h2>
           <div className="admin-list">
             {pending.map(u => (
@@ -127,24 +225,20 @@ export default function AdminAdmins() {
                 <div className="admin-list-item-info">
                   <div className="admin-list-item-title">{u.display_name ?? 'Namnlös användare'}</div>
                   <div className="admin-list-item-meta">
-                    <span className="badge badge-warning">Ingen roll</span>
-                    <span style={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>{u.id}</span>
+                    <span className="badge badge-warning">Ingen åtkomst</span>
+                    <span style={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>{u.id.slice(0, 8)}…</span>
                   </div>
                 </div>
                 <div className="admin-table-actions">
                   <select
-                    className="form-select"
-                    style={{ width: 'auto' }}
-                    defaultValue=""
-                    onChange={e => { if (e.target.value) assignRole(u.id, e.target.value as UserRole) }}
-                    aria-label="Tilldela roll"
+                    className="form-select" style={{ width: 'auto' }} defaultValue=""
+                    disabled={busy === u.id}
+                    onChange={e => { if (e.target.value) assignLevel(u, e.target.value as Level) }}
+                    aria-label="Tilldela nivå"
                   >
-                    <option value="" disabled>Tilldela roll…</option>
-                    <option value="superadmin">Superadmin</option>
-                    <option value="redaktor">Redaktör</option>
-                    <option value="skribent">Skribent</option>
+                    <option value="" disabled>Tilldela nivå…</option>
+                    {LEVELS.map(l => <option key={l.value} value={l.value}>{l.label}</option>)}
                   </select>
-                  <button className="btn btn-danger btn-sm" onClick={() => removeUser(u.id)}>Ta bort</button>
                 </div>
               </div>
             ))}
@@ -152,77 +246,71 @@ export default function AdminAdmins() {
         </div>
       )}
 
-      {/* Active admins */}
-      <h2 style={{ fontSize: '1.1rem', marginBottom: 'var(--space-3)' }}>Aktiva administratörer ({admins.length})</h2>
+      <h2 style={{ fontSize: '1.1rem', marginBottom: 'var(--space-3)' }}>
+        Aktiva behörigheter ({people.length}) <span className="text-muted" style={{ fontSize: '0.8rem', fontWeight: 400 }}>· {adminCount} admin, {memberCount} intranät</span>
+      </h2>
 
-      {admins.length === 0 ? (
-        <div className="empty-state"><p>Inga administratörer finns ännu.</p></div>
+      {people.length === 0 ? (
+        <div className="empty-state"><p>Ingen har åtkomst ännu.</p></div>
       ) : (
         <div className="admin-list">
-          {admins.map(a => (
-            <div key={a.user_id} className="admin-list-item" style={{ flexWrap: 'wrap' }}>
-              <div className="admin-list-item-info">
-                <div className="admin-list-item-title">
-                  {a.display_name ?? 'Okänd användare'}
-                  {a.user_id === currentUser?.id && (
-                    <span className="badge badge-success" style={{ marginLeft: 'var(--space-2)' }}>Du</span>
+          {people.map(p => {
+            const isSelf = p.user_id === currentUser?.id
+            const lockSelf = isSelf && currentRole === 'superadmin'
+            return (
+              <div key={p.user_id} className="admin-list-item" style={{ flexWrap: 'wrap' }}>
+                <div className="admin-list-item-info">
+                  <div className="admin-list-item-title">
+                    {p.display_name ?? 'Okänd användare'}
+                    {isSelf && <span className="badge badge-success" style={{ marginLeft: 'var(--space-2)' }}>Du</span>}
+                  </div>
+                  <div className="admin-list-item-meta">
+                    <span className={isAdminLevel(p.level) ? 'badge badge-muted' : 'badge badge-success'}>{levelLabel(p.level)}</span>
+                    <span style={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>{p.user_id.slice(0, 8)}…</span>
+                    <span>{formatDateShort(p.created_at)}</span>
+                  </div>
+                </div>
+                <div className="admin-table-actions">
+                  <select
+                    className="form-select" style={{ width: 'auto' }}
+                    value={p.level}
+                    onChange={e => changeLevel(p, e.target.value as Level)}
+                    disabled={lockSelf || busy === p.user_id}
+                    aria-label="Ändra nivå"
+                  >
+                    {LEVELS.map(l => <option key={l.value} value={l.value}>{l.label}</option>)}
+                  </select>
+                  <button className="btn btn-ghost btn-sm" onClick={() => { setPwdFor(pwdFor === p.user_id ? null : p.user_id); setPwdValue('') }}>
+                    Byt lösenord
+                  </button>
+                  {!isSelf && (
+                    <button className="btn btn-danger btn-sm" disabled={busy === p.user_id} onClick={() => removeAccess(p)}>Ta bort</button>
                   )}
                 </div>
-                <div className="admin-list-item-meta">
-                  <span>{roleLabel(a.role)}</span>
-                  <span style={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>{a.user_id.substring(0, 8)}…</span>
-                </div>
-              </div>
-              <div className="admin-table-actions">
-                <select
-                  className="form-select"
-                  style={{ width: 'auto' }}
-                  value={a.role}
-                  onChange={e => updateRole(a.user_id, e.target.value as UserRole)}
-                  disabled={a.user_id === currentUser?.id && currentRole === 'superadmin'}
-                  aria-label="Ändra roll"
-                >
-                  <option value="superadmin">Superadmin</option>
-                  <option value="redaktor">Redaktör</option>
-                  <option value="skribent">Skribent</option>
-                </select>
-                <button
-                  className="btn btn-ghost btn-sm"
-                  onClick={() => { setPwdFor(pwdFor === a.user_id ? null : a.user_id); setPwdValue('') }}
-                >
-                  Byt lösenord
-                </button>
-                {a.user_id !== currentUser?.id && (
-                  <button className="btn btn-danger btn-sm" onClick={() => removeUser(a.user_id)}>Ta bort</button>
+                {pwdFor === p.user_id && (
+                  <div className="admin-pwd-row">
+                    <input
+                      className="form-input" type="text" autoComplete="new-password"
+                      placeholder="Nytt lösenord (minst 8 tecken)"
+                      value={pwdValue} onChange={e => setPwdValue(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') setUserPassword(p.user_id) }}
+                    />
+                    <button className="btn btn-primary btn-sm" onClick={() => setUserPassword(p.user_id)} disabled={pwdBusy}>
+                      {pwdBusy ? 'Sparar…' : 'Spara lösenord'}
+                    </button>
+                    <button className="btn btn-ghost btn-sm" onClick={() => { setPwdFor(null); setPwdValue('') }}>Avbryt</button>
+                  </div>
                 )}
               </div>
-              {pwdFor === a.user_id && (
-                <div className="admin-pwd-row">
-                  <input
-                    className="form-input"
-                    type="text"
-                    autoComplete="new-password"
-                    placeholder="Nytt lösenord (minst 8 tecken)"
-                    value={pwdValue}
-                    onChange={e => setPwdValue(e.target.value)}
-                    onKeyDown={e => { if (e.key === 'Enter') setUserPassword(a.user_id) }}
-                  />
-                  <button className="btn btn-primary btn-sm" onClick={() => setUserPassword(a.user_id)} disabled={pwdBusy}>
-                    {pwdBusy ? 'Sparar…' : 'Spara lösenord'}
-                  </button>
-                  <button className="btn btn-ghost btn-sm" onClick={() => { setPwdFor(null); setPwdValue('') }}>Avbryt</button>
-                </div>
-              )}
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
 
       <div className="card" style={{ marginTop: 'var(--space-6)', background: 'var(--bg-alt)' }}>
         <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-          För att lägga till en ny administratör: personen skapar ett konto via{' '}
-          <a href="/admin/login" className="section-link">/admin/login</a>, sedan dyker de upp
-          i listan "Väntar på rolltilldelning" ovan.
+          Ny person: den skapar ett konto via <a href="/admin/login" className="section-link">/admin/login</a> och
+          dyker sedan upp under "Väntar på nivå", där du väljer behörighet.
         </p>
       </div>
     </div>

@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Link } from 'react-router-dom'
 import { AuthProvider } from './lib/auth'
 import { ToastProvider } from './lib/toast'
 import { ConfirmProvider } from './lib/confirm'
@@ -44,6 +44,11 @@ const AdminMediaEdit = lazy(() => import('./pages/admin/AdminMediaEdit'))
 const AdminMap = lazy(() => import('./pages/admin/AdminMap'))
 const AdminMapEdit = lazy(() => import('./pages/admin/AdminMapEdit'))
 const AdminMapAreaEdit = lazy(() => import('./pages/admin/AdminMapAreaEdit'))
+const IntranetGuard = lazy(() => import('./pages/intranet/IntranetGuard'))
+const IntranetNotices = lazy(() => import('./pages/intranet/IntranetNotices'))
+const IntranetDocuments = lazy(() => import('./pages/intranet/IntranetDocuments'))
+const IntranetNotes = lazy(() => import('./pages/intranet/IntranetNotes'))
+const IntranetTasks = lazy(() => import('./pages/intranet/IntranetTasks'))
 const AdminTimeline = lazy(() => import('./pages/admin/AdminTimeline'))
 const AdminTimelineEdit = lazy(() => import('./pages/admin/AdminTimelineEdit'))
 const AdminFaq = lazy(() => import('./pages/admin/AdminFaq'))
@@ -55,7 +60,6 @@ const AdminMessages = lazy(() => import('./pages/admin/AdminMessages'))
 const AdminSettings = lazy(() => import('./pages/admin/AdminSettings'))
 const AdminAdmins = lazy(() => import('./pages/admin/AdminAdmins'))
 const AdminBackground = lazy(() => import('./pages/admin/AdminBackground'))
-const AdminInternalDocs = lazy(() => import('./pages/admin/AdminInternalDocs'))
 const AdminSponsors = lazy(() => import('./pages/admin/AdminSponsors'))
 const AdminHandbook = lazy(() => import('./pages/admin/AdminHandbook'))
 
@@ -65,10 +69,18 @@ function PageSpinner() {
 
 function NotFound() {
   return (
-    <div className="empty-state">
-      <h1>Sidan hittades inte</h1>
-      <p>Den sökta sidan finns inte.</p>
-      <a href="/" className="btn btn-primary" style={{ marginTop: 'var(--space-4)' }}>Till startsidan</a>
+    <div className="notfound">
+      <div className="notfound-badge" aria-hidden="true">404</div>
+      <h1 className="notfound-title">Här växer bara skog</h1>
+      <p className="notfound-text">
+        Sidan du letade efter finns inte – eller så har den flyttat. Ingen fara, det mesta om
+        Rögleskogen hittar du från startsidan.
+      </p>
+      <div className="notfound-actions">
+        <Link to="/" className="btn btn-primary">Till startsidan</Link>
+        <Link to="/karta" className="btn btn-secondary">Se kartan</Link>
+        <Link to="/kontakt" className="btn btn-ghost">Kontakta initiativet</Link>
+      </div>
     </div>
   )
 }
@@ -130,7 +142,6 @@ export default function App() {
                 <Route path="kontakter" element={<AdminContacts />} />
                 <Route path="sponsorer" element={<AdminSponsors />} />
                 <Route path="meny" element={<AdminNavigation />} />
-                <Route path="interna-dokument" element={<AdminInternalDocs />} />
                 <Route path="sidor" element={<AdminPages />} />
                 <Route path="sidor/:slug" element={<AdminPageEdit />} />
                 <Route path="meddelanden" element={<AdminMessages />} />
@@ -138,6 +149,14 @@ export default function App() {
                 <Route path="inställningar" element={<AdminSettings />} />
                 <Route path="administratörer" element={<AdminAdmins />} />
                 <Route path="handbok" element={<AdminHandbook />} />
+              </Route>
+
+              {/* Intranät — inloggningsskyddat arbetsrum för medlemmar och admins */}
+              <Route path="/internt" element={<IntranetGuard />}>
+                <Route index element={<IntranetNotices />} />
+                <Route path="dokument" element={<IntranetDocuments />} />
+                <Route path="anteckningar" element={<IntranetNotes />} />
+                <Route path="uppgifter" element={<IntranetTasks />} />
               </Route>
 
               <Route path="*" element={<NotFound />} />

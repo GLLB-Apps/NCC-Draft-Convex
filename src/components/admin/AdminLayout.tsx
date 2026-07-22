@@ -45,9 +45,14 @@ const MENU_GROUPS: { title: string | null; items: MenuItem[] }[] = [
     title: 'Webbplats',
     items: [
       { label: 'Meny', path: '/admin/meny', roles: ['superadmin', 'redaktor'] },
-      { label: 'Interna dokument', path: '/admin/interna-dokument', roles: ['superadmin', 'redaktor'] },
       { label: 'Inställningar', path: '/admin/inställningar', roles: ['superadmin'] },
       { label: 'Administratörer', path: '/admin/administratörer', roles: ['superadmin'] },
+    ],
+  },
+  {
+    title: 'Internt',
+    items: [
+      { label: 'Internt arbetsrum', path: '/internt', roles: ['superadmin', 'redaktor', 'skribent'] },
     ],
   },
   {
@@ -83,7 +88,10 @@ function AdminMenu({ role, pathname, onNavigate }: {
               const isActive = item.path === '/admin'
                 ? pathname === '/admin'
                 : pathname.startsWith(item.path)
-              const count = item.source ? newBySource[item.source] : 0
+              // "Internt arbetsrum" samlar alla intranätskällor i en badge.
+              const count = item.path === '/internt'
+                ? newBySource.notices + newBySource.notes + newBySource.tasks + newBySource.documents
+                : item.source ? newBySource[item.source] : 0
               return (
                 <Link
                   key={item.path}

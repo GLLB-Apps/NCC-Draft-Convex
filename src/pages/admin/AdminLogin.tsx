@@ -6,7 +6,7 @@ import { useToast } from '../../lib/toast'
 import MobileAdminNotice from '../../components/admin/MobileAdminNotice'
 
 export default function AdminLogin() {
-  const { session, loading } = useAuth()
+  const { session, isAdmin, loading } = useAuth()
   const { show } = useToast()
 
   const [logo, setLogo] = useState('')
@@ -27,7 +27,9 @@ export default function AdminLogin() {
   const [signupDone, setSignupDone] = useState(false)
 
   if (loading) return null
-  if (session) return <Navigate to="/admin" replace />
+  // Admins till adminpanelen, alla andra inloggade till intranätet (guarden där
+  // visar ett vänligt meddelande om kontot ännu inte fått medlemsåtkomst).
+  if (session) return <Navigate to={isAdmin ? '/admin' : '/internt'} replace />
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()

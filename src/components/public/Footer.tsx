@@ -1,10 +1,21 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { SiteSettings } from '../../lib/types'
+import { useAuth } from '../../lib/auth'
+import { getCampaign } from '../../lib/campaign'
 
 export default function Footer({ settings }: { settings: SiteSettings | null }) {
-  const petition = settings?.petition_url ?? '#'
+  const campaign = getCampaign(settings)
   const social = settings?.social_links ? Object.entries(settings.social_links) : []
+
+  // Länken längst ned: admins → adminpanelen, medlemmar (utan admin) → intranätet,
+  // utloggade → adminpanelens inloggning.
+  const { isAdmin, isMember } = useAuth()
+  const workspace = isAdmin
+    ? { to: '/admin', label: 'Admin' }
+    : isMember
+      ? { to: '/internt', label: 'Internt' }
+      : { to: '/admin', label: 'Admin' }
 
   // Static white outline of the logo as a decorative mark on the right.
   const [logoOutline, setLogoOutline] = useState('')
@@ -29,11 +40,11 @@ export default function Footer({ settings }: { settings: SiteSettings | null }) 
       <div className="footer-cta">
         <div className="container footer-cta-inner">
           <div>
-            <h3>Var med och gör skillnad</h3>
-            <p>Skriv under namninsamlingen och håll dig uppdaterad om planerna för Rögleskogen.</p>
+            <h3>{campaign.headline}</h3>
+            <p>{campaign.blurb}</p>
           </div>
-          <a href={petition} target="_blank" rel="noopener noreferrer" className="btn btn-primary">
-            Skriv under namninsamlingen
+          <a href={campaign.ctaUrl} target="_blank" rel="noopener noreferrer" className="btn btn-primary">
+            {campaign.isDonate ? campaign.ctaLabel : 'Skriv under namninsamlingen'}
           </a>
         </div>
       </div>
@@ -60,7 +71,7 @@ export default function Footer({ settings }: { settings: SiteSettings | null }) 
         <div className="footer-col">
           <h4 className="footer-heading">Engagera dig</h4>
           <ul className="footer-links">
-            <li><a href={petition} target="_blank" rel="noopener noreferrer">Skriv under</a></li>
+            <li><a href={campaign.ctaUrl} target="_blank" rel="noopener noreferrer">{campaign.ctaLabel}</a></li>
             <li><Link to="/vittnesmal">Lämna ett vittnesmål</Link></li>
             <li><Link to="/kontakt">Kontakta initiativet</Link></li>
             <li><Link to="/fragor-och-svar">Vanliga frågor</Link></li>
@@ -94,7 +105,7 @@ export default function Footer({ settings }: { settings: SiteSettings | null }) 
             >
               Till toppen ↑
             </button>
-            <Link to="/admin" className="footer-admin-link">Admin</Link>
+            <Link to={workspace.to} className="footer-admin-link">{workspace.label}</Link>
           </div>
         </div>
       </div>

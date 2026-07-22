@@ -11,6 +11,8 @@ interface AuthContextValue {
   user: User | null
   role: UserRole | null
   isAdmin: boolean
+  /** Har intranätsåtkomst — egen medlemsrad eller admin (admins är ett superset). */
+  isMember: boolean
   loading: boolean
   signIn: (email: string, password: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
@@ -22,6 +24,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [user, setUser] = useState<User | null>(null)
   const [role, setRole] = useState<UserRole | null>(null)
+  const [hasMemberRow, setHasMemberRow] = useState(false)
   const [loading, setLoading] = useState(true)
 
   async function fetchRole(userId: string) {
@@ -33,13 +36,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setRole((data?.role as UserRole) ?? null)
   }
 
+  // Intranätsåtkomst. Kollektionen är label-skyddad, så en användare utan
+  // member-labeln får tom träff — då är de inte medlem.
+  async function fetchMember(userId: string) {
+    const { data } = await supabase
+      .from('intranet_members')
+      .select('user_id')
+      .eq('user_id', userId)
+      .maybeSingle()
+    setHasMemberRow(!!data)
+  }
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
       setUser(session?.user ?? null)
       if (session?.user) {
         ;(async () => {
-          await fetchRole(session.user.id)
+          await Promise.all([fetchRole(session.user.id), fetchMember(session.user.id)])
           setLoading(false)
         })()
       } else {
@@ -52,10 +66,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(session?.user ?? null)
       if (session?.user) {
         ;(async () => {
-          await fetchRole(session.user.id)
+          await Promise.all([fetchRole(session.user.id), fetchMember(session.user.id)])
         })()
       } else {
         setRole(null)
+        setHasMemberRow(false)
       }
     })
 
@@ -73,9 +88,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const isAdmin = role !== null
+  const isMember = isAdmin || hasMemberRow
 
   return (
-    <AuthContext.Provider value={{ session, user, role, isAdmin, loading, signIn, signOut }}>
+    <AuthContext.Provider value={{ session, user, role, isAdmin, isMember, loading, signIn, signOut }}>
       {children}
     </AuthContext.Provider>
   )

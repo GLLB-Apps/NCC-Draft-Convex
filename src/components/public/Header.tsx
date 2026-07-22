@@ -8,6 +8,7 @@ import { useAuth } from '../../lib/auth'
 import NavIcon from './NavIcon'
 import LucideIcon, { resolveIconName } from '../../lib/lucide'
 import CountUp from './CountUp'
+import { getCampaign } from '../../lib/campaign'
 
 export default function Header({ settings }: { settings: SiteSettings | null }) {
   const [navItems, setNavItems] = useState<NavigationItem[]>([])
@@ -15,6 +16,7 @@ export default function Header({ settings }: { settings: SiteSettings | null }) 
   const [scrolled, setScrolled] = useState(false)
   const location = useLocation()
   const { user, signOut } = useAuth()
+  const campaign = getCampaign(settings)
 
   // When scrolled, the logo badge retracts to the header's current height.
   useEffect(() => {
@@ -141,12 +143,12 @@ export default function Header({ settings }: { settings: SiteSettings | null }) 
             </button>
           )}
           <a
-            href={settings?.petition_url ?? '#'}
+            href={campaign.ctaUrl}
             className="btn btn-primary btn-sm"
             target="_blank"
             rel="noopener noreferrer"
           >
-            Skriv under
+            {campaign.ctaLabel}
           </a>
           <button
             className={mobileOpen ? 'mobile-toggle open' : 'mobile-toggle'}
@@ -213,17 +215,26 @@ export default function Header({ settings }: { settings: SiteSettings | null }) 
           })}
         </ul>
         <div className="mobile-nav-widget">
-          <span className="vote-widget-label">Underskrifter</span>
-          <span className="vote-widget-count"><CountUp value={settings?.signature_count ?? 0} /></span>
-          <p className="vote-widget-text">Var med och gör skillnad – skriv under du också.</p>
+          {campaign.showSignatures ? (
+            <>
+              <span className="vote-widget-label">Underskrifter</span>
+              <span className="vote-widget-count"><CountUp value={settings?.signature_count ?? 0} /></span>
+              <p className="vote-widget-text">Var med och gör skillnad – skriv under du också.</p>
+            </>
+          ) : (
+            <>
+              <span className="vote-widget-label">{campaign.headline}</span>
+              <p className="vote-widget-text">{campaign.blurb}</p>
+            </>
+          )}
           <a
-            href={settings?.petition_url ?? '#'}
+            href={campaign.ctaUrl}
             className="vote-widget-btn"
             target="_blank"
             rel="noopener noreferrer"
             tabIndex={mobileOpen ? 0 : -1}
           >
-            Skriv under
+            {campaign.ctaLabel}
           </a>
         </div>
       </nav>
