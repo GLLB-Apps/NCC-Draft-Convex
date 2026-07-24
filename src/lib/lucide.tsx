@@ -8,6 +8,7 @@
 // and topic data keeps rendering.
 import type { LucideProps } from 'lucide-react'
 import type { ComponentType } from 'react'
+import { lazy, Suspense } from 'react'
 import {
   House, Info, Newspaper, Layers, Map as MapIcon, MapPin, Clock, FileText, Image, MessageCircle,
   HelpCircle, Mail, Phone, AtSign, Users, User, Megaphone, Bell, Search, Calendar, CalendarDays,
@@ -145,18 +146,74 @@ const LEGACY: Record<string, string> = {
   truck: 'truck', health: 'heart-pulse', shield: 'shield', map: 'map-pin',
 }
 
+// kebab-case Lucide name → PascalCase component key, e.g. "map-pin" → "MapPin",
+// "flower-2" → "Flower2".
+function toPascal(name: string): string {
+  return name.replace(/(^|-)([a-z0-9])/g, (_, __, c: string) => c.toUpperCase())
+}
+
+// Cheap shape check for a Lucide icon name — lets us gate the on-demand full
+// library below without loading it just to reject empty/garbage values.
+const NAME_RE = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/
+
+// Easter egg: pull an icon name out of a lucide.dev icon URL pasted into a
+// picker, e.g. "https://lucide.dev/icons/anchor" → "anchor". null if not one.
+export function parseLucideUrl(input: string): string | null {
+  const m = input.trim().match(/lucide\.dev\/icons\/([a-z0-9-]+)/i)
+  return m ? m[1].toLowerCase() : null
+}
+
+// Whether `name` is a real Lucide icon (registry names included). Loads the
+// full icon set once, on demand, so the main bundle keeps only the curated
+// subset above. Used by the picker to validate a pasted name before storing it.
+let allNames: Promise<Set<string>> | null = null
+export async function isLucideIconName(name: string): Promise<boolean> {
+  if (!name || !NAME_RE.test(name)) return false
+  if (byName.has(name)) return true
+  if (!allNames) allNames = import('lucide-react').then(m => new Set(Object.keys(m.icons)))
+  return (await allNames).has(toPascal(name))
+}
+
+// Full-library fallback renderer, code-split so it only loads when an icon
+// outside the curated registry is actually shown (i.e. one added via the
+// picker easter egg).
+const DynamicLucideIcon = lazy(async () => {
+  const mod = await import('lucide-react')
+  const set = mod.icons as Record<string, ComponentType<LucideProps>>
+  return {
+    default: ({ icon, ...rest }: { icon: string } & LucideProps) => {
+      const Cmp = set[toPascal(icon)]
+      return Cmp ? <Cmp aria-hidden="true" {...rest} /> : null
+    },
+  }
+})
+
 export function resolveIconName(value?: string | null): string | null {
   if (!value) return null
   if (byName.has(value)) return value
   const alias = LEGACY[value]
   if (alias && byName.has(alias)) return alias
+  // Icons pasted from lucide.dev aren't in the curated registry but are still
+  // valid Lucide names — accept anything shaped like one so callers that gate
+  // on this (e.g. the menu) still render it via the full-set fallback below.
+  if (NAME_RE.test(value)) return value
   return null
 }
 
 export default function LucideIcon({ icon, ...rest }: { icon?: string | null } & LucideProps) {
-  const name = resolveIconName(icon)
-  if (!name) return null
-  const Def = byName.get(name)!
-  const Cmp = Def.Icon
-  return <Cmp aria-hidden="true" {...rest} />
+  if (!icon) return null
+  if (byName.has(icon) || (LEGACY[icon] && byName.has(LEGACY[icon]))) {
+    const Cmp = byName.get(resolveIconName(icon)!)!.Icon
+    return <Cmp aria-hidden="true" {...rest} />
+  }
+  // Not in the curated registry: render from the full Lucide set on demand
+  // (e.g. an icon added via the picker easter egg). Unknown names render null.
+  if (NAME_RE.test(icon)) {
+    return (
+      <Suspense fallback={null}>
+        <DynamicLucideIcon icon={icon} {...rest} />
+      </Suspense>
+    )
+  }
+  return null
 }

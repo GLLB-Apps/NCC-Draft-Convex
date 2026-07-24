@@ -1155,6 +1155,21 @@
 .tap-tool.active { background: var(--primary); border-color: var(--primary); color: #fff; }
 .tap-tool:disabled { opacity: 0.4; cursor: not-allowed; }
 .tap-tool-insert { color: var(--text-muted); }
+/* Alt+<letter> hint badge on toolbar buttons */
+.tap-tool-key {
+  display: inline-block;
+  min-width: 1.1em;
+  margin-left: 4px;
+  padding: 0 3px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  font-size: 0.7rem;
+  line-height: 1.3;
+  text-align: center;
+  color: var(--text-muted);
+  background: var(--bg-alt);
+}
+.tap-tool-insert:hover .tap-tool-key { border-color: var(--primary); color: var(--primary); }
 
 .tap-doc { padding: var(--space-4) var(--space-5); }
 
@@ -1165,6 +1180,7 @@
   position: absolute;
   top: 4px;
   right: 0;
+  z-index: 2; /* keep above element blocks (also positioned) so ↑/↓/✕ stay clickable */
   display: flex;
   gap: 2px;
   opacity: 0;

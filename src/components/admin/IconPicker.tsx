@@ -1,7 +1,7 @@
 // Reusable searchable Lucide icon picker, used wherever the admin chooses an
 // icon (menu editor, topics, …). Value is a Lucide icon name (kebab-case).
-import { useMemo, useState } from 'react'
-import LucideIcon, { ICON_LIBRARY } from '../../lib/lucide'
+import { useEffect, useMemo, useState } from 'react'
+import LucideIcon, { ICON_LIBRARY, isLucideIconName, parseLucideUrl } from '../../lib/lucide'
 
 interface Props {
   value?: string | null
@@ -12,6 +12,18 @@ interface Props {
 
 export default function IconPicker({ value, onChange, allowNone = true, autoFocus = true }: Props) {
   const [query, setQuery] = useState('')
+  // Easter egg: paste a Lucide icon URL (e.g. https://lucide.dev/icons/anchor)
+  // into the search box to add any icon from the full library, not just the
+  // curated set below. `pasted` is the validated icon name once confirmed real.
+  const [pasted, setPasted] = useState<string | null>(null)
+
+  useEffect(() => {
+    const name = parseLucideUrl(query)
+    if (!name) { setPasted(null); return }
+    let alive = true
+    isLucideIconName(name).then(ok => { if (alive) setPasted(ok ? name : null) })
+    return () => { alive = false }
+  }, [query])
 
   const groups = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -46,6 +58,23 @@ export default function IconPicker({ value, onChange, allowNone = true, autoFocu
             Ingen
           </button>
         )}
+        {pasted && (
+          <div className="icon-picker-group">
+            <div className="icon-picker-group-title">Från Lucide ✨</div>
+            <div className="icon-picker-grid">
+              <button
+                type="button"
+                className={`icon-picker-btn${value === pasted ? ' active' : ''}`}
+                title={pasted}
+                aria-label={pasted}
+                aria-pressed={value === pasted}
+                onClick={() => onChange(pasted)}
+              >
+                <LucideIcon icon={pasted} size={20} />
+              </button>
+            </div>
+          </div>
+        )}
         {groups.map(([group, defs]) => (
           <div key={group} className="icon-picker-group">
             <div className="icon-picker-group-title">{group}</div>
@@ -66,7 +95,13 @@ export default function IconPicker({ value, onChange, allowNone = true, autoFocu
             </div>
           </div>
         ))}
-        {groups.length === 0 && <p className="icon-picker-empty">Inga ikoner matchar ”{query}”.</p>}
+        {groups.length === 0 && !pasted && (
+          <p className="icon-picker-empty">
+            {parseLucideUrl(query)
+              ? 'Ingen sådan Lucide-ikon hittades.'
+              : `Inga ikoner matchar ”${query}”.`}
+          </p>
+        )}
       </div>
     </div>
   )
