@@ -4,7 +4,8 @@ import type { MapLocation, MapArea } from '../../lib/types'
 import { supabase } from '../../lib/supabase'
 import { useToast } from '../../lib/toast'
 import { useConfirm } from '../../lib/confirm'
-import { mapPointTypeLabel, statusLabel, statusBadgeClass, polygonAreaKm2 } from '../../lib/utils'
+import { mapPointTypeLabel, mapPointTypeIconName, statusLabel, statusBadgeClass, polygonAreaKm2 } from '../../lib/utils'
+import LucideIcon from '../../lib/lucide'
 
 type Tab = 'points' | 'areas'
 
@@ -80,6 +81,7 @@ export default function AdminMap() {
                       style={{ borderColor: a.color, borderStyle: a.line_style === 'dashed' ? 'dashed' : 'solid' }}
                       aria-hidden="true"
                     />
+                    {a.icon && <LucideIcon icon={a.icon} size={16} className="admin-list-icon" />}
                     {a.title}
                   </div>
                   <div className="admin-list-item-meta">
@@ -104,7 +106,10 @@ export default function AdminMap() {
             {points.map(p => (
               <div key={p.id} className="admin-list-item">
                 <div className="admin-list-item-info">
-                  <div className="admin-list-item-title">{p.title}</div>
+                  <div className="admin-list-item-title">
+                    <LucideIcon icon={p.icon || mapPointTypeIconName(p.point_type)} size={16} className="admin-list-icon" />
+                    {p.title}
+                  </div>
                   <div className="admin-list-item-meta">
                     <span className={statusBadgeClass(p.status)}>{statusLabel(p.status)}</span>
                     <span>{mapPointTypeLabel(p.point_type)}</span>

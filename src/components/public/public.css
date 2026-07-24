@@ -1799,6 +1799,33 @@
   line-height: 1.5;
 }
 
+/* Kategori i teckenförklaringen (Områden / Punkter) – ihopfällbar. */
+.map-filter-group { display: flex; flex-direction: column; gap: var(--space-2); }
+
+.map-filter-group-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-1) var(--space-2);
+  background: none;
+  border: none;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+}
+.map-filter-group-head:hover { background: var(--bg-alt); }
+.map-filter-group-chevron { width: 0.9em; font-size: 0.75rem; color: var(--text-muted); }
+.map-filter-group-title {
+  flex: 1;
+  text-align: left;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+.map-filter-group-body { display: flex; flex-direction: column; gap: var(--space-2); }
+
 .map-filter {
   display: flex;
   align-items: center;
@@ -1823,11 +1850,16 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.95rem;
+  background: var(--primary);
+  color: #fff;
   line-height: 1;
   flex-shrink: 0;
   box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.6);
 }
+.map-filter-icon svg { width: 15px; height: 15px; }
+
+/* Områdets valfria Lucide-ikon i teckenförklaringen – följer sidans temafärg. */
+.map-filter-area-icon { flex-shrink: 0; color: var(--primary); }
 
 /* Teckenförklaring för områdespolygoner: visar linjefärg och linjestil. */
 .map-area-swatch {

@@ -1609,6 +1609,39 @@
 
 .form-hint-warning { color: var(--warning, #b8860b); }
 
+/* Kartredigering: karta och fält sida vid sida så man slipper skrolla. */
+.map-edit-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
+  gap: var(--space-5);
+  align-items: start;
+}
+.map-edit-map { position: sticky; top: var(--space-4); }
+@media (max-width: 1024px) {
+  .map-edit-layout { grid-template-columns: 1fr; }
+  .map-edit-map { position: static; }
+}
+
+/* Ikonväljarfält (kartpunkt/område): kompakt rad + utfällbar väljare. */
+.map-icon-field { display: flex; align-items: center; gap: var(--space-2); }
+.map-icon-current {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+.map-icon-current:hover { border-color: var(--primary); }
+.map-icon-none { color: var(--text-muted); }
+
+/* Lucide-ikon framför titeln i kartlistan – följer sidans temafärg. */
+.admin-list-icon { color: var(--primary); flex-shrink: 0; margin-right: var(--space-1); vertical-align: middle; }
+
 /* Notisklocka i topbaren */
 .admin-bell { position: relative; }
 

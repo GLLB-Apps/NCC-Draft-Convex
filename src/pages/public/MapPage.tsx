@@ -5,21 +5,9 @@ import type { MapLocation, MapArea, Testimony } from '../../lib/types'
 import { supabase } from '../../lib/supabase'
 import MapPreview from '../../components/public/MapPreview'
 import TestimonyMap from '../../components/public/TestimonyMap'
-import { mapPointTypeLabel, mapPointTypeIcon, areaBounds } from '../../lib/utils'
+import { mapPointTypeLabel, mapPointTypeIconName, areaBounds } from '../../lib/utils'
+import LucideIcon from '../../lib/lucide'
 import { usePage } from '../../lib/usePage'
-
-const COLORS: Record<string, string> = {
-  work_area: '#b94a3d',
-  quarry_area: '#b94a3d',
-  property_border: '#4a6c7f',
-  transport_route: '#b8860b',
-  residence_distance: '#8b6f47',
-  nature_value: '#3d7a52',
-  walking_trail: '#2d5a3d',
-  observation_point: '#4a6c7f',
-  photo_point: '#8b6f47',
-  testimony_point: '#2d5a3d',
-}
 
 export default function MapPage() {
   const [points, setPoints] = useState<MapLocation[]>([])
@@ -28,6 +16,8 @@ export default function MapPage() {
   const [loading, setLoading] = useState(true)
   const [activeTypes, setActiveTypes] = useState<Set<string>>(new Set())
   const [hiddenAreas, setHiddenAreas] = useState<Set<string>>(new Set())
+  // Ihopfällbara kategorier i teckenförklaringen ("Områden" / "Punkter").
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
   const [tab, setTab] = useState<'area' | 'testimonies'>('area')
   const [selectedT, setSelectedT] = useState<string | null>(null)
   const page = usePage('karta')
@@ -83,6 +73,15 @@ export default function MapPage() {
 
   const uniqueTypes = Array.from(new Set(areaPoints.map(p => p.point_type)))
 
+  function toggleCollapse(key: string) {
+    setCollapsed(prev => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  }
+
   return (
     <div className="container fade-in">
       <div className="page-header">
@@ -107,42 +106,75 @@ export default function MapPage() {
               <h2 className="map-filters-title">{page.text('layers_heading')}</h2>
               <p className="map-filters-hint">{page.text('layers_hint')}</p>
 
-              {areas.map(area => {
-                const active = !hiddenAreas.has(area.id)
-                return (
+              {areas.length > 0 && (
+                <div className="map-filter-group">
                   <button
-                    key={area.id}
-                    className={active ? 'map-filter' : 'map-filter is-off'}
-                    onClick={() => toggleArea(area.id)}
-                    aria-pressed={active}
+                    type="button"
+                    className="map-filter-group-head"
+                    onClick={() => toggleCollapse('areas')}
+                    aria-expanded={!collapsed.has('areas')}
                   >
-                    <span
-                      className="map-area-swatch"
-                      style={{ borderColor: area.color, borderStyle: area.line_style === 'dashed' ? 'dashed' : 'solid' }}
-                      aria-hidden="true"
-                    />
-                    <span className="map-filter-label">{area.title}</span>
+                    <span className="map-filter-group-chevron" aria-hidden="true">{collapsed.has('areas') ? '▸' : '▾'}</span>
+                    <span className="map-filter-group-title">Områden</span>
+                    <span className="map-filter-count">{areas.length}</span>
                   </button>
-                )
-              })}
+                  {!collapsed.has('areas') && (
+                    <div className="map-filter-group-body">
+                      {areas.map(area => {
+                        const active = !hiddenAreas.has(area.id)
+                        return (
+                          <button
+                            key={area.id}
+                            className={active ? 'map-filter' : 'map-filter is-off'}
+                            onClick={() => toggleArea(area.id)}
+                            aria-pressed={active}
+                          >
+                            <span
+                              className="map-area-swatch"
+                              style={{ borderColor: area.color, borderStyle: area.line_style === 'dashed' ? 'dashed' : 'solid' }}
+                              aria-hidden="true"
+                            />
+                            {area.icon && <LucideIcon icon={area.icon} size={15} className="map-filter-area-icon" />}
+                            <span className="map-filter-label">{area.title}</span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {uniqueTypes.length > 0 && (
-                <>
-                {uniqueTypes.map(type => {
-                  const active = activeTypes.size === 0 || activeTypes.has(type)
-                  const count = areaPoints.filter(p => p.point_type === type).length
-                  return (
-                    <button key={type} className={active ? 'map-filter' : 'map-filter is-off'} onClick={() => toggleType(type)} aria-pressed={active}>
-                      <span className="map-filter-icon" style={{ background: COLORS[type] ?? '#2d5a3d' }} aria-hidden="true">{mapPointTypeIcon(type)}</span>
-                      <span className="map-filter-label">{mapPointTypeLabel(type)}</span>
-                      <span className="map-filter-count">{count}</span>
-                    </button>
-                  )
-                })}
-                {activeTypes.size > 0 && (
-                  <button className="map-filter-reset" onClick={() => setActiveTypes(new Set())}>Visa alla punkter</button>
-                )}
-                </>
+                <div className="map-filter-group">
+                  <button
+                    type="button"
+                    className="map-filter-group-head"
+                    onClick={() => toggleCollapse('points')}
+                    aria-expanded={!collapsed.has('points')}
+                  >
+                    <span className="map-filter-group-chevron" aria-hidden="true">{collapsed.has('points') ? '▸' : '▾'}</span>
+                    <span className="map-filter-group-title">Punkter</span>
+                    <span className="map-filter-count">{areaPoints.length}</span>
+                  </button>
+                  {!collapsed.has('points') && (
+                    <div className="map-filter-group-body">
+                      {uniqueTypes.map(type => {
+                        const active = activeTypes.size === 0 || activeTypes.has(type)
+                        const count = areaPoints.filter(p => p.point_type === type).length
+                        return (
+                          <button key={type} className={active ? 'map-filter' : 'map-filter is-off'} onClick={() => toggleType(type)} aria-pressed={active}>
+                            <span className="map-filter-icon" aria-hidden="true"><LucideIcon icon={mapPointTypeIconName(type)} size={15} /></span>
+                            <span className="map-filter-label">{mapPointTypeLabel(type)}</span>
+                            <span className="map-filter-count">{count}</span>
+                          </button>
+                        )
+                      })}
+                      {activeTypes.size > 0 && (
+                        <button className="map-filter-reset" onClick={() => setActiveTypes(new Set())}>Visa alla punkter</button>
+                      )}
+                    </div>
+                  )}
+                </div>
               )}
             </aside>
             <div className="map-container">

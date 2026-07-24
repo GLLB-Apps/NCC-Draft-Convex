@@ -1,8 +1,9 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import type { MapLocation, MapArea } from '../../lib/types'
-import { mapPointTypeLabel, distanceMeters, formatDistance, MAP_FIT_PADDING, areaBounds } from '../../lib/utils'
+import { mapPointTypeLabel, mapPointTypeIconName, distanceMeters, formatDistance, MAP_FIT_PADDING, areaBounds } from '../../lib/utils'
+import LucideIcon from '../../lib/lucide'
 
 const COLORS: Record<string, string> = {
   work_area: '#b94a3d',
@@ -31,6 +32,12 @@ export default function MapPreview({ points, areas = [], height = 350 }: Props) 
   // inte rensar bort det andra (L.Polygon ärver från L.Polyline).
   const pointLayerRef = useRef<L.LayerGroup | null>(null)
   const areaLayerRef = useRef<L.LayerGroup | null>(null)
+  // Leaflet-markörer/popuper byggs som HTML-strängar. Vi renderar därför varje
+  // ikon (React) i en gömd behållare och klonar dess <svg>-uppmärkning därifrån
+  // — så slipper vi dra in react-dom/server bara för att göra strängar av dem.
+  const iconStoreRef = useRef<HTMLDivElement>(null)
+  const pointIcon = (p: MapLocation) => p.icon || mapPointTypeIconName(p.point_type)
+  const iconNames = useMemo(() => Array.from(new Set(points.map(pointIcon))), [points])
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return
@@ -92,6 +99,11 @@ export default function MapPreview({ points, areas = [], height = 350 }: Props) 
 
     group.clearLayers()
 
+    // Klonad <svg>-sträng för en ikon ur den gömda behållaren (färg ärvs via
+    // currentColor från markören/popupen).
+    const svgFor = (name: string) =>
+      iconStoreRef.current?.querySelector(`[data-icon="${CSS.escape(name)}"] svg`)?.outerHTML ?? ''
+
     // Reference point(s) for "distance to residence": nearest quarry/work area.
     const quarryPoints = points.filter(p => p.point_type === 'quarry_area' || p.point_type === 'work_area')
     const nearestQuarry = (p: MapLocation) => {
@@ -106,11 +118,14 @@ export default function MapPreview({ points, areas = [], height = 350 }: Props) 
 
     points.forEach(point => {
       const color = COLORS[point.point_type] ?? '#2d5a3d'
+      const iconName = pointIcon(point)
+      const glyph = svgFor(iconName)
       const icon = L.divIcon({
-        html: `<div style="width:14px;height:14px;border-radius:50%;background:${color};border:2px solid white;box-shadow:0 1px 3px rgba(0,0,0,0.4);"></div>`,
+        html: `<div style="width:28px;height:28px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:${color};border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;"><span style="transform:rotate(45deg);display:flex;color:#fff;">${glyph}</span></div>`,
         className: '',
-        iconSize: [14, 14],
-        iconAnchor: [7, 7],
+        iconSize: [28, 28],
+        iconAnchor: [14, 26],
+        popupAnchor: [0, -24],
       })
 
       // Distance line from a residence point to the nearest planned quarry area.
@@ -129,7 +144,10 @@ export default function MapPreview({ points, areas = [], height = 350 }: Props) 
 
       const marker = L.marker([point.lat, point.lng], { icon }).addTo(group)
       marker.bindPopup(`
-        <strong>${point.title}</strong><br/>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+          <span style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:${color};color:#fff;flex-shrink:0;">${svgFor(iconName)}</span>
+          <strong>${point.title}</strong>
+        </div>
         <span style="font-size:0.85rem;color:#666;">${mapPointTypeLabel(point.point_type)}</span>
         ${point.description ? `<br/><span style="font-size:0.85rem;">${point.description}</span>` : ''}
         ${distanceNote}
@@ -137,5 +155,13 @@ export default function MapPreview({ points, areas = [], height = 350 }: Props) 
     })
   }, [points])
 
-  return <div ref={containerRef} style={{ height, borderRadius: 'var(--radius-lg)' }} />
+  return (
+    <>
+      <div ref={containerRef} style={{ height, borderRadius: 'var(--radius-lg)' }} />
+      {/* Gömd ikonkälla som markörer/popuper klonar sin <svg> ifrån. */}
+      <div ref={iconStoreRef} aria-hidden="true" style={{ display: 'none' }}>
+        {iconNames.map(n => <span key={n} data-icon={n}><LucideIcon icon={n} size={16} /></span>)}
+      </div>
+    </>
+  )
 }

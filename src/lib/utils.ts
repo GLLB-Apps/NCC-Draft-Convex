@@ -73,20 +73,23 @@ export function mapPointTypeLabel(type: string): string {
   return map[type] ?? type
 }
 
-export function mapPointTypeIcon(type: string): string {
+// Default Lucide icon (kebab-case) per point type. All names are in the curated
+// registry (src/lib/lucide.tsx) so they render synchronously without pulling in
+// the full library. A point's own `icon` overrides this when set.
+export function mapPointTypeIconName(type: string): string {
   const map: Record<string, string> = {
-    work_area: '🏗️',
-    quarry_area: '⛏️',
-    property_border: '📐',
-    transport_route: '🚚',
-    residence_distance: '🏠',
-    nature_value: '🌳',
-    walking_trail: '🥾',
-    observation_point: '🔭',
-    photo_point: '📷',
-    testimony_point: '💬',
+    work_area: 'construction',
+    quarry_area: 'mountain',
+    property_border: 'ruler',
+    transport_route: 'truck',
+    residence_distance: 'house',
+    nature_value: 'trees',
+    walking_trail: 'footprints',
+    observation_point: 'eye',
+    photo_point: 'camera',
+    testimony_point: 'message-circle',
   }
-  return map[type] ?? '📍'
+  return map[type] ?? 'map-pin'
 }
 
 // Great-circle distance between two lat/lng points, in metres.

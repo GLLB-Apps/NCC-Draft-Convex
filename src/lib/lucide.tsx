@@ -8,7 +8,7 @@
 // and topic data keeps rendering.
 import type { LucideProps } from 'lucide-react'
 import type { ComponentType } from 'react'
-import { lazy, Suspense } from 'react'
+import { icons as LUCIDE_ICONS } from 'lucide-react'
 import {
   House, Info, Newspaper, Layers, Map as MapIcon, MapPin, Clock, FileText, Image, MessageCircle,
   HelpCircle, Mail, Phone, AtSign, Users, User, Megaphone, Bell, Search, Calendar, CalendarDays,
@@ -152,9 +152,19 @@ function toPascal(name: string): string {
   return name.replace(/(^|-)([a-z0-9])/g, (_, __, c: string) => c.toUpperCase())
 }
 
-// Cheap shape check for a Lucide icon name — lets us gate the on-demand full
-// library below without loading it just to reject empty/garbage values.
+// Cheap shape check for a Lucide icon name — rejects empty/garbage before we
+// bother looking a value up in the full set.
 const NAME_RE = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/
+
+// The full Lucide set, keyed by PascalCase component name. It is already in the
+// main bundle (several components import named icons statically, and this map
+// pulls the rest), so importing it here is synchronous and free — which lets
+// LucideIcon render any icon, including ones pasted from lucide.dev that aren't
+// in the curated registry above, without a lazy/Suspense round-trip.
+const FULL = LUCIDE_ICONS as Record<string, ComponentType<LucideProps>>
+function fullSetComponent(name: string): ComponentType<LucideProps> | undefined {
+  return NAME_RE.test(name) ? FULL[toPascal(name)] : undefined
+}
 
 // Easter egg: pull an icon name out of a lucide.dev icon URL pasted into a
 // picker, e.g. "https://lucide.dev/icons/anchor" → "anchor". null if not one.
@@ -163,30 +173,10 @@ export function parseLucideUrl(input: string): string | null {
   return m ? m[1].toLowerCase() : null
 }
 
-// Whether `name` is a real Lucide icon (registry names included). Loads the
-// full icon set once, on demand, so the main bundle keeps only the curated
-// subset above. Used by the picker to validate a pasted name before storing it.
-let allNames: Promise<Set<string>> | null = null
-export async function isLucideIconName(name: string): Promise<boolean> {
-  if (!name || !NAME_RE.test(name)) return false
-  if (byName.has(name)) return true
-  if (!allNames) allNames = import('lucide-react').then(m => new Set(Object.keys(m.icons)))
-  return (await allNames).has(toPascal(name))
+// Whether `name` is a real Lucide icon (registry names included).
+export function isLucideIconName(name: string): boolean {
+  return byName.has(name) || !!fullSetComponent(name)
 }
-
-// Full-library fallback renderer, code-split so it only loads when an icon
-// outside the curated registry is actually shown (i.e. one added via the
-// picker easter egg).
-const DynamicLucideIcon = lazy(async () => {
-  const mod = await import('lucide-react')
-  const set = mod.icons as Record<string, ComponentType<LucideProps>>
-  return {
-    default: ({ icon, ...rest }: { icon: string } & LucideProps) => {
-      const Cmp = set[toPascal(icon)]
-      return Cmp ? <Cmp aria-hidden="true" {...rest} /> : null
-    },
-  }
-})
 
 export function resolveIconName(value?: string | null): string | null {
   if (!value) return null
@@ -202,18 +192,8 @@ export function resolveIconName(value?: string | null): string | null {
 
 export default function LucideIcon({ icon, ...rest }: { icon?: string | null } & LucideProps) {
   if (!icon) return null
-  if (byName.has(icon) || (LEGACY[icon] && byName.has(LEGACY[icon]))) {
-    const Cmp = byName.get(resolveIconName(icon)!)!.Icon
-    return <Cmp aria-hidden="true" {...rest} />
-  }
-  // Not in the curated registry: render from the full Lucide set on demand
-  // (e.g. an icon added via the picker easter egg). Unknown names render null.
-  if (NAME_RE.test(icon)) {
-    return (
-      <Suspense fallback={null}>
-        <DynamicLucideIcon icon={icon} {...rest} />
-      </Suspense>
-    )
-  }
-  return null
+  // Curated registry first (tree-shaken, canonical), then the full set for
+  // anything pasted from lucide.dev. Unknown names render nothing.
+  const Cmp = byName.get(resolveIconName(icon) ?? '')?.Icon ?? fullSetComponent(icon)
+  return Cmp ? <Cmp aria-hidden="true" {...rest} /> : null
 }

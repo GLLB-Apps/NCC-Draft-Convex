@@ -19,10 +19,7 @@ export default function IconPicker({ value, onChange, allowNone = true, autoFocu
 
   useEffect(() => {
     const name = parseLucideUrl(query)
-    if (!name) { setPasted(null); return }
-    let alive = true
-    isLucideIconName(name).then(ok => { if (alive) setPasted(ok ? name : null) })
-    return () => { alive = false }
+    setPasted(name && isLucideIconName(name) ? name : null)
   }, [query])
 
   const groups = useMemo(() => {

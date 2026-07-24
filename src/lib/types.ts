@@ -165,6 +165,8 @@ export interface MapLocation {
   lat: number
   lng: number
   point_type: MapPointType
+  /** Valfri Lucide-ikon (kebab-case). Faller tillbaka på punkttypens ikon. */
+  icon: string | null
   image_url: string | null
   source: string | null
   status: ContentStatus
@@ -239,6 +241,8 @@ export interface MapArea {
   color: string
   line_style: MapAreaLineStyle
   fill_opacity: number
+  /** Valfri Lucide-ikon (kebab-case) som visas i teckenförklaringen. */
+  icon: string | null
   /** Yttre ring i ritordning. Stängs automatiskt — upprepa inte första punkten. */
   points: LatLngTuple[]
   sort_order: number

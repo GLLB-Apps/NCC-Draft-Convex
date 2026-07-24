@@ -5,6 +5,8 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../lib/auth'
 import { useToast } from '../../lib/toast'
 import { parseCoordinateText, polygonAreaKm2, MAP_FIT_PADDING } from '../../lib/utils'
+import LucideIcon from '../../lib/lucide'
+import IconPicker from '../../components/admin/IconPicker'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 
@@ -32,6 +34,8 @@ export default function AdminMapAreaEdit() {
   })
   const [points, setPoints] = useState<LatLngTuple[]>([])
   const [history, setHistory] = useState<LatLngTuple[][]>([])
+  const [icon, setIcon] = useState<string | null>(null)
+  const [iconOpen, setIconOpen] = useState(false)
   const [status, setStatus] = useState<ContentStatus>('draft')
   const [loading, setLoading] = useState(!isNew)
   const [saving, setSaving] = useState(false)
@@ -76,6 +80,7 @@ export default function AdminMapAreaEdit() {
           sort_order: a.sort_order ?? 0,
         })
         setPoints(Array.isArray(a.points) ? a.points : [])
+        setIcon(a.icon ?? null)
         setStatus(a.status)
       }
       setLoading(false)
@@ -179,6 +184,7 @@ export default function AdminMapAreaEdit() {
       line_style: form.line_style,
       fill_opacity: form.fill_opacity,
       sort_order: form.sort_order,
+      icon: icon || null,
       points,
       status: saveStatus,
       updated_by: user?.id,
@@ -206,7 +212,8 @@ export default function AdminMapAreaEdit() {
         <Link to="/admin/karta" className="btn btn-ghost btn-sm">← Tillbaka</Link>
       </div>
 
-      <div className="admin-form-card">
+      <div className="map-edit-layout">
+        <div className="map-edit-map admin-form-card">
         <div className="map-editor-toolbar">
           <button
             type="button"
@@ -266,7 +273,9 @@ export default function AdminMapAreaEdit() {
             </div>
           </div>
         )}
+        </div>
 
+        <div className="map-edit-fields admin-form-card">
         <div className="form-group">
           <label className="form-label" htmlFor="title">Titel *</label>
           <input id="title" className="form-input" type="text" value={form.title} onChange={e => update('title', e.target.value)} />
@@ -275,6 +284,19 @@ export default function AdminMapAreaEdit() {
           <label className="form-label" htmlFor="description">Beskrivning</label>
           <textarea id="description" className="form-textarea" rows={2} value={form.description} onChange={e => update('description', e.target.value)} />
           <p className="form-hint">Visas i popupen när någon klickar på området.</p>
+        </div>
+
+        <div className="form-group">
+          <label className="form-label">Ikon</label>
+          <div className="map-icon-field">
+            <button type="button" className="map-icon-current" onClick={() => setIconOpen(v => !v)} aria-expanded={iconOpen}>
+              {icon ? <LucideIcon icon={icon} size={20} /> : <span className="map-icon-none" aria-hidden="true">◦</span>}
+              <span>{icon ?? 'Ingen ikon'}</span>
+            </button>
+            {icon && <button type="button" className="btn btn-ghost btn-sm" onClick={() => setIcon(null)}>Ta bort</button>}
+          </div>
+          {iconOpen && <IconPicker value={icon} onChange={n => { setIcon(n); setIconOpen(false) }} />}
+          <p className="form-hint">Visas i teckenförklaringen. Klistra in en Lucide-adress i sökrutan för valfri ikon.</p>
         </div>
 
         <div className="form-group">
@@ -344,6 +366,7 @@ export default function AdminMapAreaEdit() {
         <div className="admin-form-actions">
           <button type="button" className="btn btn-primary" onClick={() => save(false)} disabled={saving}>{saving ? 'Sparar…' : 'Spara'}</button>
           <button type="button" className="btn btn-secondary" onClick={() => save(true)} disabled={saving}>Publicera</button>
+        </div>
         </div>
       </div>
     </div>
