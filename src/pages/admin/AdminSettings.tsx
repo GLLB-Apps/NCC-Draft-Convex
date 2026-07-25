@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import type { SiteSettings } from '../../lib/types'
 import { supabase } from '../../lib/supabase'
 import { useToast } from '../../lib/toast'
@@ -45,9 +46,6 @@ export default function AdminSettings() {
       status_phase: settings.status_phase,
       next_important_date: settings.next_important_date,
       signature_count: settings.signature_count,
-      hero_title: settings.hero_title,
-      hero_intro: settings.hero_intro,
-      hero_image: settings.hero_image,
     }).eq('id', settings.id)
     setSaving(false)
     if (error) show('Kunde inte spara: ' + error.message, 'error')
@@ -101,19 +99,9 @@ export default function AdminSettings() {
       </div>
 
       <div className="admin-form-card" style={{ marginTop: 'var(--space-5)' }}>
-        <h3 style={{ marginBottom: 'var(--space-5)' }}>Startsida</h3>
-        <div className="form-group">
-          <label className="form-label" htmlFor="hero_title">Hero-rubrik</label>
-          <input id="hero_title" className="form-input" type="text" value={settings.hero_title} onChange={e => update('hero_title', e.target.value)} />
-        </div>
-        <div className="form-group">
-          <label className="form-label" htmlFor="hero_intro">Hero-ingress</label>
-          <textarea id="hero_intro" className="form-textarea" rows={3} value={settings.hero_intro} onChange={e => update('hero_intro', e.target.value)} />
-        </div>
-        <div className="form-group">
-          <label className="form-label" htmlFor="hero_image">Hero-bild (URL)</label>
-          <input id="hero_image" className="form-input" type="url" value={settings.hero_image ?? ''} onChange={e => update('hero_image', e.target.value || null)} />
-        </div>
+        <h3 style={{ marginBottom: 'var(--space-2)' }}>Startsidans hero</h3>
+        <p className="form-hint" style={{ marginBottom: 'var(--space-3)' }}>Rubrik, ingress, bild och knappar/CTA redigeras i hero-editorn.</p>
+        <Link to="/admin/hero" className="btn btn-secondary btn-sm">Redigera hero →</Link>
       </div>
 
       <div className="admin-form-card" style={{ marginTop: 'var(--space-5)' }}>

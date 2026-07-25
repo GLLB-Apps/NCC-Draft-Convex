@@ -21,7 +21,7 @@ export interface PageConfig {
 export const PAGES: PageConfig[] = [
   {
     slug: 'hem', label: 'Startsida', route: '/', defaultTitle: 'Startsida', defaultIntro: '', headerless: true,
-    manage: [{ label: 'Webbplatsinställningar (hero m.m.)', to: '/admin/inställningar' }],
+    manage: [{ label: 'Redigera hero (bild, text, knappar)', to: '/admin/hero' }, { label: 'Webbplatsinställningar', to: '/admin/inställningar' }],
     fields: [
       { key: 'status_heading', label: 'Status: rubrik', default: 'Aktuell status' },
       { key: 'status_intro', label: 'Status: text', default: 'Översikt över var i processen vi befinner oss.' },
@@ -115,6 +115,22 @@ export const PAGES: PageConfig[] = [
 ]
 
 export const pageBySlug = (slug: string) => PAGES.find(p => p.slug === slug)
+
+// Toppnivå-adresser som egna sidor inte får använda (befintliga rutter + admin).
+export const RESERVED_SLUGS = new Set([
+  '', 'bakgrund', 'amnen', 'nyheter', 'vittnesmal', 'karta', 'tidslinje',
+  'dokument', 'media', 'press', 'fragor-och-svar', 'kontakt',
+  'admin', 'internt', 'login', 'api',
+])
+
+/** Gör en URL-vänlig slug av en titel (svenska tecken → ascii). */
+export function slugify(input: string): string {
+  return input
+    .toLowerCase().trim()
+    .replace(/[åä]/g, 'a').replace(/ö/g, 'o')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
 
 // Site pages that can be linked directly from the menu, with a suggested
 // icon (Lucide name). Used by the menu editor to offer pages that are not

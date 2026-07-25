@@ -26,6 +26,7 @@ const MediaPage = lazy(() => import('./pages/public/MediaPage'))
 const PressPage = lazy(() => import('./pages/public/PressPage'))
 const FaqPage = lazy(() => import('./pages/public/FaqPage'))
 const ContactPage = lazy(() => import('./pages/public/ContactPage'))
+const CustomPage = lazy(() => import('./pages/public/CustomPage'))
 
 // Admin pages — lazy
 const AdminLogin = lazy(() => import('./pages/admin/AdminLogin'))
@@ -56,6 +57,9 @@ const AdminContacts = lazy(() => import('./pages/admin/AdminContacts'))
 const AdminNavigation = lazy(() => import('./pages/admin/AdminNavigation'))
 const AdminPages = lazy(() => import('./pages/admin/AdminPages'))
 const AdminPageEdit = lazy(() => import('./pages/admin/AdminPageEdit'))
+const AdminHero = lazy(() => import('./pages/admin/AdminHero'))
+const AdminCustomPages = lazy(() => import('./pages/admin/AdminCustomPages'))
+const AdminCustomPageEdit = lazy(() => import('./pages/admin/AdminCustomPageEdit'))
 const AdminMessages = lazy(() => import('./pages/admin/AdminMessages'))
 const AdminSettings = lazy(() => import('./pages/admin/AdminSettings'))
 const AdminAdmins = lazy(() => import('./pages/admin/AdminAdmins'))
@@ -110,6 +114,8 @@ export default function App() {
                 <Route path="/press" element={<PressPage />} />
                 <Route path="/fragor-och-svar" element={<FaqPage />} />
                 <Route path="/kontakt" element={<ContactPage />} />
+                {/* Egna sidor: fångar omatchade toppnivå-adresser (explicita rutter vinner). */}
+                <Route path="/:slug" element={<CustomPage />} />
               </Route>
 
               {/* Admin routes */}
@@ -144,6 +150,10 @@ export default function App() {
                 <Route path="meny" element={<AdminNavigation />} />
                 <Route path="sidor" element={<AdminPages />} />
                 <Route path="sidor/:slug" element={<AdminPageEdit />} />
+                <Route path="hero" element={<AdminHero />} />
+                <Route path="egna-sidor" element={<AdminCustomPages />} />
+                <Route path="egna-sidor/ny" element={<AdminCustomPageEdit />} />
+                <Route path="egna-sidor/:id" element={<AdminCustomPageEdit />} />
                 <Route path="meddelanden" element={<AdminMessages />} />
                 <Route path="bakgrund" element={<AdminBackground />} />
                 <Route path="inställningar" element={<AdminSettings />} />

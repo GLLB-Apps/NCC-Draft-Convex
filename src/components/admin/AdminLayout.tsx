@@ -23,6 +23,7 @@ const MENU_GROUPS: { title: string | null; items: MenuItem[] }[] = [
     title: 'Innehåll',
     items: [
       { label: 'Sidor', path: '/admin/sidor', roles: ['superadmin', 'redaktor'] },
+      { label: 'Fristående sidor', path: '/admin/egna-sidor', roles: ['superadmin', 'redaktor'] },
       { label: 'Nyheter', path: '/admin/nyheter', roles: ['superadmin', 'redaktor', 'skribent'] },
       { label: 'Ämnesområden', path: '/admin/amnen', roles: ['superadmin', 'redaktor', 'skribent'] },
       { label: 'Dokument', path: '/admin/dokument', roles: ['superadmin', 'redaktor', 'skribent'] },
@@ -44,6 +45,7 @@ const MENU_GROUPS: { title: string | null; items: MenuItem[] }[] = [
   {
     title: 'Webbplats',
     items: [
+      { label: 'Hero (startsida)', path: '/admin/hero', roles: ['superadmin', 'redaktor'] },
       { label: 'Meny', path: '/admin/meny', roles: ['superadmin', 'redaktor'] },
       { label: 'Inställningar', path: '/admin/inställningar', roles: ['superadmin'] },
       { label: 'Administratörer', path: '/admin/administratörer', roles: ['superadmin'] },

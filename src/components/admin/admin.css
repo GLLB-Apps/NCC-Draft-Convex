@@ -1648,6 +1648,31 @@
 /* Lucide-ikon framför titeln i kartlistan – följer sidans temafärg. */
 .admin-list-icon { color: var(--primary); flex-shrink: 0; margin-right: var(--space-1); vertical-align: middle; }
 
+/* Hero-editorns knapplista */
+.hero-btn-list { display: flex; flex-direction: column; gap: var(--space-3); }
+.hero-btn-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-alt);
+}
+.hero-btn-reorder { display: flex; flex-direction: column; gap: 2px; }
+.hero-btn-fields { flex: 1; display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
+.hero-btn-linkrow { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+.hero-btn-linkrow .form-select { flex: 0 0 auto; max-width: 45%; }
+.hero-btn-linkrow .form-input { flex: 1 1 160px; min-width: 0; }
+.hero-btn-opts { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+.hero-btn-opts .form-select { width: auto; }
+.hero-btn-check { display: inline-flex; align-items: center; gap: 6px; font-size: 0.9rem; }
+.hero-btn-cta-note { font-size: 0.9rem; color: var(--primary); font-weight: 500; }
+
+/* Adressfält för egna sidor */
+.custom-page-slug { display: flex; align-items: center; gap: 4px; }
+.custom-page-slug > span { color: var(--text-muted); font-family: monospace; }
+
 /* Notisklocka i topbaren */
 .admin-bell { position: relative; }
 

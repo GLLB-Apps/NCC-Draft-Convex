@@ -46,7 +46,30 @@ export interface SiteSettings {
   hero_title: string
   hero_intro: string
   hero_image: string | null
+  hero_buttons: HeroButton[]
   background_blocks: ContentBlock[]
+}
+
+/** En knapp i heron. `cta: true` följer kampanjläget (namninsamling/donation). */
+export interface HeroButton {
+  label: string
+  url: string
+  style: 'primary' | 'secondary'
+  cta?: boolean
+}
+
+/** Admin-skapad sida som renderas med block-editorn, på toppnivå-adress /slug. */
+export interface CustomPage {
+  id: string
+  slug: string
+  title: string
+  intro: string | null
+  blocks: ContentBlock[]
+  status: ContentStatus
+  sort_order: number
+  published_at: string | null
+  created_at: string
+  updated_at: string
 }
 
 export interface Category {

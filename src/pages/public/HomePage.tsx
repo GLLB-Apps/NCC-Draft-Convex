@@ -68,9 +68,22 @@ export default function HomePage() {
           <h1>{settings?.hero_title ?? 'Ett nytt stenbrott planeras i Rögleskogen'}</h1>
           <p className="hero-intro">{settings?.hero_intro}</p>
           <div className="hero-actions">
-            <Link to="/amnen" className="btn btn-primary">Läs om planerna</Link>
-            <a href={campaign.ctaUrl} target="_blank" rel="noopener noreferrer" className="btn btn-secondary">{campaign.ctaLabel}</a>
-            <Link to="/karta" className="btn btn-secondary">Se området på karta</Link>
+            {(settings?.hero_buttons?.length ? settings.hero_buttons : null)
+              ? settings!.hero_buttons.map((b, i) => {
+                  const cls = `btn btn-${b.style === 'primary' ? 'primary' : 'secondary'}`
+                  if (b.cta) return <a key={i} href={campaign.ctaUrl} target="_blank" rel="noopener noreferrer" className={cls}>{campaign.ctaLabel}</a>
+                  if (!b.label) return null
+                  return b.url.startsWith('/')
+                    ? <Link key={i} to={b.url} className={cls}>{b.label}</Link>
+                    : <a key={i} href={b.url} target="_blank" rel="noopener noreferrer" className={cls}>{b.label}</a>
+                })
+              : (
+                <>
+                  <Link to="/amnen" className="btn btn-primary">Läs om planerna</Link>
+                  <a href={campaign.ctaUrl} target="_blank" rel="noopener noreferrer" className="btn btn-secondary">{campaign.ctaLabel}</a>
+                  <Link to="/karta" className="btn btn-secondary">Se området på karta</Link>
+                </>
+              )}
           </div>
         </div>
       </section>

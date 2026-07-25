@@ -17,9 +17,10 @@ const DB = import.meta.env.VITE_APPWRITE_DATABASE_ID
 const JSON_FIELDS: Record<string, string[]> = {
   topics: ['content'],
   posts: ['content'],
-  site_settings: ['social_links', 'background_blocks'],
+  site_settings: ['social_links', 'background_blocks', 'hero_buttons'],
   audit_log: ['details'],
   pages: ['texts', 'blocks'],
+  custom_pages: ['blocks'],
   map_areas: ['points'],
   profiles: ['notifications_seen'],
 }

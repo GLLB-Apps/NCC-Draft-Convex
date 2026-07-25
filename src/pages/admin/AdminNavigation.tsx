@@ -23,6 +23,7 @@ export default function AdminNavigation() {
   const [dragId, setDragId] = useState<string | null>(null)
   const [overId, setOverId] = useState<string | null>(null)
   const [overPos, setOverPos] = useState<'before' | 'after'>('before')
+  const [customChoices, setCustomChoices] = useState<{ label: string; url: string; icon: string }[]>([])
   const { show } = useToast()
   const { confirm } = useConfirm()
 
@@ -30,8 +31,12 @@ export default function AdminNavigation() {
 
   function load() {
     setLoading(true)
-    supabase.from('navigation_items').select('*').order('sort_order').then(({ data }) => {
-      setItems(data as NavigationItem[] ?? [])
+    Promise.all([
+      supabase.from('navigation_items').select('*').order('sort_order'),
+      supabase.from('custom_pages').select('*').eq('status', 'published').order('sort_order'),
+    ]).then(([nav, custom]) => {
+      setItems(nav.data as NavigationItem[] ?? [])
+      setCustomChoices((custom.data as { title: string; slug: string }[] ?? []).map(p => ({ label: p.title, url: `/${p.slug}`, icon: 'file-text' })))
       setLoading(false)
     })
   }
@@ -40,7 +45,7 @@ export default function AdminNavigation() {
   const childrenOf = (id: string) => items.filter(i => i.parent_id === id)
   const byId = Object.fromEntries(items.map(i => [i.id, i]))
   const usedUrls = new Set(items.map(i => i.url))
-  const availablePages = MENU_PAGES.filter(p => !usedUrls.has(p.url))
+  const availablePages = [...MENU_PAGES, ...customChoices].filter(p => !usedUrls.has(p.url))
 
   // Current structure as [{ id, children:[id] }], then persist a new structure.
   function structure() {
