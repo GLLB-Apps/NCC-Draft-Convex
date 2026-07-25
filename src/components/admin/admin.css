@@ -1454,6 +1454,12 @@
 .menu-row-dragging { opacity: 0.4; }
 .menu-row-drop-before { box-shadow: 0 -3px 0 -1px var(--primary); }
 .menu-row-drop-after { box-shadow: 0 3px 0 -1px var(--primary); }
+/* Släpp inuti en grupp: markera hela raden. */
+.menu-row-drop-into {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+  background: var(--primary-bg);
+}
 
 .menu-row-grip {
   cursor: grab;

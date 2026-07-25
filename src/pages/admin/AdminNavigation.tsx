@@ -14,6 +14,8 @@ export default function AdminNavigation() {
   const [newLabel, setNewLabel] = useState('')
   const [newUrl, setNewUrl] = useState('')
   const [showCustom, setShowCustom] = useState(false)
+  const [showGroup, setShowGroup] = useState(false)
+  const [newGroupLabel, setNewGroupLabel] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editLabel, setEditLabel] = useState('')
   const [editUrl, setEditUrl] = useState('')
@@ -77,10 +79,11 @@ export default function AdminNavigation() {
   function indent(item: NavigationItem) {
     const struct = structure()
     const i = struct.findIndex(s => s.id === item.id)
-    if (i <= 0 || struct[i].children.length) return
+    if (i <= 0) return
     const node = struct[i]
+    // Flatten the item plus any sub-items into the group above (two-level menu).
     struct.splice(i, 1)
-    struct[i - 1].children.push(node.id)
+    struct[i - 1].children.push(node.id, ...node.children)
     applyStructure(struct)
   }
 
@@ -116,7 +119,9 @@ export default function AdminNavigation() {
     if (!drag || !target) return
 
     const struct = structure()
-    // Detach the dragged node (a top-level group keeps its children).
+    // Detach the dragged node. `branch` is the dragged item followed by any
+    // sub-items it had — the menu is two levels deep, so when a group is nested
+    // into another its sub-items are flattened in alongside it.
     let node: { id: string; children: string[] }
     if (drag.parent_id) {
       const p = struct.find(s => s.children.includes(dId))
@@ -127,26 +132,29 @@ export default function AdminNavigation() {
       node = struct[idx]
       struct.splice(idx, 1)
     }
-    const dragHasChildren = node.children.length > 0
-    const nest = () => { show('Val med underval kan inte bli underval', 'error') }
+    const branch = [node.id, ...node.children]
+    const targetIsHeading = !target.url
 
     if (target.parent_id) {
-      // Drop next to a child → sibling within the same group.
-      if (dragHasChildren) return nest()
-      const p = struct.find(s => s.children.includes(targetId))
-      if (!p) return
-      let ti = p.children.indexOf(targetId)
-      if (overPos === 'after') ti += 1
-      p.children.splice(ti, 0, dId)
-    } else if (overPos === 'after' && childrenOf(targetId).length > 0) {
-      // Drop just below a group header → becomes its first child.
-      if (dragHasChildren) return nest()
+      // Dropping next to a sub-item → insert the whole branch as siblings there.
+      const parent = struct.find(s => s.children.includes(targetId))
+      if (parent) {
+        let ti = parent.children.indexOf(targetId)
+        if (overPos === 'after') ti += 1
+        parent.children.splice(ti, 0, ...branch)
+      } else {
+        struct.splice(struct.length, 0, node)
+      }
+    } else if (targetIsHeading || (childrenOf(targetId).length > 0 && overPos === 'after')) {
+      // Drop onto a group — a link-less heading (anywhere on it) or the lower
+      // half of a group that already has sub-items → the branch goes inside it.
       const tnode = struct.find(s => s.id === targetId)
-      if (tnode) tnode.children.unshift(dId)
+      if (tnode) tnode.children.push(...branch)
     } else {
-      // Drop next to a top-level item → top-level sibling.
+      // Drop next to a top-level item → top-level sibling (keeps its children).
       let ti = struct.findIndex(s => s.id === targetId)
-      if (overPos === 'after') ti += 1
+      if (ti < 0) ti = struct.length
+      else if (overPos === 'after') ti += 1
       struct.splice(ti, 0, node)
     }
     applyStructure(struct)
@@ -167,6 +175,16 @@ export default function AdminNavigation() {
     })
     if (error) show('Kunde inte lägga till: ' + error.message, 'error')
     else { setNewLabel(''); setNewUrl(''); show('Menyval tillagt', 'success'); load() }
+  }
+
+  // En grupp är ett menyval utan länk – en ren rubrik som andra val kan ligga under.
+  async function addGroup() {
+    if (!newGroupLabel.trim()) { show('Gruppnamn krävs', 'error'); return }
+    const { error } = await supabase.from('navigation_items').insert({
+      label: newGroupLabel.trim(), url: '', sort_order: items.length + 100, is_active: true, parent_id: null,
+    })
+    if (error) show('Kunde inte skapa grupp: ' + error.message, 'error')
+    else { setNewGroupLabel(''); setShowGroup(false); show('Grupp skapad', 'success'); load() }
   }
 
   function startEdit(item: NavigationItem) {
@@ -203,10 +221,13 @@ export default function AdminNavigation() {
 
   function row(item: NavigationItem, isChild: boolean, index: number, siblingCount: number) {
     const editing = editingId === item.id
-    const canIndent = !isChild && index > 0 && childrenOf(item.id).length === 0
-    const dropCls = dragId && overId === item.id && dragId !== item.id
-      ? (overPos === 'before' ? ' menu-row-drop-before' : ' menu-row-drop-after')
-      : ''
+    const canIndent = !isChild && index > 0
+    let dropCls = ''
+    if (dragId && overId === item.id && dragId !== item.id) {
+      const ownChild = childrenOf(dragId).some(c => c.id === item.id)
+      const nestInto = !ownChild && !item.parent_id && (!item.url || (childrenOf(item.id).length > 0 && overPos === 'after'))
+      dropCls = nestInto ? ' menu-row-drop-into' : (overPos === 'before' ? ' menu-row-drop-before' : ' menu-row-drop-after')
+    }
     return (
       <div
         key={item.id}
@@ -269,7 +290,7 @@ export default function AdminNavigation() {
       </div>
 
       <p className="text-muted" style={{ marginBottom: 'var(--space-5)', fontSize: '0.9rem' }}>
-        <strong>Dra</strong> raderna (⠿) för att flytta och sortera – släpp precis under en grupprubrik för att göra valet till ett <strong>underval</strong>.
+        <strong>Dra</strong> raderna (⠿) för att flytta och sortera – släpp en rad <strong>på en grupp</strong> för att lägga valet inuti gruppen (raden markeras då grön).
         Du kan också använda <strong>⇥</strong> för att göra ett val till underval av valet ovanför, <strong>⇤</strong> för att flytta tillbaka till toppnivå, och ↑/↓ för att ordna.
         Välj ikon med ✦. Lämna länken tom för en ren grupprubrik. Menyn styr både huvudmenyn och sidfoten.
       </p>
@@ -301,6 +322,16 @@ export default function AdminNavigation() {
             <input className="form-input" value={newLabel} onChange={e => setNewLabel(e.target.value)} placeholder="Etikett – t.ex. Facebook" onKeyDown={e => e.key === 'Enter' && addItem()} />
             <input className="form-input" value={newUrl} onChange={e => setNewUrl(e.target.value)} placeholder="Länk – t.ex. https://… (tom = grupprubrik)" onKeyDown={e => e.key === 'Enter' && addItem()} />
             <button className="btn btn-primary" onClick={addItem}>Lägg till</button>
+          </div>
+        )}
+
+        <button type="button" className="menu-add-custom-toggle" onClick={() => setShowGroup(v => !v)}>
+          {showGroup ? '− Dölj ny grupp' : '+ Ny grupp (rubrik utan länk)'}
+        </button>
+        {showGroup && (
+          <div className="menu-add">
+            <input className="form-input" value={newGroupLabel} onChange={e => setNewGroupLabel(e.target.value)} placeholder="Gruppnamn – t.ex. Om projektet" onKeyDown={e => e.key === 'Enter' && addGroup()} />
+            <button className="btn btn-primary" onClick={addGroup}>Skapa grupp</button>
           </div>
         )}
       </div>

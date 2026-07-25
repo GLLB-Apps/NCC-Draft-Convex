@@ -106,11 +106,11 @@ export default function Header({ settings }: { settings: SiteSettings | null }) 
               <div className="nav-group" key={item.id}>
                 {item.url ? (
                   <Link to={item.url} className={groupActive ? 'nav-link nav-group-trigger active' : 'nav-link nav-group-trigger'}>
-                    {item.label}<span className="nav-caret" aria-hidden="true">▾</span>
+                    {resolveIconName(item.icon) && <LucideIcon icon={item.icon} className="nav-drawer-icon" />}{item.label}<span className="nav-caret" aria-hidden="true">▾</span>
                   </Link>
                 ) : (
                   <button type="button" className={groupActive ? 'nav-link nav-group-trigger active' : 'nav-link nav-group-trigger'} aria-haspopup="true">
-                    {item.label}<span className="nav-caret" aria-hidden="true">▾</span>
+                    {resolveIconName(item.icon) && <LucideIcon icon={item.icon} className="nav-drawer-icon" />}{item.label}<span className="nav-caret" aria-hidden="true">▾</span>
                   </button>
                 )}
                 <div className="nav-dropdown">
@@ -191,7 +191,10 @@ export default function Header({ settings }: { settings: SiteSettings | null }) 
                     <span className="mobile-nav-link-arrow" aria-hidden="true">→</span>
                   </Link>
                 ) : (
-                  <div className="mobile-nav-grouplabel">{item.label}</div>
+                  <div className="mobile-nav-grouplabel">
+                    {resolveIconName(item.icon) && <LucideIcon icon={item.icon} className="nav-drawer-icon" />}
+                    {item.label}
+                  </div>
                 )}
                 {children.length > 0 && (
                   <ul className="mobile-nav-sublist">
