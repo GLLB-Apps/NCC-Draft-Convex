@@ -6,10 +6,12 @@ export type MediaType = 'image' | 'video' | 'map' | 'graphic' | 'press_image'
 export type MapPointType = 'work_area' | 'quarry_area' | 'property_border' | 'transport_route' | 'residence_distance' | 'nature_value' | 'walking_trail' | 'observation_point' | 'photo_point' | 'testimony_point'
 
 export interface ContentBlock {
-  type: 'heading' | 'paragraph' | 'quote' | 'factbox' | 'warning' | 'image' | 'gallery' | 'video' | 'document_list' | 'links' | 'divider' | 'button' | 'related' | 'sources' | 'comparison' | 'faq' | 'list' | 'cta'
+  type: 'heading' | 'paragraph' | 'quote' | 'factbox' | 'warning' | 'image' | 'gallery' | 'video' | 'document_list' | 'links' | 'divider' | 'button' | 'related' | 'sources' | 'comparison' | 'faq' | 'list' | 'cta' | 'resource'
   text?: string
   title?: string
   url?: string
+  /** Knapptext för t.ex. resurs-blocket ("Öppna enkäten"). */
+  button_label?: string
   items?: string[]
   image_url?: string
   alt_text?: string

@@ -20,6 +20,7 @@ const INSERTS: { type: ContentBlock['type']; label: string }[] = [
   { type: 'cta', label: 'Uppmaning' },
   { type: 'video', label: 'Video' },
   { type: 'button', label: 'Knapp' },
+  { type: 'resource', label: 'Extern resurs' },
   { type: 'sources', label: 'Källor' },
   { type: 'divider', label: 'Avdelare' },
 ]
@@ -32,7 +33,7 @@ const INSERTS: { type: ContentBlock['type']; label: string }[] = [
 const SHORTCUT_KEY: Partial<Record<ContentBlock['type'], string>> = {
   paragraph: 'T', heading: 'R', quote: 'C',
   image: 'B', factbox: 'F', warning: 'V', list: 'L',
-  cta: 'U', video: 'I', button: 'K', sources: 'S', divider: 'A',
+  cta: 'U', video: 'I', button: 'K', resource: 'X', sources: 'S', divider: 'A',
 }
 // e.code (layout-independent, avoids AltGr special chars) → block type.
 const CODE_TO_TYPE = Object.fromEntries(
@@ -46,6 +47,7 @@ function blankBlock(type: ContentBlock['type']): ContentBlock {
   if (type === 'image') { b.image_url = ''; b.alt_text = ''; b.text = '' }
   if (type === 'video') { b.video_url = ''; b.title = '' }
   if (type === 'button') { b.text = ''; b.url = '' }
+  if (type === 'resource') { b.title = ''; b.text = ''; b.url = ''; b.button_label = '' }
   if (type === 'sources') { b.sources = [] }
   if (type === 'list') { b.title = ''; b.items = [''] }
   if (type === 'cta') { b.title = ''; b.links = [] }
@@ -241,6 +243,15 @@ export default function TapEditor({ blocks, onChange }: Props) {
                   <>
                     <input className="form-input" type="text" value={block.text ?? ''} onChange={e => set(i, { text: e.target.value })} placeholder="Knapptext" />
                     <input className="form-input" type="url" value={block.url ?? ''} onChange={e => set(i, { url: e.target.value })} placeholder="Länk (URL)" />
+                  </>
+                )}
+
+                {block.type === 'resource' && (
+                  <>
+                    <input className="form-input" type="text" value={block.title ?? ''} onChange={e => set(i, { title: e.target.value })} placeholder="Rubrik – t.ex. Enkät om Rögleskogen" />
+                    <textarea className="form-textarea" rows={2} value={block.text ?? ''} onChange={e => set(i, { text: e.target.value })} placeholder="Kort beskrivning (valfritt)" />
+                    <input className="form-input" type="url" value={block.url ?? ''} onChange={e => set(i, { url: e.target.value })} placeholder="Länk (URL) – öppnas i nytt fönster" />
+                    <input className="form-input" type="text" value={block.button_label ?? ''} onChange={e => set(i, { button_label: e.target.value })} placeholder="Knapptext (valfritt, standard: ”Öppna”)" />
                   </>
                 )}
 

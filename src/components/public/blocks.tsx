@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import type { ContentBlock } from '../../lib/types'
+import LucideIcon from '../../lib/lucide'
 
 // Renders a single content block. Shared across pages that show free-form
 // block content (background, press, …).
@@ -49,6 +50,7 @@ export function RenderBlock({ block }: { block: ContentBlock }) {
         </ul>
       </div>
     )
+    case 'resource': return <BlockResource block={block} />
     default: return null
   }
 }
@@ -73,6 +75,32 @@ export function BlockList({ block }: { block: ContentBlock }) {
       <ul className="block-list-items">
         {items.map((it, i) => <li key={i}>{it}</li>)}
       </ul>
+    </div>
+  )
+}
+
+// External resource block: a uniform card for surveys, petitions, reports and
+// other external forms — icon + title + description + a button, all opening in
+// a new tab.
+export function BlockResource({ block }: { block: ContentBlock }) {
+  if (!block.url && !block.title) return null
+  const label = block.button_label?.trim() || 'Öppna'
+  return (
+    <div className="block-resource">
+      <span className="block-resource-icon" aria-hidden="true"><LucideIcon icon="external-link" size={22} /></span>
+      <div className="block-resource-body">
+        {block.title && <h3 className="block-resource-title">{block.title}</h3>}
+        {block.text && <p className="block-resource-text">{block.text}</p>}
+        {block.url && (
+          <div className="block-resource-action">
+            <a href={block.url} target="_blank" rel="noopener noreferrer" className="btn btn-primary">
+              {label}
+              <LucideIcon icon="external-link" size={16} />
+            </a>
+            <span className="block-resource-note">Öppnas i nytt fönster</span>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
