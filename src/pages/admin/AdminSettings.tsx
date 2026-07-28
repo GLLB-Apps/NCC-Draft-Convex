@@ -38,6 +38,9 @@ export default function AdminSettings() {
       default_share_image: settings.default_share_image,
       contact_email: settings.contact_email,
       contact_phone: settings.contact_phone,
+      contact_delivery: settings.contact_delivery ?? 'system',
+      contact_recipient: settings.contact_recipient,
+      contact_from: settings.contact_from,
       social_links: settings.social_links,
       footer_text: settings.footer_text,
       privacy_text: settings.privacy_text,
@@ -198,6 +201,44 @@ export default function AdminSettings() {
           <label className="form-label" htmlFor="default_share_image">Standardbild för delning (URL)</label>
           <input id="default_share_image" className="form-input" type="url" value={settings.default_share_image ?? ''} onChange={e => update('default_share_image', e.target.value || null)} />
         </div>
+      </div>
+
+      <div className="admin-form-card" style={{ marginTop: 'var(--space-5)' }}>
+        <h3 style={{ marginBottom: 'var(--space-3)' }}>Kontaktformulär – mottagning</h3>
+        <p className="text-muted" style={{ fontSize: '0.85rem', marginBottom: 'var(--space-4)' }}>
+          Välj hur meddelanden från kontaktformuläret tas emot. <strong>System</strong> sparar dem under
+          Meddelanden i adminpanelen. <strong>E-post</strong> skickar dem vidare via Resend till mottagaradressen.
+        </p>
+        <div className="form-group">
+          <label className="form-label" htmlFor="contact_delivery">Ta emot som</label>
+          <select
+            id="contact_delivery"
+            className="form-select"
+            value={settings.contact_delivery ?? 'system'}
+            onChange={e => update('contact_delivery', e.target.value)}
+          >
+            <option value="system">System (adminpanelen)</option>
+            <option value="email">E-post</option>
+            <option value="both">Både system och e-post</option>
+          </select>
+        </div>
+        {(settings.contact_delivery === 'email' || settings.contact_delivery === 'both') && (
+          <>
+            <div className="form-group">
+              <label className="form-label" htmlFor="contact_recipient">Mottagar-e-post</label>
+              <input id="contact_recipient" className="form-input" type="email" placeholder={settings.contact_email ?? 'namn@exempel.se'} value={settings.contact_recipient ?? ''} onChange={e => update('contact_recipient', e.target.value || null)} />
+              <p className="text-muted" style={{ fontSize: '0.8rem', marginTop: 'var(--space-2)' }}>Dit meddelandena mejlas. Lämnas tom = kontakt-e-posten ovan.</p>
+            </div>
+            <div className="form-group">
+              <label className="form-label" htmlFor="contact_from">Avsändaradress (Resend)</label>
+              <input id="contact_from" className="form-input" type="text" placeholder="Kontaktformulär <onboarding@resend.dev>" value={settings.contact_from ?? ''} onChange={e => update('contact_from', e.target.value || null)} />
+              <p className="text-muted" style={{ fontSize: '0.8rem', marginTop: 'var(--space-2)' }}>
+                Kräver en verifierad domän i Resend. Lämnas tom används testadressen <code>onboarding@resend.dev</code>
+                (kan bara mejla till Resend-kontots egen adress). API-nyckeln <code>RESEND_API_KEY</code> sätts som miljövariabel i Vercel.
+              </p>
+            </div>
+          </>
+        )}
       </div>
 
       <div className="admin-form-card" style={{ marginTop: 'var(--space-5)' }}>
