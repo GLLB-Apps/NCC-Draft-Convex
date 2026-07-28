@@ -45,7 +45,7 @@ function IntranetNav({ pathname, onNavigate }: { pathname: string; onNavigate: (
 }
 
 export default function IntranetLayout({ children }: { children: React.ReactNode }) {
-  const { user, isAdmin, signOut } = useAuth()
+  const { user, isAdmin, canWriteIntranet, signOut } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
@@ -87,14 +87,21 @@ export default function IntranetLayout({ children }: { children: React.ReactNode
               <IntranetBell />
               <span className="admin-user-name">
                 {user?.email}
-                <span className="badge badge-muted" style={{ marginLeft: 'var(--space-2)' }}>{isAdmin ? 'Admin' : 'Medlem'}</span>
+                <span className="badge badge-muted" style={{ marginLeft: 'var(--space-2)' }}>{isAdmin ? 'Admin' : canWriteIntranet ? 'Medlem' : 'Läsbehörighet'}</span>
               </span>
               <button className="btn btn-ghost btn-sm" onClick={handleSignOut}>
                 <LogOut size={15} aria-hidden="true" /> Logga ut
               </button>
             </div>
           </header>
-          <div className="admin-content">{children}</div>
+          <div className="admin-content">
+            {!canWriteIntranet && (
+              <div className="intranet-readonly-banner">
+                Du har <strong>läsbehörighet</strong> – du kan läsa allt i arbetsrummet men inte skapa eller ändra.
+              </div>
+            )}
+            {children}
+          </div>
         </div>
       </div>
     </IntranetNotificationsProvider>

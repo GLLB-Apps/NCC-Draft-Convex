@@ -13,6 +13,8 @@ interface AuthContextValue {
   isAdmin: boolean
   /** Har intranätsåtkomst — egen medlemsrad eller admin (admins är ett superset). */
   isMember: boolean
+  /** Får skapa/ändra i intranätet. Falskt för läsbehörighet ("viewer"). */
+  canWriteIntranet: boolean
   loading: boolean
   signIn: (email: string, password: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
@@ -25,6 +27,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [role, setRole] = useState<UserRole | null>(null)
   const [hasMemberRow, setHasMemberRow] = useState(false)
+  const [memberReadOnly, setMemberReadOnly] = useState(false)
   const [loading, setLoading] = useState(true)
 
   async function fetchRole(userId: string) {
@@ -41,10 +44,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   async function fetchMember(userId: string) {
     const { data } = await supabase
       .from('intranet_members')
-      .select('user_id')
+      .select('user_id, read_only')
       .eq('user_id', userId)
       .maybeSingle()
     setHasMemberRow(!!data)
+    setMemberReadOnly(!!(data as { read_only?: boolean } | null)?.read_only)
   }
 
   useEffect(() => {
@@ -71,6 +75,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else {
         setRole(null)
         setHasMemberRow(false)
+        setMemberReadOnly(false)
       }
     })
 
@@ -89,9 +94,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const isAdmin = role !== null
   const isMember = isAdmin || hasMemberRow
+  // Admins och fulla medlemmar skriver; läsbehörighet ("viewer") gör det inte.
+  const canWriteIntranet = isAdmin || (hasMemberRow && !memberReadOnly)
 
   return (
-    <AuthContext.Provider value={{ session, user, role, isAdmin, isMember, loading, signIn, signOut }}>
+    <AuthContext.Provider value={{ session, user, role, isAdmin, isMember, canWriteIntranet, loading, signIn, signOut }}>
       {children}
     </AuthContext.Provider>
   )

@@ -10,16 +10,21 @@ import type { UserRole } from '../../lib/types'
 // "intranet" är intranätsåtkomst via Appwrite-labeln "member" och ger INGEN
 // åtkomst till adminpanelen. Nivåerna hålls isär mekaniskt men visas som en
 // gemensam lista här.
-type Level = UserRole | 'intranet'
+type Level = UserRole | 'intranet' | 'viewer'
 
 const LEVELS: { value: Level; label: string; desc: string }[] = [
   { value: 'superadmin', label: 'Superadmin', desc: 'Full åtkomst: allt innehåll, inställningar och användarhantering.' },
   { value: 'redaktor', label: 'Redaktör', desc: 'Allt innehåll och kommunikation. Inte inställningar eller användare.' },
   { value: 'skribent', label: 'Skribent', desc: 'Skriver nyheter, ämnen, dokument och media.' },
-  { value: 'intranet', label: 'Intranät', desc: 'Endast det interna arbetsrummet – ingen åtkomst till adminpanelen.' },
+  { value: 'intranet', label: 'Intranät', desc: 'Det interna arbetsrummet – läser och skriver. Ingen adminpanel.' },
+  { value: 'viewer', label: 'Intranät (läsa)', desc: 'Ser det interna arbetsrummet men kan inte skapa eller ändra något.' },
 ]
 const levelLabel = (l: Level) => LEVELS.find(x => x.value === l)?.label ?? l
-const isAdminLevel = (l: Level): l is UserRole => l !== 'intranet'
+const isAdminLevel = (l: Level): l is UserRole => l !== 'intranet' && l !== 'viewer'
+const isIntranetLevel = (l: Level) => l === 'intranet' || l === 'viewer'
+// Vilken Appwrite-åtkomstlabel varje nivå motsvarar (den faktiska gränsen).
+const accessLabelFor = (l: Level): 'admin' | 'member' | 'viewer' =>
+  isAdminLevel(l) ? 'admin' : l === 'viewer' ? 'viewer' : 'member'
 
 interface Person {
   user_id: string
@@ -48,7 +53,7 @@ export default function AdminAdmins() {
     const [rolesRes, profilesRes, membersRes] = await Promise.all([
       supabase.from('user_roles').select('user_id, role, created_at').order('created_at'),
       supabase.from('profiles').select('id, display_name, created_at').order('created_at'),
-      supabase.from('intranet_members').select('user_id, display_name, created_at').order('created_at'),
+      supabase.from('intranet_members').select('user_id, display_name, read_only, created_at').order('created_at'),
     ])
     const roleRows = (rolesRes.data ?? []) as Array<Record<string, unknown>>
     const profileRows = (profilesRes.data ?? []) as Array<Record<string, unknown>>
@@ -68,7 +73,7 @@ export default function AdminAdmins() {
       if (adminIds.has(m.user_id as string)) continue
       list.push({
         user_id: m.user_id as string,
-        level: 'intranet',
+        level: m.read_only ? 'viewer' : 'intranet',
         display_name: nameById.get(m.user_id as string) ?? (m.display_name as string | null) ?? null,
         created_at: m.created_at as string,
       })
@@ -86,7 +91,7 @@ export default function AdminAdmins() {
    * faktiska säkerhetsgränsen: 'admin' ger skrivrätt + intranät, 'member' bara
    * intranät, 'none' varken eller. Returnerar true vid framgång.
    */
-  async function setAccess(userId: string, access: 'admin' | 'member' | 'none'): Promise<boolean> {
+  async function setAccess(userId: string, access: 'admin' | 'member' | 'viewer' | 'none'): Promise<boolean> {
     const jwt = await createSessionJwt()
     const res = await fetch('/api/set-access', {
       method: 'POST',
@@ -102,9 +107,9 @@ export default function AdminAdmins() {
   async function assignLevel(u: PendingUser, level: Level) {
     setBusy(u.id)
     try {
-      if (level === 'intranet') {
-        if (!(await setAccess(u.id, 'member'))) return
-        const { error } = await supabase.from('intranet_members').insert({ user_id: u.id, display_name: u.display_name, added_by: currentUser?.email ?? null })
+      if (isIntranetLevel(level)) {
+        if (!(await setAccess(u.id, accessLabelFor(level)))) return
+        const { error } = await supabase.from('intranet_members').insert({ user_id: u.id, display_name: u.display_name, read_only: level === 'viewer', added_by: currentUser?.email ?? null })
         if (error) { show('Åtkomst gavs, men raden kunde inte sparas: ' + error.message, 'error'); return }
       } else {
         const { error } = await supabase.from('user_roles').insert({ user_id: u.id, role: level })
@@ -118,32 +123,33 @@ export default function AdminAdmins() {
   }
 
   /**
-   * Byter nivå på en person med befintlig åtkomst. Vid byte mellan admin och
-   * intranät ges den nya åtkomsten FÖRST, så att ingen står helt utan under bytet.
+   * Byter nivå på en person med befintlig åtkomst. Den nya åtkomstlabeln sätts
+   * FÖRST, så att ingen står helt utan under bytet, sedan städas rad-tillstånden
+   * (user_roles för admin-nivåer, intranet_members för intranät-nivåer).
    */
   async function changeLevel(p: Person, next: Level) {
     if (next === p.level) return
     setBusy(p.user_id)
     try {
-      const curAdmin = isAdminLevel(p.level)
-      const nextAdmin = isAdminLevel(next)
+      if (!(await setAccess(p.user_id, accessLabelFor(next)))) return
 
-      if (curAdmin && nextAdmin) {
-        const { error } = await supabase.from('user_roles').update({ role: next }).eq('user_id', p.user_id)
-        if (error) { show('Kunde inte uppdatera: ' + error.message, 'error'); return }
-        // Säkerställ admin-labeln ifall den saknades (äldre konton).
-        await setAccess(p.user_id, 'admin')
-      } else if (curAdmin && !nextAdmin) {
-        // admin → intranät: byt labeln admin→member, lägg medlemsrad, ta bort rollen.
-        if (!(await setAccess(p.user_id, 'member'))) return
-        await supabase.from('intranet_members').insert({ user_id: p.user_id, display_name: p.display_name, added_by: currentUser?.email ?? null })
+      // Rollrad (user_roles) – bara admin-nivåer har en.
+      if (isAdminLevel(next)) {
+        if (isAdminLevel(p.level)) await supabase.from('user_roles').update({ role: next }).eq('user_id', p.user_id)
+        else await supabase.from('user_roles').insert({ user_id: p.user_id, role: next })
+      } else if (isAdminLevel(p.level)) {
         await supabase.from('user_roles').delete().eq('user_id', p.user_id)
-      } else if (!curAdmin && nextAdmin) {
-        // intranät → admin: byt labeln member→admin, lägg rollrad, ta bort medlemsrad.
-        if (!(await setAccess(p.user_id, 'admin'))) return
-        await supabase.from('user_roles').insert({ user_id: p.user_id, role: next })
+      }
+
+      // Medlemsrad (intranet_members) – intranät-nivåerna har en; read_only skiljer dem.
+      if (isIntranetLevel(next)) {
+        const read_only = next === 'viewer'
+        if (isIntranetLevel(p.level)) await supabase.from('intranet_members').update({ read_only }).eq('user_id', p.user_id)
+        else await supabase.from('intranet_members').insert({ user_id: p.user_id, display_name: p.display_name, read_only, added_by: currentUser?.email ?? null })
+      } else if (isIntranetLevel(p.level)) {
         await supabase.from('intranet_members').delete().eq('user_id', p.user_id)
       }
+
       show(`${p.display_name || 'Användaren'}: ${levelLabel(next)}`, 'success')
       load()
     } finally { setBusy(null) }
@@ -155,7 +161,7 @@ export default function AdminAdmins() {
     setBusy(p.user_id)
     try {
       if (!(await setAccess(p.user_id, 'none'))) return
-      if (p.level === 'intranet') {
+      if (isIntranetLevel(p.level)) {
         await supabase.from('intranet_members').delete().eq('user_id', p.user_id)
       } else {
         const { error } = await supabase.from('user_roles').delete().eq('user_id', p.user_id)

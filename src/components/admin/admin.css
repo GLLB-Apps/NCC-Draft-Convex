@@ -1673,6 +1673,18 @@
 .custom-page-slug { display: flex; align-items: center; gap: 4px; }
 .custom-page-slug > span { color: var(--text-muted); font-family: monospace; }
 
+/* Läsbehörighet i intranätet: liten banner överst i innehållet. */
+.intranet-readonly-banner {
+  margin-bottom: var(--space-5);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--primary);
+  border-radius: var(--radius-md);
+  background: var(--primary-bg);
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
 /* Notisklocka i topbaren */
 .admin-bell { position: relative; }
 

@@ -13,7 +13,7 @@ import { useMarkIntranetRead } from '../../lib/intranetNotifications'
 const emptyDraft = { title: '', body: '', category: '' }
 
 export default function IntranetNotes() {
-  const { user, isAdmin } = useAuth()
+  const { user, isAdmin, canWriteIntranet } = useAuth()
   const { show } = useToast()
   const { confirm } = useConfirm()
   const [notes, setNotes] = useState<IntranetNote[]>([])
@@ -93,7 +93,7 @@ export default function IntranetNotes() {
     <div className="fade-in">
       <div className="admin-page-header">
         <h1>Anteckningar</h1>
-        {!creating && <button className="btn btn-primary btn-sm" onClick={() => setCreating(true)}><Plus size={16} /> Ny anteckning</button>}
+        {canWriteIntranet && !creating && <button className="btn btn-primary btn-sm" onClick={() => setCreating(true)}><Plus size={16} /> Ny anteckning</button>}
       </div>
 
       {creating && (
@@ -138,7 +138,7 @@ export default function IntranetNotes() {
               <div className="intranet-note-head">
                 <h2 className="intranet-note-title">{n.title}</h2>
                 <div className="intranet-note-actions">
-                  <button className="intdoc-icon-btn" title={n.pinned ? 'Lossa' : 'Nåla fast'} onClick={() => togglePin(n)}><Pin size={15} /></button>
+                  {canWriteIntranet && <button className="intdoc-icon-btn" title={n.pinned ? 'Lossa' : 'Nåla fast'} onClick={() => togglePin(n)}><Pin size={15} /></button>}
                   {canEdit(n) && <button className="intdoc-icon-btn" title="Redigera" onClick={() => setEditing(n)}><Pencil size={15} /></button>}
                   {canEdit(n) && <button className="intdoc-icon-btn danger" title="Ta bort" onClick={() => remove(n)}><Trash2 size={15} /></button>}
                 </div>

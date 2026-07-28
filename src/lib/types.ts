@@ -37,6 +37,12 @@ export interface SiteSettings {
   default_share_image: string | null
   contact_email: string | null
   contact_phone: string | null
+  /** Hur kontaktformulärets meddelanden tas emot. */
+  contact_delivery: 'system' | 'email' | 'both' | null
+  /** Mottagar-e-post för utskick via Resend (faller tillbaka på contact_email). */
+  contact_recipient: string | null
+  /** Avsändaradress för Resend, t.ex. "Kontakt <kontakt@dindomän.se>". */
+  contact_from: string | null
   social_links: Record<string, string>
   footer_text: string | null
   privacy_text: string | null
@@ -211,6 +217,8 @@ export interface IntranetMember {
   email: string | null
   added_by: string | null
   note: string | null
+  /** true = läsbehörighet (Appwrite-labeln "viewer"); false = full medlem. */
+  read_only: boolean
   created_at: string
   updated_at: string
 }

@@ -11,7 +11,7 @@ import { useMarkIntranetRead } from '../../lib/intranetNotifications'
 // Anslagstavlan — startsidan i intranätet. Korta meddelanden till gruppen,
 // fastnålade först, därefter senaste först.
 export default function IntranetNotices() {
-  const { user, isAdmin } = useAuth()
+  const { user, isAdmin, canWriteIntranet } = useAuth()
   const { show } = useToast()
   const { confirm } = useConfirm()
   const [notices, setNotices] = useState<IntranetNotice[]>([])
@@ -67,7 +67,7 @@ export default function IntranetNotices() {
     <div className="fade-in">
       <div className="admin-page-header">
         <h1>Anslagstavla</h1>
-        {!composing && <button className="btn btn-primary btn-sm" onClick={() => setComposing(true)}><Plus size={16} /> Nytt anslag</button>}
+        {canWriteIntranet && !composing && <button className="btn btn-primary btn-sm" onClick={() => setComposing(true)}><Plus size={16} /> Nytt anslag</button>}
       </div>
 
       {composing && (
@@ -96,9 +96,11 @@ export default function IntranetNotices() {
               <div className="intranet-notice-head">
                 <h2 className="intranet-notice-title">{n.pinned && <Pin size={14} aria-hidden="true" />} {n.title}</h2>
                 <div className="intranet-notice-actions">
-                  <button className="intdoc-icon-btn" title={n.pinned ? 'Lossa' : 'Nåla fast'} onClick={() => togglePin(n)}>
-                    {n.pinned ? <PinOff size={15} /> : <Pin size={15} />}
-                  </button>
+                  {canWriteIntranet && (
+                    <button className="intdoc-icon-btn" title={n.pinned ? 'Lossa' : 'Nåla fast'} onClick={() => togglePin(n)}>
+                      {n.pinned ? <PinOff size={15} /> : <Pin size={15} />}
+                    </button>
+                  )}
                   {(n.author_id === user?.id || isAdmin) && (
                     <button className="intdoc-icon-btn danger" title="Ta bort" onClick={() => remove(n)}><Trash2 size={15} /></button>
                   )}

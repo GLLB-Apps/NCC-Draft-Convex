@@ -12,7 +12,7 @@ import { useMarkIntranetRead } from '../../lib/intranetNotifications'
 const UNGROUPED = 'Att göra'
 
 export default function IntranetTasks() {
-  const { user, isAdmin } = useAuth()
+  const { user, isAdmin, canWriteIntranet } = useAuth()
   const { show } = useToast()
   const { confirm } = useConfirm()
   const [tasks, setTasks] = useState<IntranetTask[]>([])
@@ -86,26 +86,28 @@ export default function IntranetTasks() {
         <h1>Uppgifter</h1>
       </div>
 
-      <div className="card" style={{ marginBottom: 'var(--space-5)' }}>
-        <div className="intranet-task-add">
-          <input
-            className="form-input"
-            placeholder="Ny uppgift…"
-            value={text}
-            onChange={e => setText(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') add() }}
-          />
-          <input
-            className="form-input intranet-task-list-input"
-            list="task-lists"
-            placeholder="Lista (valfritt)"
-            value={list}
-            onChange={e => setList(e.target.value)}
-          />
-          <datalist id="task-lists">{lists.map(l => <option key={l} value={l} />)}</datalist>
-          <button className="btn btn-primary" onClick={add}><Plus size={16} /> Lägg till</button>
+      {canWriteIntranet && (
+        <div className="card" style={{ marginBottom: 'var(--space-5)' }}>
+          <div className="intranet-task-add">
+            <input
+              className="form-input"
+              placeholder="Ny uppgift…"
+              value={text}
+              onChange={e => setText(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') add() }}
+            />
+            <input
+              className="form-input intranet-task-list-input"
+              list="task-lists"
+              placeholder="Lista (valfritt)"
+              value={list}
+              onChange={e => setList(e.target.value)}
+            />
+            <datalist id="task-lists">{lists.map(l => <option key={l} value={l} />)}</datalist>
+            <button className="btn btn-primary" onClick={add}><Plus size={16} /> Lägg till</button>
+          </div>
         </div>
-      </div>
+      )}
 
       {tasks.length === 0 ? (
         <div className="empty-state"><p>Inga uppgifter ännu.</p></div>
@@ -118,7 +120,7 @@ export default function IntranetTasks() {
               <ul className="intranet-task-list">
                 {items.map(t => (
                   <li key={t.id} className={t.done ? 'intranet-task is-done' : 'intranet-task'}>
-                    <button className="intranet-task-check" onClick={() => toggle(t)} aria-pressed={t.done} aria-label={t.done ? 'Markera som ej klar' : 'Markera som klar'}>
+                    <button className="intranet-task-check" onClick={() => canWriteIntranet && toggle(t)} disabled={!canWriteIntranet} aria-pressed={t.done} aria-label={t.done ? 'Markera som ej klar' : 'Markera som klar'}>
                       {t.done && <Check size={14} aria-hidden="true" />}
                     </button>
                     <span className="intranet-task-text">{t.text}</span>

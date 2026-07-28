@@ -36,7 +36,7 @@ interface Pending {
 }
 
 export default function AdminInternalDocs() {
-  const { user } = useAuth()
+  const { user, canWriteIntranet } = useAuth()
   const { show } = useToast()
   const { confirm } = useConfirm()
   const uploaderName = user?.email ?? ''
@@ -210,8 +210,8 @@ export default function AdminInternalDocs() {
                     {doc.file_url && (
                       <a className="intdoc-icon-btn" title="Ladda ner" href={doc.file_url} download={doc.file_name ?? undefined} target="_blank" rel="noopener noreferrer"><Download size={16} /></a>
                     )}
-                    <button className="intdoc-icon-btn" title="Redigera" onClick={() => setEditing(doc)}><Pencil size={16} /></button>
-                    <button className="intdoc-icon-btn danger" title="Ta bort" onClick={() => removeDoc(doc)}><Trash2 size={16} /></button>
+                    {canWriteIntranet && <button className="intdoc-icon-btn" title="Redigera" onClick={() => setEditing(doc)}><Pencil size={16} /></button>}
+                    {canWriteIntranet && <button className="intdoc-icon-btn danger" title="Ta bort" onClick={() => removeDoc(doc)}><Trash2 size={16} /></button>}
                   </div>
                 </div>
               ))}
@@ -219,8 +219,8 @@ export default function AdminInternalDocs() {
           )}
         </div>
 
-        {/* RIGHT: categories + upload */}
-        <div className="intdoc-right">
+        {/* RIGHT: categories + upload (dolt för läsbehörighet) */}
+        {canWriteIntranet && <div className="intdoc-right">
           <div className="card">
             <h3 style={{ marginTop: 0 }}>Ladda upp dokument</h3>
             {pending ? (
@@ -283,7 +283,7 @@ export default function AdminInternalDocs() {
               </div>
             )}
           </div>
-        </div>
+        </div>}
       </div>
 
       {/* Edit metadata modal */}

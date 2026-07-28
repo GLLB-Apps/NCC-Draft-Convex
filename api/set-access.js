@@ -3,14 +3,15 @@
 // som säkerhetsgräns — labeln är gränsen.
 //
 //   access 'admin'  → label "admin"  (skriver innehåll + intranät)
-//   access 'member' → label "member" (endast intranät)
+//   access 'member' → label "member" (skriver i intranätet)
+//   access 'viewer' → label "viewer" (läser intranätet, kan inte ändra)
 //   access 'none'   → varken eller
 //
-// Endast admin-labeln och member-labeln rörs; ev. andra labels bevaras.
-// Anroparen bevisar sig med en kortlivad JWT och måste vara superadmin.
+// Endast åtkomstlabels rörs; ev. andra labels bevaras. Anroparen bevisar sig
+// med en kortlivad JWT och måste vara superadmin.
 import { Client, Account, Databases, Users, Query } from 'node-appwrite'
 
-const ACCESS_LABELS = ['admin', 'member']
+const ACCESS_LABELS = ['admin', 'member', 'viewer']
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
@@ -20,8 +21,8 @@ export default async function handler(req, res) {
   const jwt = (req.headers.authorization || '').replace(/^Bearer\s+/i, '').trim()
 
   if (!jwt) return res.status(401).json({ error: 'Saknar token' })
-  if (!userId || !['admin', 'member', 'none'].includes(access)) {
-    return res.status(400).json({ error: 'userId och access ("admin"/"member"/"none") krävs' })
+  if (!userId || !['admin', 'member', 'viewer', 'none'].includes(access)) {
+    return res.status(400).json({ error: 'userId och access ("admin"/"member"/"viewer"/"none") krävs' })
   }
 
   const endpoint = process.env.VITE_APPWRITE_ENDPOINT
@@ -56,7 +57,7 @@ export default async function handler(req, res) {
     const users = new Users(adminClient)
     const current = (await users.get({ userId })).labels || []
     const base = current.filter(l => !ACCESS_LABELS.includes(l))
-    const add = access === 'admin' ? ['admin'] : access === 'member' ? ['member'] : []
+    const add = access === 'none' ? [] : [access]
     const next = [...base, ...add]
     await users.updateLabels({ userId, labels: next })
     return res.status(200).json({ ok: true, labels: next })
