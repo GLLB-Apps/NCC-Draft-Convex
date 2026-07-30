@@ -1950,6 +1950,23 @@
 
 .press-card h3 { margin-bottom: var(--space-3); }
 
+/* Klickbar rad i presslistorna – ett pressmeddelande leder till nyheten,
+   ett dokument till filen. */
+.press-item {
+  display: block;
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--border-light);
+  color: inherit;
+  text-decoration: none;
+}
+
+.press-item-title { font-weight: 500; }
+
+.press-item:hover .press-item-title,
+.press-item-link:hover { color: var(--primary); }
+
+.press-item-link { color: inherit; text-decoration: none; }
+
 /* Background page */
 .background-section {
   margin-bottom: var(--space-7);

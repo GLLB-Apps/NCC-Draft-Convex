@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import type { Post, DocumentItem, MediaItem, Contact } from '../../lib/types'
 import { supabase } from '../../lib/supabase'
 import { formatDate, formatDateShort, senderTypeLabel, senderTypeBadge } from '../../lib/utils'
@@ -45,7 +46,9 @@ export default function PressPage() {
   const shownPosts = posts.slice(0, toCount(page.text('press_limit'), 5))
   const shownDocs = documents.slice(0, toCount(page.text('docs_limit'), 10))
   const pressEmpty = page.text('press_empty')
+  const pressLink = page.text('press_link')
   const docsEmpty = page.text('docs_empty')
+  const docsLink = page.text('docs_link')
   const imagesNote = page.text('images_note')
   const imagesEmpty = page.text('images_empty')
   const downloadLabel = page.text('download_label')
@@ -82,11 +85,12 @@ export default function PressPage() {
               {shownPosts.length === 0 ? (
                 <p className="text-muted" style={{ fontSize: '0.85rem' }}>{pressEmpty}</p>
               ) : shownPosts.map(p => (
-                <div key={p.id} style={{ padding: 'var(--space-3) 0', borderBottom: '1px solid var(--border-light)' }}>
-                  <p style={{ fontWeight: 500 }}>{p.title}</p>
+                <Link key={p.id} to={`/nyheter/${p.slug}`} className="press-item">
+                  <p className="press-item-title">{p.title}</p>
                   <p className="text-muted" style={{ fontSize: '0.85rem' }}>{formatDateShort(p.published_at)}</p>
-                </div>
+                </Link>
               ))}
+              {pressLink && <Link to="/nyheter" className="section-link" style={{ marginTop: 'var(--space-3)' }}>{pressLink}</Link>}
             </div>
           )}
 
@@ -95,16 +99,24 @@ export default function PressPage() {
               <h3>{page.text('docs_heading')}</h3>
               {shownDocs.length === 0 ? (
                 <p className="text-muted" style={{ fontSize: '0.85rem' }}>{docsEmpty}</p>
-              ) : shownDocs.map(d => (
-                <div key={d.id} style={{ padding: 'var(--space-3) 0', borderBottom: '1px solid var(--border-light)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
-                    <span style={{ fontWeight: 500 }}>{d.title}</span>
-                    {d.sender_type && <span className={senderTypeBadge(d.sender_type)}>{senderTypeLabel(d.sender_type)}</span>}
+              ) : shownDocs.map(d => {
+                // Dokument har ingen egen sida – titeln länkar till filen, eller
+                // till den externa källan när ingen fil är uppladdad.
+                const href = d.file_url || d.external_url
+                return (
+                  <div key={d.id} style={{ padding: 'var(--space-3) 0', borderBottom: '1px solid var(--border-light)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+                      {href
+                        ? <a href={href} target="_blank" rel="noopener noreferrer" className="press-item-title press-item-link">{d.title}</a>
+                        : <span style={{ fontWeight: 500 }}>{d.title}</span>}
+                      {d.sender_type && <span className={senderTypeBadge(d.sender_type)}>{senderTypeLabel(d.sender_type)}</span>}
+                    </div>
+                    {d.description && <p className="text-muted" style={{ fontSize: '0.85rem' }}>{d.description}</p>}
+                    {href && downloadLabel && <a href={href} target="_blank" rel="noopener noreferrer" className="section-link">{downloadLabel}</a>}
                   </div>
-                  {d.description && <p className="text-muted" style={{ fontSize: '0.85rem' }}>{d.description}</p>}
-                  {d.file_url && downloadLabel && <a href={d.file_url} target="_blank" rel="noopener noreferrer" className="section-link">{downloadLabel}</a>}
-                </div>
-              ))}
+                )
+              })}
+              {docsLink && <Link to="/dokument" className="section-link" style={{ marginTop: 'var(--space-3)' }}>{docsLink}</Link>}
             </div>
           )}
         </div>
