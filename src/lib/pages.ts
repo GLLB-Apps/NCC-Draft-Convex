@@ -4,7 +4,16 @@
 export interface PageManageLink { label: string; to: string }
 
 // Extra editable text on a page (beyond title + intro), e.g. form labels.
-export interface PageField { key: string; label: string; default: string; multiline?: boolean }
+// `type: 'number'` is still stored as text – it only changes the input in the
+// admin and signals that the page parses the value as a number.
+export interface PageField {
+  key: string
+  label: string
+  default: string
+  multiline?: boolean
+  type?: 'number'
+  hint?: string
+}
 
 export interface PageConfig {
   slug: string          // document id / key in the `pages` collection
@@ -102,14 +111,30 @@ export const PAGES: PageConfig[] = [
   },
   {
     slug: 'press', label: 'Press', route: '/press', defaultTitle: 'Press', defaultIntro: 'Information och material för journalister och media.',
-    manage: [], hasBlocks: true,
+    manage: [
+      { label: 'Hantera nyheter (pressmeddelanden)', to: '/admin/nyheter' },
+      { label: 'Hantera dokument', to: '/admin/dokument' },
+      { label: 'Hantera pressbilder (media)', to: '/admin/media' },
+      { label: 'Hantera kontaktpersoner', to: '/admin/kontakter' },
+    ],
+    hasBlocks: true,
     fields: [
       { key: 'facts_heading', label: 'Rubrik: fakta', default: 'Fakta i korthet' },
       { key: 'facts', label: 'Fakta (en rad per punkt)', multiline: true, default: 'NCC planerar en ny bergtäkt i Rögleskogen mellan Södra Sandby och Dalby i Lunds kommun.\nProcessen befinner sig i informations- och samrådsskedet.\nEtt medborgarinitiativ har bildats för att samla information och frågor.\nAll information på denna webbplats är exempeldata om inte annat anges.' },
       { key: 'press_heading', label: 'Rubrik: pressmeddelanden', default: 'Aktuella pressmeddelanden' },
+      { key: 'press_limit', label: 'Antal pressmeddelanden', type: 'number', default: '5', hint: 'Hämtas från de senast publicerade nyheterna.' },
+      { key: 'press_empty', label: 'Pressmeddelanden: text när listan är tom', default: '', hint: 'Lämna tomt för att dölja hela rutan när inget är publicerat.' },
       { key: 'docs_heading', label: 'Rubrik: nyckeldokument', default: 'Nyckeldokument' },
+      { key: 'docs_limit', label: 'Antal nyckeldokument', type: 'number', default: '10' },
+      { key: 'docs_empty', label: 'Nyckeldokument: text när listan är tom', default: '', hint: 'Lämna tomt för att dölja rutan.' },
       { key: 'contacts_heading', label: 'Rubrik: kontaktpersoner', default: 'Kontaktpersoner' },
+      { key: 'contacts_empty', label: 'Kontaktpersoner: text när listan är tom', default: 'Kontaktuppgifter publiceras här.' },
       { key: 'images_heading', label: 'Rubrik: pressbilder', default: 'Pressbilder' },
+      { key: 'images_note', label: 'Pressbilder: text under rubriken', multiline: true, default: '', hint: 'T.ex. villkor för användning. Visas bara om den är ifylld.' },
+      { key: 'images_empty', label: 'Pressbilder: text när inga bilder är släppta', default: '', hint: 'Lämna tomt för att dölja rutan.' },
+      { key: 'download_label', label: 'Länktext: ladda ner', default: 'Ladda ner →' },
+      { key: 'updated_label', label: 'Rubrik: senast uppdaterad', default: 'Senast uppdaterad', hint: 'Lämna tomt för att dölja rutan.' },
+      { key: 'updated_value', label: 'Senast uppdaterad: datum', default: '', hint: 'Fritext, t.ex. ”juli 2026”. Lämna tomt för dagens datum.' },
     ],
   },
 ]

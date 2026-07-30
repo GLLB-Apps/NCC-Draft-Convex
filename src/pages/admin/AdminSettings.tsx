@@ -244,8 +244,11 @@ export default function AdminSettings() {
       <div className="admin-form-card" style={{ marginTop: 'var(--space-5)' }}>
         <h3 style={{ marginBottom: 'var(--space-5)' }}>Texter</h3>
         <div className="form-group">
-          <label className="form-label" htmlFor="footer_text">Sidfot</label>
-          <textarea id="footer_text" className="form-textarea" rows={2} value={settings.footer_text ?? ''} onChange={e => update('footer_text', e.target.value || null)} />
+          <span className="form-label">Sidfot</span>
+          <p className="form-hint" style={{ marginBottom: 'var(--space-2)' }}>
+            Sidfotens texter, länkar och raden längst ned redigeras i sin egen vy.
+          </p>
+          <Link to="/admin/sidfot" className="btn btn-secondary btn-sm">Redigera sidfoten →</Link>
         </div>
         <div className="form-group">
           <label className="form-label" htmlFor="privacy_text">Integritetstext</label>

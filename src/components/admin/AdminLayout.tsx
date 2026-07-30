@@ -46,6 +46,7 @@ const MENU_GROUPS: { title: string | null; items: MenuItem[] }[] = [
     title: 'Webbplats',
     items: [
       { label: 'Hero (startsida)', path: '/admin/hero', roles: ['superadmin', 'redaktor'] },
+      { label: 'Sidfot', path: '/admin/sidfot', roles: ['superadmin', 'redaktor'] },
       { label: 'Meny', path: '/admin/meny', roles: ['superadmin', 'redaktor'] },
       { label: 'Inställningar', path: '/admin/inställningar', roles: ['superadmin'] },
       { label: 'Administratörer', path: '/admin/administratörer', roles: ['superadmin'] },

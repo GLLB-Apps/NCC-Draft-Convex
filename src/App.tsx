@@ -58,6 +58,7 @@ const AdminNavigation = lazy(() => import('./pages/admin/AdminNavigation'))
 const AdminPages = lazy(() => import('./pages/admin/AdminPages'))
 const AdminPageEdit = lazy(() => import('./pages/admin/AdminPageEdit'))
 const AdminHero = lazy(() => import('./pages/admin/AdminHero'))
+const AdminFooter = lazy(() => import('./pages/admin/AdminFooter'))
 const AdminCustomPages = lazy(() => import('./pages/admin/AdminCustomPages'))
 const AdminCustomPageEdit = lazy(() => import('./pages/admin/AdminCustomPageEdit'))
 const AdminMessages = lazy(() => import('./pages/admin/AdminMessages'))
@@ -151,6 +152,7 @@ export default function App() {
                 <Route path="sidor" element={<AdminPages />} />
                 <Route path="sidor/:slug" element={<AdminPageEdit />} />
                 <Route path="hero" element={<AdminHero />} />
+                <Route path="sidfot" element={<AdminFooter />} />
                 <Route path="egna-sidor" element={<AdminCustomPages />} />
                 <Route path="egna-sidor/ny" element={<AdminCustomPageEdit />} />
                 <Route path="egna-sidor/:id" element={<AdminCustomPageEdit />} />

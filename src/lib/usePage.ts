@@ -30,7 +30,10 @@ export function usePage(slug: string) {
   return {
     title: data?.title || cfg?.defaultTitle || '',
     intro: (data?.intro ?? cfg?.defaultIntro) || '',
-    text: (key: string) => texts[key] || cfg?.fields?.find(f => f.key === key)?.default || '',
+    // A saved value always wins – including an empty one, so a text can be
+    // cleared in the admin to hide it instead of snapping back to the default.
+    text: (key: string) =>
+      typeof texts[key] === 'string' ? texts[key] : (cfg?.fields?.find(f => f.key === key)?.default ?? ''),
     blocks: Array.isArray(data?.blocks) ? data.blocks : [],
   }
 }

@@ -3,10 +3,18 @@ import { Link } from 'react-router-dom'
 import type { SiteSettings } from '../../lib/types'
 import { useAuth } from '../../lib/auth'
 import { getCampaign } from '../../lib/campaign'
+import {
+  DEFAULT_FOOTER_LINKS, FOOTER_CTA_KEY, FOOTER_LINKS_KEY,
+  fillFooterTokens, footerText, parseFooterLinks, serializeFooterLinks, useFooterTexts,
+} from '../../lib/footer'
+
+// Interna länkar renderas med <Link>, externa som vanliga <a>.
+const isExternal = (url: string) => /^(https?:|mailto:|tel:)/i.test(url)
 
 export default function Footer({ settings }: { settings: SiteSettings | null }) {
   const campaign = getCampaign(settings)
   const social = settings?.social_links ? Object.entries(settings.social_links) : []
+  const texts = useFooterTexts()
 
   // Länken längst ned: admins → adminpanelen, medlemmar (utan admin) → intranätet,
   // utloggade → adminpanelens inloggning.
@@ -27,6 +35,18 @@ export default function Footer({ settings }: { settings: SiteSettings | null }) 
       .catch(() => { /* decorative only */ })
     return () => { cancelled = true }
   }, [])
+
+  // Sidfoten ligger under vikningen – att vänta in texterna är osynligt, och
+  // slipper visa en text som redaktören just tagit bort.
+  if (!texts) return null
+
+  const siteName = settings?.site_name ?? 'Rögleskogen'
+  const text = (key: string) => footerText(texts, key)
+  const brandText = typeof texts.brand_text === 'string' ? texts.brand_text : (settings?.footer_text ?? text('brand_text'))
+  const links = parseFooterLinks(texts[FOOTER_LINKS_KEY] ?? serializeFooterLinks(DEFAULT_FOOTER_LINKS))
+  const showCtaLink = texts[FOOTER_CTA_KEY] !== '0'
+  const copyright = fillFooterTokens(text('copyright'), siteName)
+  const toTop = text('to_top')
 
   return (
     <footer className="site-footer">
@@ -51,12 +71,9 @@ export default function Footer({ settings }: { settings: SiteSettings | null }) 
 
       <div className="container footer-inner">
         <div className="footer-col footer-col-brand">
-          <h3 className="footer-title">{settings?.site_name ?? 'Rögleskogen'}</h3>
+          <h3 className="footer-title">{siteName}</h3>
           <p className="footer-subtitle">{settings?.site_subtitle}</p>
-          <p className="footer-text">
-            {settings?.footer_text ??
-              'Ett oberoende medborgarinitiativ som samlar information, dokument och vittnesmål om den planerade bergtäkten mellan Södra Sandby och Dalby.'}
-          </p>
+          {brandText && <p className="footer-text">{brandText}</p>}
           {social.length > 0 && (
             <div className="footer-social">
               {social.map(([key, url]) => (
@@ -68,43 +85,51 @@ export default function Footer({ settings }: { settings: SiteSettings | null }) 
           )}
         </div>
 
-        <div className="footer-col">
-          <h4 className="footer-heading">Engagera dig</h4>
-          <ul className="footer-links">
-            <li><a href={campaign.ctaUrl} target="_blank" rel="noopener noreferrer">{campaign.ctaLabel}</a></li>
-            <li><Link to="/vittnesmal">Lämna ett vittnesmål</Link></li>
-            <li><Link to="/kontakt">Kontakta initiativet</Link></li>
-            <li><Link to="/fragor-och-svar">Vanliga frågor</Link></li>
-          </ul>
-        </div>
+        {(text('links_heading') || links.length > 0 || showCtaLink) && (
+          <div className="footer-col">
+            <h4 className="footer-heading">{text('links_heading')}</h4>
+            <ul className="footer-links">
+              {showCtaLink && (
+                <li><a href={campaign.ctaUrl} target="_blank" rel="noopener noreferrer">{campaign.ctaLabel}</a></li>
+              )}
+              {links.map((l, i) => (
+                <li key={i}>
+                  {isExternal(l.url)
+                    ? <a href={l.url} target="_blank" rel="noopener noreferrer">{l.label}</a>
+                    : <Link to={l.url}>{l.label}</Link>}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         <div className="footer-col">
-          <h4 className="footer-heading">Kontakt</h4>
+          <h4 className="footer-heading">{text('contact_heading')}</h4>
           {settings?.contact_email && (
             <p className="footer-contact">
               <a href={`mailto:${settings.contact_email}`}>{settings.contact_email}</a>
             </p>
           )}
           {settings?.contact_phone && <p className="footer-contact">{settings.contact_phone}</p>}
-          <p className="footer-text" style={{ marginTop: 'var(--space-3)' }}>
-            Har du tips, bilder eller frågor? Hör gärna av dig.
-          </p>
+          {text('contact_note') && (
+            <p className="footer-text" style={{ marginTop: 'var(--space-3)' }}>{text('contact_note')}</p>
+          )}
         </div>
       </div>
 
       <div className="footer-bottom">
         <div className="container">
-          <p className="footer-copyright">
-            © {new Date().getFullYear()} {settings?.site_name ?? 'Rögleskogen'}. Exempeldata — inte verifierade fakta utan källhänvisning.
-          </p>
+          {copyright && <p className="footer-copyright">{copyright}</p>}
           <div className="footer-bottom-links">
-            <button
-              type="button"
-              className="footer-to-top"
-              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-            >
-              Till toppen ↑
-            </button>
+            {toTop && (
+              <button
+                type="button"
+                className="footer-to-top"
+                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+              >
+                {toTop}
+              </button>
+            )}
             <Link to={workspace.to} className="footer-admin-link">{workspace.label}</Link>
           </div>
         </div>

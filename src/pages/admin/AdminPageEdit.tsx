@@ -76,8 +76,16 @@ export default function AdminPageEdit() {
                     {f.multiline ? (
                       <textarea id={`t_${f.key}`} className="form-textarea" rows={2} value={texts[f.key] ?? ''} onChange={e => setTexts(prev => ({ ...prev, [f.key]: e.target.value }))} />
                     ) : (
-                      <input id={`t_${f.key}`} className="form-input" type="text" value={texts[f.key] ?? ''} onChange={e => setTexts(prev => ({ ...prev, [f.key]: e.target.value }))} />
+                      <input
+                        id={`t_${f.key}`}
+                        className="form-input"
+                        type={f.type === 'number' ? 'number' : 'text'}
+                        min={f.type === 'number' ? 0 : undefined}
+                        value={texts[f.key] ?? ''}
+                        onChange={e => setTexts(prev => ({ ...prev, [f.key]: e.target.value }))}
+                      />
                     )}
+                    {f.hint && <p className="form-hint">{f.hint}</p>}
                   </div>
                 ))}
               </>
