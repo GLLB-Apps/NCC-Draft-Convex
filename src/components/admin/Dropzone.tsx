@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { uploadFile } from '../../lib/storage'
+import { isHeic, uploadFile } from '../../lib/storage'
 import { useToast } from '../../lib/toast'
 
 interface Props {
@@ -13,11 +13,12 @@ interface Props {
   compact?: boolean
 }
 
-export default function Dropzone({ onUploaded, onComplete, onError, multiple = false, accept = 'image/*', label, hint, compact }: Props) {
+export default function Dropzone({ onUploaded, onComplete, onError, multiple = false, accept = 'image/*,.heic,.heif', label, hint, compact }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
   const { show } = useToast()
   const [over, setOver] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [converting, setConverting] = useState(false)
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null)
 
   async function handleFiles(fileList: FileList | null) {
@@ -27,7 +28,10 @@ export default function Dropzone({ onUploaded, onComplete, onError, multiple = f
     setProgress({ done: 0, total: files.length })
     try {
       for (let i = 0; i < files.length; i++) {
+        // iPhone-bilder görs om till JPEG före uppladdning, vilket tar en stund.
+        setConverting(isHeic(files[i]))
         const url = await uploadFile(files[i])
+        setConverting(false)
         await onUploaded(url, files[i])
         setProgress({ done: i + 1, total: files.length })
       }
@@ -38,6 +42,7 @@ export default function Dropzone({ onUploaded, onComplete, onError, multiple = f
       else show('Uppladdning misslyckades: ' + msg, 'error')
     } finally {
       setBusy(false)
+      setConverting(false)
       setProgress(null)
       if (inputRef.current) inputRef.current.value = ''
     }
@@ -56,7 +61,9 @@ export default function Dropzone({ onUploaded, onComplete, onError, multiple = f
     >
       <input ref={inputRef} type="file" accept={accept} multiple={multiple} hidden onChange={e => handleFiles(e.target.files)} />
       {busy ? (
-        <div className="dropzone-status">Laddar upp… {progress ? `${progress.done}/${progress.total}` : ''}</div>
+        <div className="dropzone-status">
+          {converting ? 'Konverterar iPhone-bild (HEIC → JPEG)…' : 'Laddar upp…'} {progress ? `${progress.done}/${progress.total}` : ''}
+        </div>
       ) : (
         <>
           <span className="dropzone-icon" aria-hidden="true">⬆</span>
