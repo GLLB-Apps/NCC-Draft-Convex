@@ -1047,6 +1047,47 @@
 .news-card h3 { margin: 0; }
 .news-card p { color: var(--text-muted); font-size: 0.9rem; }
 
+.news-card-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.news-card-source { font-size: 0.85rem !important; font-style: italic; }
+
+.news-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: auto;
+  padding-top: var(--space-2);
+}
+
+/* Filter + taggmoln ovanför nyhetslistan */
+.news-filters {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin-bottom: var(--space-7);
+  padding-bottom: var(--space-5);
+  border-bottom: 1px solid var(--border-light);
+}
+
+.news-filter-clear {
+  align-self: flex-start;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+/* Källknapp överst i ett pressklipp */
+.news-source-link {
+  display: inline-block;
+  margin-bottom: var(--space-7);
+}
+
 /* Testimony card */
 .testimony-card {
   background: var(--bg-card);

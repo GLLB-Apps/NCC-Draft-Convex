@@ -5,7 +5,21 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../lib/auth'
 import { useToast } from '../../lib/toast'
 import { slugify } from '../../lib/utils'
+import { DEFAULT_NEWS_CATEGORY, NEWS_CATEGORIES, newsCategory, parseTags, postTags } from '../../lib/newsCategories'
 import TapEditor from '../../components/admin/TapEditor'
+
+// <input type="date"> vill ha YYYY-MM-DD; databasen sparar hela tidsstämpeln.
+const toDateInput = (iso: string | null) => (iso ? new Date(iso).toISOString().slice(0, 10) : '')
+function fromDateInput(value: string, previous: string | null): string | null {
+  if (!value) return null
+  // Behåll klockslaget om bara datumet ändrats, annars mitt på dagen så att
+  // tidszonen inte kan putta datumet till dagen före.
+  const prev = previous ? new Date(previous) : null
+  const time = prev && toDateInput(previous) === value
+    ? prev.toISOString().slice(10)
+    : 'T12:00:00.000Z'
+  return `${value}${time}`
+}
 
 export default function AdminNewsEdit() {
   const { id } = useParams<{ id: string }>()
@@ -16,7 +30,10 @@ export default function AdminNewsEdit() {
 
   const [form, setForm] = useState({
     title: '', slug: '', excerpt: '', author: '', featured_image: '', image_caption: '', is_pinned: false,
+    category: DEFAULT_NEWS_CATEGORY, source: '', external_url: '',
   })
+  const [tags, setTags] = useState('')
+  const [publishedAt, setPublishedAt] = useState<string | null>(null)
   const [content, setContent] = useState<ContentBlock[]>([])
   const [status, setStatus] = useState<ContentStatus>('draft')
   const [loading, setLoading] = useState(!isNew)
@@ -30,7 +47,10 @@ export default function AdminNewsEdit() {
         setForm({
           title: p.title, slug: p.slug, excerpt: p.excerpt ?? '', author: p.author ?? '',
           featured_image: p.featured_image ?? '', image_caption: p.image_caption ?? '', is_pinned: p.is_pinned,
+          category: p.category ?? DEFAULT_NEWS_CATEGORY, source: p.source ?? '', external_url: p.external_url ?? '',
         })
+        setTags(postTags(p).join(', '))
+        setPublishedAt(p.published_at)
         setContent(Array.isArray(p.content) ? p.content : [])
         setStatus(p.status)
       }
@@ -50,6 +70,9 @@ export default function AdminNewsEdit() {
     if (!form.title.trim()) { show('Titel krävs', 'error'); return }
     setSaving(true)
     const saveStatus = publish ? 'published' : status
+    // Publiceringsdatumet är redaktörens: sätt dagens datum först när något
+    // publiceras utan datum, och rör det aldrig när en publicerad post sparas om.
+    const published_at = publishedAt ?? (saveStatus === 'published' ? new Date().toISOString() : null)
     const payload = {
       title: form.title,
       slug: form.slug || slugify(form.title),
@@ -58,10 +81,14 @@ export default function AdminNewsEdit() {
       featured_image: form.featured_image || null,
       image_caption: form.image_caption || null,
       author: form.author || null,
+      category: form.category || DEFAULT_NEWS_CATEGORY,
+      tags: parseTags(tags),
+      source: form.source || null,
+      external_url: form.external_url || null,
       status: saveStatus,
       is_pinned: form.is_pinned,
       updated_by: user?.id,
-      published_at: publish ? new Date().toISOString() : null,
+      published_at,
     }
     if (isNew) {
       const { error } = await supabase.from('posts').insert({ ...payload, created_by: user?.id })
@@ -116,6 +143,20 @@ export default function AdminNewsEdit() {
                 <option value="archived">Arkiverad</option>
               </select>
             </div>
+            <div className="form-group">
+              <label className="form-label" htmlFor="published_at">Publiceringsdatum</label>
+              <input
+                id="published_at"
+                className="form-input"
+                type="date"
+                value={toDateInput(publishedAt)}
+                onChange={e => setPublishedAt(fromDateInput(e.target.value, publishedAt))}
+              />
+              <p className="form-hint">
+                Styr ordningen på nyhetssidan. Sätt det riktiga datumet när du lägger upp
+                äldre material — tomt betyder att dagens datum sätts vid publicering.
+              </p>
+            </div>
             <div className="checkbox-group">
               <input id="is_pinned" type="checkbox" checked={form.is_pinned} onChange={e => update('is_pinned', e.target.checked)} />
               <label htmlFor="is_pinned" className="form-label" style={{ margin: 0 }}>Fäst högst upp</label>
@@ -127,6 +168,64 @@ export default function AdminNewsEdit() {
               <button type="button" className="btn btn-secondary" onClick={() => save(true)} disabled={saving}>
                 Publicera
               </button>
+            </div>
+          </div>
+
+          <div className="editor-panel">
+            <h3>Kategori & taggar</h3>
+            <div className="form-group">
+              <label className="form-label" htmlFor="category">Kategori</label>
+              <select id="category" className="form-select" value={form.category} onChange={e => update('category', e.target.value)}>
+                {NEWS_CATEGORIES.map(c => <option key={c.key} value={c.key}>{c.label}</option>)}
+              </select>
+              <p className="form-hint">{newsCategory(form.category)?.hint}</p>
+            </div>
+            <div className="form-group">
+              <label className="form-label" htmlFor="tags">Taggar</label>
+              <input
+                id="tags"
+                className="form-input"
+                type="text"
+                value={tags}
+                onChange={e => setTags(e.target.value)}
+                placeholder="Rögle kloster, buller, samråd"
+              />
+              <p className="form-hint">Separera med komma. Taggarna blir klickbara i taggmolnet på nyhetssidan.</p>
+              {parseTags(tags).length > 0 && (
+                <div className="tag-chip-row">
+                  {parseTags(tags).map(t => <span key={t} className="tag-chip">{t}</span>)}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="editor-panel">
+            <h3>Källa</h3>
+            <p className="form-hint" style={{ marginBottom: 'var(--space-3)' }}>
+              För pressklipp, krönikor och annat som publicerats någon annanstans. Länken visas
+              som en tydlig knapp överst i artikeln och på kortet i listan.
+            </p>
+            <div className="form-group">
+              <label className="form-label" htmlFor="source">Publicerat i</label>
+              <input
+                id="source"
+                className="form-input"
+                type="text"
+                value={form.source}
+                onChange={e => update('source', e.target.value)}
+                placeholder="Sveriges Radio P4 Extra"
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label" htmlFor="external_url">Länk till originalet</label>
+              <input
+                id="external_url"
+                className="form-input"
+                type="url"
+                value={form.external_url}
+                onChange={e => update('external_url', e.target.value)}
+                placeholder="https://sverigesradio.se/…"
+              />
             </div>
           </div>
 

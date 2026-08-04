@@ -30,9 +30,17 @@ export function RenderBlock({ block }: { block: ContentBlock }) {
       </figure>
     )
     case 'video': return (
-      <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0, borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
+      <div className="block-video">
         {block.video_url && (
-          <iframe src={block.video_url} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} allowFullScreen title={block.title ?? 'Video'} />
+          <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0, borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
+            <iframe
+              src={block.video_url}
+              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              title={block.title ?? 'Video'}
+            />
+          </div>
         )}
       </div>
     )
@@ -48,6 +56,31 @@ export function RenderBlock({ block }: { block: ContentBlock }) {
             <li key={i}><a href={s.url} target="_blank" rel="noopener noreferrer">{s.label}</a></li>
           ))}
         </ul>
+      </div>
+    )
+    case 'links': return (
+      <div className="block-sources">
+        <h4>{block.title ?? 'Relaterade länkar'}</h4>
+        <ul>
+          {block.links?.map((l, i) => (
+            <li key={i}><a href={l.url} target="_blank" rel="noopener noreferrer">{l.label}</a></li>
+          ))}
+        </ul>
+      </div>
+    )
+    case 'comparison': return (
+      <div className="block-sources">
+        {block.title && <h4>{block.title}</h4>}
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <tbody>
+            {block.rows?.map((r, i) => (
+              <tr key={i} style={{ borderBottom: '1px solid var(--border)' }}>
+                <td style={{ padding: 'var(--space-2) var(--space-3)', fontWeight: 500 }}>{r.label}</td>
+                <td style={{ padding: 'var(--space-2) var(--space-3)' }}>{r.value}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     )
     case 'resource': return <BlockResource block={block} />

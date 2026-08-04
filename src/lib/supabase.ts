@@ -16,7 +16,7 @@ const DB = import.meta.env.VITE_APPWRITE_DATABASE_ID
 // Fields stored as JSON strings in Appwrite but consumed as objects/arrays in the app.
 const JSON_FIELDS: Record<string, string[]> = {
   topics: ['content'],
-  posts: ['content'],
+  posts: ['content', 'tags'],
   site_settings: ['social_links', 'background_blocks', 'hero_buttons'],
   audit_log: ['details'],
   pages: ['texts', 'blocks'],

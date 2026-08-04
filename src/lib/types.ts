@@ -117,6 +117,14 @@ export interface Post {
   author: string | null
   status: ContentStatus
   is_pinned: boolean
+  /** 'nyhet' | 'pressklipp' | 'kronika' | 'pressmeddelande' – se lib/newsCategories.ts. */
+  category: string | null
+  /** Fria taggar, driver taggmolnet på nyhetssidan. */
+  tags: string[]
+  /** Var materialet publicerades, t.ex. "Sveriges Radio P4 Extra". */
+  source: string | null
+  /** Länk till originalartikeln/inslaget. */
+  external_url: string | null
   seo_title: string | null
   seo_description: string | null
   published_at: string | null

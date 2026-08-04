@@ -1,12 +1,19 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import PageHeader from '../../components/public/PageHeader'
 import { Link } from 'react-router-dom'
 import type { Post } from '../../lib/types'
 import { supabase } from '../../lib/supabase'
 import { formatDateShort, truncate } from '../../lib/utils'
+import {
+  DEFAULT_NEWS_CATEGORY, NEWS_CATEGORIES, newsCategoryBadge, newsCategoryLabel, postTags, tagCloud,
+} from '../../lib/newsCategories'
+
+const categoryOf = (post: Post) => post.category ?? DEFAULT_NEWS_CATEGORY
 
 export default function NewsPage() {
   const [posts, setPosts] = useState<Post[]>([])
+  const [category, setCategory] = useState('')
+  const [tag, setTag] = useState('')
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -22,7 +29,27 @@ export default function NewsPage() {
       })
   }, [])
 
+  // Kategorierna filtrerar molnet och tvärtom, så att kombinationen alltid ger
+  // träffar: taggmolnet visar taggarna inom vald kategori.
+  const inCategory = useMemo(
+    () => (category ? posts.filter(p => categoryOf(p) === category) : posts),
+    [posts, category],
+  )
+  const cloud = useMemo(() => tagCloud(inCategory), [inCategory])
+  const shown = useMemo(
+    () => (tag ? inCategory.filter(p => postTags(p).some(t => t.toLowerCase() === tag.toLowerCase())) : inCategory),
+    [inCategory, tag],
+  )
+
+  function pickCategory(key: string) {
+    setCategory(prev => (prev === key ? '' : key))
+    setTag('')
+  }
+
   if (loading) return <div className="loading"><div className="spinner"></div></div>
+
+  const counts = new Map<string, number>()
+  for (const p of posts) counts.set(categoryOf(p), (counts.get(categoryOf(p)) ?? 0) + 1)
 
   return (
     <div className="container fade-in">
@@ -30,23 +57,77 @@ export default function NewsPage() {
         <PageHeader slug="nyheter" />
       </div>
 
-      {posts.length === 0 ? (
+      {posts.length > 0 && (
+        <div className="news-filters">
+          <div className="filter-chips">
+            <button type="button" className={`filter-chip${category === '' ? ' is-active' : ''}`} onClick={() => pickCategory('')}>
+              Allt <span className="filter-chip-count">{posts.length}</span>
+            </button>
+            {NEWS_CATEGORIES.map(c => {
+              const count = counts.get(c.key) ?? 0
+              if (count === 0) return null
+              return (
+                <button
+                  key={c.key}
+                  type="button"
+                  className={`filter-chip${category === c.key ? ' is-active' : ''}`}
+                  onClick={() => pickCategory(c.key)}
+                >
+                  {c.label} <span className="filter-chip-count">{count}</span>
+                </button>
+              )
+            })}
+          </div>
+
+          {cloud.length > 0 && (
+            <div className="tag-cloud" aria-label="Taggar">
+              {cloud.map(({ tag: name, count, weight }) => (
+                <button
+                  key={name}
+                  type="button"
+                  className={`tag-cloud-item${tag.toLowerCase() === name.toLowerCase() ? ' is-active' : ''}`}
+                  style={{ fontSize: `${0.82 + weight * 0.55}rem`, opacity: 0.65 + weight * 0.35 }}
+                  onClick={() => setTag(prev => (prev.toLowerCase() === name.toLowerCase() ? '' : name))}
+                  title={`${count} inlägg`}
+                >
+                  {name}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {(category || tag) && (
+            <button type="button" className="section-link news-filter-clear" onClick={() => { setCategory(''); setTag('') }}>
+              Rensa filter ✕
+            </button>
+          )}
+        </div>
+      )}
+
+      {shown.length === 0 ? (
         <div className="empty-state">
-          <p>Inga nyheter är publicerade ännu.</p>
+          <p>{posts.length === 0 ? 'Inga nyheter är publicerade ännu.' : 'Inget matchar filtret.'}</p>
         </div>
       ) : (
         <div className="grid grid-2" style={{ marginBottom: 'var(--space-9)' }}>
-          {posts.map(post => (
+          {shown.map(post => (
             <Link key={post.id} to={`/nyheter/${post.slug}`} className="card card-clickable news-card">
               {post.featured_image && (
                 <img src={post.featured_image} alt="" className="news-card-image" />
               )}
-              <div>
+              <div className="news-card-meta">
+                <span className={newsCategoryBadge(categoryOf(post))}>{newsCategoryLabel(categoryOf(post))}</span>
                 <span className="news-card-date">{formatDateShort(post.published_at)}</span>
-                {post.is_pinned && <span className="badge badge-warning" style={{ marginLeft: 'var(--space-2)' }}>Fäst</span>}
+                {post.is_pinned && <span className="badge badge-warning">Fäst</span>}
               </div>
               <h3>{post.title}</h3>
+              {post.source && <p className="news-card-source">Publicerat i {post.source}</p>}
               {post.excerpt && <p>{truncate(post.excerpt, 150)}</p>}
+              {postTags(post).length > 0 && (
+                <div className="news-card-tags">
+                  {postTags(post).map(t => <span key={t} className="tag-chip">{t}</span>)}
+                </div>
+              )}
             </Link>
           ))}
         </div>
