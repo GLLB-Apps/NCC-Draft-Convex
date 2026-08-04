@@ -280,27 +280,78 @@ input, textarea, select {
   font-variant-numeric: tabular-nums;
 }
 
-/* Taggmoln – storleken sätts inline utifrån hur ofta taggen förekommer */
+/* Taggmoln. Textstorleken sätts inline och bär antalet inlägg; färgen i tre
+   steg förstärker samma sak. Alla tre stegen klarar AA mot ytan – ovanliga
+   taggar är de minsta och får därför inte tonas ned ytterligare. */
 .tag-cloud {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
-  gap: var(--space-2) var(--space-3);
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2) var(--space-4);
+  padding: var(--space-5) var(--space-6);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-light);
+  background: radial-gradient(ellipse at 50% 35%, var(--bg-card) 0%, var(--primary-bg) 100%);
 }
 
 .tag-cloud-item {
+  position: relative;
   background: none;
   border: none;
-  padding: 0;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  line-height: 1.15;
   color: var(--text-muted);
   cursor: pointer;
-  line-height: 1.3;
-  transition: color 0.15s;
+  transition: color var(--transition), background var(--transition), transform var(--transition);
 }
 
-.tag-cloud-item::before { content: '#'; opacity: 0.5; }
-.tag-cloud-item:hover { color: var(--primary); }
-.tag-cloud-item.is-active { color: var(--primary); font-weight: 600; opacity: 1 !important; }
+.tag-tier-mid { color: var(--primary); }
+.tag-tier-top {
+  color: var(--primary-dark);
+  font-family: var(--font-heading);
+  font-weight: 600;
+}
+
+.tag-cloud-item:hover,
+.tag-cloud-item:focus-visible {
+  color: var(--primary-dark);
+  background: var(--bg-card);
+  transform: translateY(-1px);
+}
+
+.tag-cloud-item.is-active,
+.tag-cloud-item.is-active:hover {
+  background: var(--primary);
+  color: #fff;
+}
+
+/* Antalet visas först när taggen är i fokus – annars blir molnet stökigt. */
+.tag-cloud-count {
+  margin-left: 3px;
+  font-family: var(--font-sans);
+  font-size: 0.6em;
+  font-weight: 500;
+  vertical-align: super;
+  opacity: 0;
+  transition: opacity var(--transition);
+}
+
+.tag-cloud-item:hover .tag-cloud-count,
+.tag-cloud-item:focus-visible .tag-cloud-count,
+.tag-cloud-item.is-active .tag-cloud-count { opacity: 0.8; }
+
+@media (prefers-reduced-motion: reduce) {
+  .tag-cloud-item { transition: none; }
+  .tag-cloud-item:hover,
+  .tag-cloud-item:focus-visible { transform: none; }
+}
+
+@media (max-width: 600px) {
+  .tag-cloud { padding: var(--space-4) var(--space-4); gap: var(--space-2) var(--space-3); }
+}
 
 /* Enskild tagg (kort, redigeraren) */
 .tag-chip-row {

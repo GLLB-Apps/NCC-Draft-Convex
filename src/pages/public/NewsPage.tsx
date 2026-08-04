@@ -5,7 +5,7 @@ import type { Post } from '../../lib/types'
 import { supabase } from '../../lib/supabase'
 import { formatDateShort, truncate } from '../../lib/utils'
 import {
-  DEFAULT_NEWS_CATEGORY, NEWS_CATEGORIES, newsCategoryBadge, newsCategoryLabel, postTags, tagCloud,
+  DEFAULT_NEWS_CATEGORY, NEWS_CATEGORIES, centerWeighted, newsCategoryBadge, newsCategoryLabel, postTags, tagCloud,
 } from '../../lib/newsCategories'
 
 const categoryOf = (post: Post) => post.category ?? DEFAULT_NEWS_CATEGORY
@@ -93,19 +93,26 @@ export default function NewsPage() {
           </div>
 
           {cloud.length > 0 && (
-            <div className="tag-cloud" aria-label="Taggar">
-              {cloud.map(({ tag: name, count, weight }) => (
-                <button
-                  key={name}
-                  type="button"
-                  className={`tag-cloud-item${tag.toLowerCase() === name.toLowerCase() ? ' is-active' : ''}`}
-                  style={{ fontSize: `${0.82 + weight * 0.55}rem`, opacity: 0.65 + weight * 0.35 }}
-                  onClick={() => pickTag(name)}
-                  title={`${count} inlägg`}
-                >
-                  {name}
-                </button>
-              ))}
+            <div className="tag-cloud" role="group" aria-label="Filtrera på tagg">
+              {centerWeighted(cloud).map(({ tag: name, count, weight }) => {
+                const active = tag.toLowerCase() === name.toLowerCase()
+                // Storleken bär antalet; färgen förstärker bara samma sak i tre steg.
+                const tier = weight >= 0.999 ? 'top' : weight > 0 ? 'mid' : 'tail'
+                return (
+                  <button
+                    key={name}
+                    type="button"
+                    className={`tag-cloud-item tag-tier-${tier}${active ? ' is-active' : ''}`}
+                    style={{ fontSize: `${0.85 + weight * 1.05}rem` }}
+                    onClick={() => pickTag(name)}
+                    aria-pressed={active}
+                    aria-label={`${name}, ${count} inlägg`}
+                  >
+                    {name}
+                    <span className="tag-cloud-count" aria-hidden="true">{count}</span>
+                  </button>
+                )
+              })}
             </div>
           )}
 

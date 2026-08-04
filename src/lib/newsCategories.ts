@@ -49,6 +49,18 @@ export function parseTags(value: string): string[] {
 }
 
 /**
+ * Ordnar om en fallande lista så att de tyngsta hamnar i mitten och de lättaste
+ * ytterst – det är den placeringen som får ett taggmoln att läsas som en massa
+ * i stället för som en lista.
+ */
+export function centerWeighted<T>(items: T[]): T[] {
+  const left: T[] = []
+  const right: T[] = []
+  items.forEach((item, i) => (i % 2 === 0 ? right : left).push(item))
+  return [...left.reverse(), ...right]
+}
+
+/**
  * Räknar hur ofta varje tagg förekommer och ger den en vikt 0–1, som
  * taggmolnet använder till textstorlek. Ensam tagg får full vikt.
  */
