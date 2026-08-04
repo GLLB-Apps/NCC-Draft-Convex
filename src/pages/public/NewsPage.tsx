@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import PageHeader from '../../components/public/PageHeader'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import type { Post } from '../../lib/types'
 import { supabase } from '../../lib/supabase'
 import { formatDateShort, truncate } from '../../lib/utils'
@@ -12,9 +12,23 @@ const categoryOf = (post: Post) => post.category ?? DEFAULT_NEWS_CATEGORY
 
 export default function NewsPage() {
   const [posts, setPosts] = useState<Post[]>([])
-  const [category, setCategory] = useState('')
-  const [tag, setTag] = useState('')
   const [loading, setLoading] = useState(true)
+
+  // Filtret ligger i adressen (?kategori=pressklipp&tagg=…) så att en menypost
+  // kan peka rakt på t.ex. pressklippen, och så att ett filtrerat urval går att
+  // dela med en länk.
+  const [params, setParams] = useSearchParams()
+  const category = NEWS_CATEGORIES.some(c => c.key === params.get('kategori')) ? params.get('kategori')! : ''
+  const tag = params.get('tagg') ?? ''
+
+  function setFilter(next: { kategori?: string; tagg?: string }) {
+    const updated = new URLSearchParams(params)
+    for (const [key, value] of Object.entries(next)) {
+      if (value) updated.set(key, value)
+      else updated.delete(key)
+    }
+    setParams(updated, { replace: true })
+  }
 
   useEffect(() => {
     supabase
@@ -41,10 +55,9 @@ export default function NewsPage() {
     [inCategory, tag],
   )
 
-  function pickCategory(key: string) {
-    setCategory(prev => (prev === key ? '' : key))
-    setTag('')
-  }
+  // Byte av kategori nollställer taggen – annars kan kombinationen bli tom.
+  const pickCategory = (key: string) => setFilter({ kategori: category === key ? '' : key, tagg: '' })
+  const pickTag = (name: string) => setFilter({ tagg: tag.toLowerCase() === name.toLowerCase() ? '' : name })
 
   if (loading) return <div className="loading"><div className="spinner"></div></div>
 
@@ -87,7 +100,7 @@ export default function NewsPage() {
                   type="button"
                   className={`tag-cloud-item${tag.toLowerCase() === name.toLowerCase() ? ' is-active' : ''}`}
                   style={{ fontSize: `${0.82 + weight * 0.55}rem`, opacity: 0.65 + weight * 0.35 }}
-                  onClick={() => setTag(prev => (prev.toLowerCase() === name.toLowerCase() ? '' : name))}
+                  onClick={() => pickTag(name)}
                   title={`${count} inlägg`}
                 >
                   {name}
@@ -97,7 +110,7 @@ export default function NewsPage() {
           )}
 
           {(category || tag) && (
-            <button type="button" className="section-link news-filter-clear" onClick={() => { setCategory(''); setTag('') }}>
+            <button type="button" className="section-link news-filter-clear" onClick={() => setFilter({ kategori: '', tagg: '' })}>
               Rensa filter ✕
             </button>
           )}

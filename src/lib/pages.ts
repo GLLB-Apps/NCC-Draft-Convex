@@ -167,6 +167,10 @@ export const MENU_PAGES: { label: string; url: string; icon: string }[] = [
   { label: 'Bakgrund', url: '/bakgrund', icon: 'info' },
   { label: 'Ämnesområden', url: '/amnen', icon: 'layers' },
   { label: 'Nyheter', url: '/nyheter', icon: 'newspaper' },
+  // Filtrerade vyer av nyhetssidan – går att lägga i menyn som egna poster.
+  { label: 'Pressklipp', url: '/nyheter?kategori=pressklipp', icon: 'newspaper' },
+  { label: 'Krönikor & debatt', url: '/nyheter?kategori=kronika', icon: 'quote' },
+  { label: 'Pressmeddelanden', url: '/nyheter?kategori=pressmeddelande', icon: 'megaphone' },
   { label: 'Karta', url: '/karta', icon: 'map-pin' },
   { label: 'Tidslinje', url: '/tidslinje', icon: 'clock' },
   { label: 'Dokument', url: '/dokument', icon: 'file-text' },

@@ -35,12 +35,18 @@ export default function Header({ settings }: { settings: SiteSettings | null }) 
       .then(({ data }) => setNavItems(data ?? []))
   }, [])
 
+  // Även ett byte av bara filtret (?kategori=…) stänger mobilmenyn.
   useEffect(() => {
     setMobileOpen(false)
-  }, [location.pathname])
+  }, [location.pathname, location.search])
 
   const topLevel = navItems.filter(i => !i.parent_id)
   const childrenOf = (id: string) => navItems.filter(i => i.parent_id === id)
+  // En menypost kan peka på en filtrerad vy (t.ex. /nyheter?kategori=pressklipp).
+  // Då är det den posten som är aktiv, inte den ofiltrerade sidan.
+  const isCurrent = (url: string) => url.includes('?')
+    ? url === location.pathname + location.search
+    : url === location.pathname && !location.search
   // The logo badge hangs down below the header at the top of any page, and
   // retracts to a compact size once scrolled or when the mobile menu is open
   // (so it doesn't cover the first drawer item).
@@ -95,13 +101,13 @@ export default function Header({ settings }: { settings: SiteSettings | null }) 
                 <Link
                   key={item.id}
                   to={item.url}
-                  className={location.pathname === item.url ? 'nav-link active' : 'nav-link'}
+                  className={isCurrent(item.url) ? 'nav-link active' : 'nav-link'}
                 >
                   {resolveIconName(item.icon) ? <LucideIcon icon={item.icon} className="nav-drawer-icon" /> : <NavIcon path={item.url} />}{item.label}
                 </Link>
               ) : null
             }
-            const groupActive = children.some(c => c.url === location.pathname)
+            const groupActive = children.some(c => isCurrent(c.url))
             return (
               <div className="nav-group" key={item.id}>
                 {item.url ? (
@@ -118,7 +124,7 @@ export default function Header({ settings }: { settings: SiteSettings | null }) 
                     <Link
                       key={c.id}
                       to={c.url}
-                      className={location.pathname === c.url ? 'nav-dropdown-link active' : 'nav-dropdown-link'}
+                      className={isCurrent(c.url) ? 'nav-dropdown-link active' : 'nav-dropdown-link'}
                     >
                       {resolveIconName(c.icon) ? <LucideIcon icon={c.icon} className="nav-drawer-icon" /> : <NavIcon path={c.url} />}{c.label}
                     </Link>
@@ -183,7 +189,7 @@ export default function Header({ settings }: { settings: SiteSettings | null }) 
                 {item.url ? (
                   <Link
                     to={item.url}
-                    className={location.pathname === item.url ? 'mobile-nav-link active' : 'mobile-nav-link'}
+                    className={isCurrent(item.url) ? 'mobile-nav-link active' : 'mobile-nav-link'}
                     tabIndex={mobileOpen ? 0 : -1}
                   >
                     <span className="mobile-nav-link-icon">{resolveIconName(item.icon) ? <LucideIcon icon={item.icon} className="nav-drawer-icon" /> : <NavIcon path={item.url} />}</span>
@@ -202,7 +208,7 @@ export default function Header({ settings }: { settings: SiteSettings | null }) 
                       <li key={c.id}>
                         <Link
                           to={c.url}
-                          className={location.pathname === c.url ? 'mobile-nav-link mobile-nav-sublink active' : 'mobile-nav-link mobile-nav-sublink'}
+                          className={isCurrent(c.url) ? 'mobile-nav-link mobile-nav-sublink active' : 'mobile-nav-link mobile-nav-sublink'}
                           tabIndex={mobileOpen ? 0 : -1}
                         >
                           <span className="mobile-nav-link-icon">{resolveIconName(c.icon) ? <LucideIcon icon={c.icon} className="nav-drawer-icon" /> : <NavIcon path={c.url} />}</span>
