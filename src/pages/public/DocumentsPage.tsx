@@ -3,10 +3,16 @@ import PageHeader from '../../components/public/PageHeader'
 import type { DocumentItem } from '../../lib/types'
 import { supabase } from '../../lib/supabase'
 import { formatDateShort, senderTypeLabel, senderTypeBadge } from '../../lib/utils'
+import PdfReader, { downloadUrl, opensInline, type PdfDoc } from '../../components/public/PdfReader'
+
+/** PDF:er går att läsa direkt på sidan; övriga filer laddas ner. */
+const isPdf = (doc: DocumentItem) =>
+  doc.file_type?.toUpperCase() === 'PDF' || /\.pdf($|[?#])/i.test(doc.file_url ?? '')
 
 export default function DocumentsPage() {
   const [documents, setDocuments] = useState<DocumentItem[]>([])
   const [loading, setLoading] = useState(true)
+  const [reading, setReading] = useState<PdfDoc | null>(null)
   const [filters, setFilters] = useState({ sender_type: '', search: '', year: '' })
 
   useEffect(() => {
@@ -84,8 +90,23 @@ export default function DocumentsPage() {
                   {doc.sender && <span>Från: {doc.sender}</span>}
                 </div>
               </div>
-              <div style={{ flexShrink: 0 }}>
-                {doc.file_url && (
+              <div className="document-actions">
+                {doc.file_url && isPdf(doc) && (
+                  <>
+                    <button
+                      type="button"
+                      className="btn btn-primary btn-sm"
+                      onClick={() => {
+                        if (opensInline()) setReading({ title: doc.title, url: doc.file_url! })
+                        else window.open(doc.file_url!, '_blank', 'noopener')
+                      }}
+                    >
+                      Läs
+                    </button>
+                    <a href={downloadUrl(doc.file_url)} className="btn btn-ghost btn-sm">Ladda ner</a>
+                  </>
+                )}
+                {doc.file_url && !isPdf(doc) && (
                   <a href={doc.file_url} target="_blank" rel="noopener noreferrer" className="btn btn-secondary btn-sm">Ladda ner</a>
                 )}
                 {doc.external_url && !doc.file_url && (
@@ -96,6 +117,8 @@ export default function DocumentsPage() {
           ))}
         </div>
       )}
+
+      <PdfReader doc={reading} onClose={() => setReading(null)} />
     </div>
   )
 }
