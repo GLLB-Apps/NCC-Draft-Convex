@@ -1,6 +1,7 @@
-import { useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { KeyboardEvent } from 'react'
-import type { ContentBlock } from '../../lib/types'
+import type { ContentBlock, DocumentItem } from '../../lib/types'
+import { supabase } from '../../lib/supabase'
 
 // A document-style editor for non-technical admins: click anywhere and type,
 // press Enter for a new line, and tap the toolbar to turn a line into a heading
@@ -24,6 +25,59 @@ const INSERTS: { type: ContentBlock['type']; label: string }[] = [
   { type: 'sources', label: 'Källor' },
   { type: 'divider', label: 'Avdelare' },
 ]
+
+/** Publicerade dokument att länka till, hämtas en gång per editor. */
+function usePublishedDocuments() {
+  const [docs, setDocs] = useState<DocumentItem[]>([])
+  useEffect(() => {
+    let active = true
+    supabase.from('documents').select('*').eq('status', 'published').order('published_at', { ascending: false })
+      .then(({ data }) => { if (active) setDocs((data as DocumentItem[] ?? []).filter(d => d.file_url || d.external_url)) })
+    return () => { active = false }
+  }, [])
+  return docs
+}
+
+const documentUrl = (doc: DocumentItem) => doc.file_url || doc.external_url || ''
+
+/**
+ * Väljare som fyller i länken till ett uppladdat dokument, så att en knapp kan
+ * peka på t.ex. ett yttrande utan att adressen behöver klistras in för hand.
+ */
+function DocumentPicker({ docs, url, onPick }: {
+  docs: DocumentItem[]
+  url: string
+  onPick: (doc: DocumentItem) => void
+}) {
+  if (docs.length === 0) {
+    return (
+      <p className="form-hint">
+        Inga publicerade dokument att länka till ännu — ladda upp under Dokument först.
+      </p>
+    )
+  }
+  return (
+    <>
+      <select
+        className="form-select"
+        value={docs.some(d => documentUrl(d) === url) ? url : ''}
+        onChange={e => {
+          const doc = docs.find(d => documentUrl(d) === e.target.value)
+          if (doc) onPick(doc)
+        }}
+        aria-label="Välj dokument"
+      >
+        <option value="">Välj ett dokument…</option>
+        {docs.map(d => (
+          <option key={d.id} value={documentUrl(d)}>
+            {d.title}{d.file_type ? ` (${d.file_type})` : ''}
+          </option>
+        ))}
+      </select>
+      <p className="form-hint">…eller klistra in en egen länk i fältet ovan.</p>
+    </>
+  )
+}
 
 // Alt+<letter> quick-inserts a block (or, for text styles, applies the style),
 // so you rarely need to reach for the toolbar. Letters follow the Swedish label
@@ -69,6 +123,7 @@ export default function TapEditor({ blocks, onChange }: Props) {
   const refs = useRef<(HTMLTextAreaElement | null)[]>([])
   const [focused, setFocused] = useState<number | null>(null)
   const [pending, setPending] = useState<{ index: number; caret: number } | null>(null)
+  const documents = usePublishedDocuments()
 
   // Ensure there is always something to type into.
   const list = blocks.length ? blocks : [{ type: 'paragraph' as const, text: '' }]
@@ -243,6 +298,11 @@ export default function TapEditor({ blocks, onChange }: Props) {
                   <>
                     <input className="form-input" type="text" value={block.text ?? ''} onChange={e => set(i, { text: e.target.value })} placeholder="Knapptext" />
                     <input className="form-input" type="url" value={block.url ?? ''} onChange={e => set(i, { url: e.target.value })} placeholder="Länk (URL)" />
+                    <DocumentPicker
+                      docs={documents}
+                      url={block.url ?? ''}
+                      onPick={doc => set(i, { url: documentUrl(doc), text: block.text || doc.title })}
+                    />
                   </>
                 )}
 
@@ -252,6 +312,15 @@ export default function TapEditor({ blocks, onChange }: Props) {
                     <textarea className="form-textarea" rows={2} value={block.text ?? ''} onChange={e => set(i, { text: e.target.value })} placeholder="Kort beskrivning (valfritt)" />
                     <input className="form-input" type="url" value={block.url ?? ''} onChange={e => set(i, { url: e.target.value })} placeholder="Länk (URL) – öppnas i nytt fönster" />
                     <input className="form-input" type="text" value={block.button_label ?? ''} onChange={e => set(i, { button_label: e.target.value })} placeholder="Knapptext (valfritt, standard: ”Öppna”)" />
+                    <DocumentPicker
+                      docs={documents}
+                      url={block.url ?? ''}
+                      onPick={doc => set(i, {
+                        url: documentUrl(doc),
+                        title: block.title || doc.title,
+                        text: block.text || doc.description || '',
+                      })}
+                    />
                   </>
                 )}
 
