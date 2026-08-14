@@ -285,6 +285,41 @@ Texten i rutan.
 /** "Yttrande NCC 2024.pdf" → "Yttrande NCC 2024", som förslag på knapptext. */
 const fileTitle = (name: string) => name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim() || name
 
+/**
+ * Texten ett block faktiskt visar, som en sträng — underlaget när innehållet
+ * ska följa med till en annan typ. Bara fälten den aktuella typen använder
+ * läses, annars skulle ett stycke som blivit punktlista och sedan stycke igen
+ * få texten två gånger (den ligger kvar i både text och items).
+ */
+function blockText(block: ContentBlock): string {
+  const parts: (string | undefined)[] = [block.title]
+  if (block.type === 'list') parts.push(...(block.items ?? []))
+  else if (block.type === 'cta' || block.type === 'links') parts.push(...(block.links ?? []).map(l => l.label))
+  else parts.push(block.text)
+  return parts.filter(part => part?.trim()).join('\n')
+}
+
+/**
+ * Byter typ på ett block utan att skriva om innehållet. Fälten följer med som
+ * de är — ett block är en påse med valfria fält, och den nya typen visar dem
+ * den känner igen — men texten flyttas dit den nya typen faktiskt läser den, så
+ * att ett stycke som blir en punktlista inte hamnar tomt.
+ */
+function convertBlock(block: ContentBlock, type: ContentBlock['type']): ContentBlock {
+  if (block.type === type) return block
+  const next: ContentBlock = { ...blankBlock(type), ...block, type }
+  const text = blockText(block)
+
+  if (isText(type)) next.text = text
+  if (type === 'factbox' || type === 'warning') next.text = block.text?.trim() ? block.text : text
+  if (type === 'button' && !block.text?.trim()) next.text = text.split('\n')[0] ?? ''
+  if (type === 'list' && !block.items?.length) next.items = text ? text.split('\n') : ['']
+  if (type === 'table' && !block.cells?.length) {
+    next.cells = text ? text.split('\n').map(row => [row, '']) : [['', '']]
+  }
+  return next
+}
+
 function autosize(el: HTMLTextAreaElement | null) {
   if (!el) return
   el.style.height = 'auto'
@@ -365,8 +400,12 @@ export default function TapEditor({ blocks, onChange }: Props) {
     commit(next)
   }
   function insertAfter(index: number | null, type: ContentBlock['type'], extra?: Partial<ContentBlock>) {
-    const at = index == null ? list.length : index + 1
-    commit([...list.slice(0, at), { ...blankBlock(type), ...extra }, ...list.slice(at)])
+    const block = { ...blankBlock(type), ...extra }
+    // Står man på en tom rad ska blocket hamna där, inte under den — annars
+    // blir en tom rad kvar ovanför allt man lägger till.
+    const onBlankLine = index != null && isText(list[index]?.type) && !list[index].text?.trim()
+    const at = index == null ? list.length : onBlankLine ? index : index + 1
+    commit([...list.slice(0, at), block, ...list.slice(onBlankLine ? at + 1 : at)])
     if (isText(type)) setPending({ index: at, caret: 0 })
   }
   // The text-style buttons double as a way to "break free" from an element
@@ -412,6 +451,28 @@ export default function TapEditor({ blocks, onChange }: Props) {
     insertAtCaret(snippet, caret < 0 ? snippet.length : caret)
   }
 
+  /**
+   * Står markören mitt i blocket? Då byter kortkommandot typ på blocket i
+   * stället för att lägga till ett nytt. I slutet av raden — eller på en tom
+   * rad — är det ett nytt block man är ute efter. I en ruta (bild, faktaruta …)
+   * finns inget "slut" att stå i, så där gäller alltid byte.
+   */
+  function caretInside(index: number): boolean {
+    const block = list[index]
+    if (!block) return false
+    if (!isText(block.type)) return true
+    const el = refs.current[index]
+    if (!el || document.activeElement !== el) return false
+    return el.value.length > 0 && el.selectionEnd < el.value.length
+  }
+
+  /** Byter typ på ett block och låter markören stå kvar där den stod. */
+  function convertAt(index: number, type: ContentBlock['type']) {
+    const caret = refs.current[index]?.selectionEnd
+    commit(list.map((b, i) => (i === index ? convertBlock(b, type) : b)))
+    if (isText(type)) setPending({ index, caret: caret ?? (list[index].text ?? '').length })
+  }
+
   // MD-läget: på väg in skrivs blocken ut som text, och varje ändring tolkas
   // direkt tillbaka till block. Vägen ut behöver därför inget eget steg — det
   // som står i rutan är redan sparat som block.
@@ -445,7 +506,10 @@ export default function TapEditor({ blocks, onChange }: Props) {
     const type = CODE_TO_TYPE[e.code]
     if (!type) return
     e.preventDefault()
-    if (isText(type)) applyText(type)
+    // Mitt i ett block byter kommandot typ på blocket och behåller innehållet.
+    // I slutet av det, eller på en tom rad, lägger det till ett nytt.
+    if (markdown == null && focused != null && caretInside(focused)) convertAt(focused, type)
+    else if (isText(type)) applyText(type)
     else addBlock(type)
   }
 
@@ -755,7 +819,7 @@ export default function TapEditor({ blocks, onChange }: Props) {
           Innehåll som inte finns i vanlig markdown (faktarutor, videor, uppmaningar …) står som <code>:::</code>-block och följer med tillbaka oförändrat.
         </p>
       ) : (
-      <p className="tap-hint">Klicka och skriv. Tryck <kbd>Enter</kbd> för ny rad. Markera en rad och tryck <strong>Rubrik</strong> (nivå 1–6 i listan, <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>1</kbd>–<kbd>6</kbd>, eller <code>##</code> först på raden) eller <strong>Citat</strong> för att ändra stil. Står du i en ruta (bild, faktaruta …) kan du trycka <strong>Text</strong>, <strong>Rubrik</strong> eller <strong>Citat</strong> för att fortsätta skriva under den. Håll <kbd>Ctrl</kbd>+<kbd>Alt</kbd> och tryck bokstaven på en knapp för att lägga till blocket direkt.</p>
+      <p className="tap-hint">Klicka och skriv. Tryck <kbd>Enter</kbd> för ny rad. Markera en rad och tryck <strong>Rubrik</strong> (nivå 1–6 i listan, <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>1</kbd>–<kbd>6</kbd>, eller <code>##</code> först på raden) eller <strong>Citat</strong> för att ändra stil. Står du i en ruta (bild, faktaruta …) kan du trycka <strong>Text</strong>, <strong>Rubrik</strong> eller <strong>Citat</strong> för att fortsätta skriva under den. Håll <kbd>Ctrl</kbd>+<kbd>Alt</kbd> och tryck bokstaven på en knapp: står du <strong>mitt i</strong> ett block byter det typ på blocket med innehållet kvar, står du i slutet av raden eller på en tom rad läggs blocket till.</p>
       )}
     </div>
   )
