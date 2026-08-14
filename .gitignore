@@ -12,6 +12,11 @@ dist
 dist-ssr
 *.local
 
+# Python (api/pdf2md.py)
+__pycache__/
+*.pyc
+.venv
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

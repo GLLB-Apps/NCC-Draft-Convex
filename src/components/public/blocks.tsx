@@ -82,6 +82,7 @@ export function RenderBlock({ block }: { block: ContentBlock }) {
         </table>
       </div>
     )
+    case 'table': return <BlockTable block={block} />
     case 'resource': return <BlockResource block={block} />
     default: return null
   }
@@ -103,6 +104,37 @@ export function BlockHeading({ block }: { block: ContentBlock }) {
   const level = headingLevel(block.level)
   const Tag = `h${level}` as 'h1'
   return <Tag className={`block-heading block-heading-${level}`}>{block.text}</Tag>
+}
+
+// Tabell med valfritt antal kolumner — det PDF-importen gör av tabellerna i
+// dokumentet. Breda tabeller scrollar i sidled i stället för att spränga sidan.
+export function BlockTable({ block }: { block: ContentBlock }) {
+  // Rubrikraden tas bort bara när den är helt tom — annars skulle en tabell med
+  // en tom första kolumnrubrik få sina kolumner förskjutna.
+  const columns = (block.columns ?? []).some(c => c.trim()) ? block.columns ?? [] : []
+  const cells = (block.cells ?? []).filter(row => row.some(c => c.trim()))
+  if (!columns.length && !cells.length) return null
+  const width = Math.max(columns.length, ...cells.map(r => r.length), 0)
+  const pad = (row: string[]) => Array.from({ length: width }, (_, i) => row[i] ?? '')
+  return (
+    <figure className="block-table-wrap">
+      {block.title && <figcaption className="block-table-title">{block.title}</figcaption>}
+      <div className="block-table-scroll">
+        <table className="block-table">
+          {columns.length > 0 && (
+            <thead>
+              <tr>{pad(columns).map((c, i) => <th key={i} scope="col">{c}</th>)}</tr>
+            </thead>
+          )}
+          <tbody>
+            {cells.map((row, i) => (
+              <tr key={i}>{pad(row).map((c, j) => <td key={j}>{c}</td>)}</tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </figure>
+  )
 }
 
 // Bullet-list card block.

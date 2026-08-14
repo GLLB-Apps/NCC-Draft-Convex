@@ -6,7 +6,7 @@ export type MediaType = 'image' | 'video' | 'map' | 'graphic' | 'press_image'
 export type MapPointType = 'work_area' | 'quarry_area' | 'property_border' | 'transport_route' | 'residence_distance' | 'nature_value' | 'walking_trail' | 'observation_point' | 'photo_point' | 'testimony_point'
 
 export interface ContentBlock {
-  type: 'heading' | 'paragraph' | 'quote' | 'factbox' | 'warning' | 'image' | 'gallery' | 'video' | 'document_list' | 'links' | 'divider' | 'button' | 'related' | 'sources' | 'comparison' | 'faq' | 'list' | 'cta' | 'resource'
+  type: 'heading' | 'paragraph' | 'quote' | 'factbox' | 'warning' | 'image' | 'gallery' | 'video' | 'document_list' | 'links' | 'divider' | 'button' | 'related' | 'sources' | 'comparison' | 'faq' | 'list' | 'cta' | 'resource' | 'table'
   text?: string
   title?: string
   url?: string
@@ -21,6 +21,10 @@ export interface ContentBlock {
   links?: { label: string; url: string }[]
   sources?: { label: string; url: string }[]
   rows?: { label: string; value: string }[]
+  /** Tabellblock: rubrikraden. Tom lista = tabell utan rubrikrad. */
+  columns?: string[]
+  /** Tabellblock: en lista per rad, med en cell per kolumn. */
+  cells?: string[][]
 }
 
 export interface SiteSettings {

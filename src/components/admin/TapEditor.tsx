@@ -2,9 +2,11 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { KeyboardEvent } from 'react'
 import type { ContentBlock, DocumentItem } from '../../lib/types'
 import { supabase } from '../../lib/supabase'
+import { useToast } from '../../lib/toast'
 import { headingLevel, internalPath, normalizeUrl } from '../../lib/utils'
 import { blocksToMarkdown, markdownToBlocks } from '../../lib/markdownBlocks'
 import HeadingMenu from './HeadingMenu'
+import PdfImportDialog from './PdfImportDialog'
 import UploadDialog from './UploadDialog'
 
 // A document-style editor for non-technical admins: click anywhere and type,
@@ -26,6 +28,7 @@ const INSERTS: { type: ContentBlock['type']; label: string }[] = [
   { type: 'video', label: 'Video' },
   { type: 'button', label: 'Knapp' },
   { type: 'links', label: 'Länklista' },
+  { type: 'table', label: 'Tabell' },
   { type: 'comparison', label: 'Jämförelse' },
   { type: 'sources', label: 'Källor' },
   { type: 'divider', label: 'Avdelare' },
@@ -44,6 +47,7 @@ const MD_SNIPPET: Partial<Record<ContentBlock['type'], string>> = {
   video: ':::video {}\nhttps://…\n:::',
   button: '[{}](https://…)',
   links: ':::länkar {}\n- [Text](https://…)\n:::',
+  table: '| {} | Kolumn 2 |\n| --- | --- |\n|  |  |',
   comparison: ':::jämförelse {}\n- Etikett: Värde\n:::',
   sources: ':::källor\n- [{}](https://…)\n:::',
   divider: '---{}',
@@ -114,6 +118,92 @@ function DocumentPicker({ docs, url, onPick }: {
 }
 
 /**
+ * Rutnätsredigering för tabellblocket. Raderna kan vara olika långa i sparad
+ * data (PDF-import ger ojämna tabeller), så allt fylls ut till samma bredd
+ * innan det visas — annars hamnar cellerna i fel kolumn.
+ */
+function TableEditor({ block, onChange }: { block: ContentBlock; onChange: (updates: Partial<ContentBlock>) => void }) {
+  const columns = block.columns ?? []
+  const cells = block.cells ?? []
+  const width = Math.max(columns.length, ...cells.map(r => r.length), 1)
+  const pad = (row: string[]) => Array.from({ length: width }, (_, i) => row[i] ?? '')
+  const head = pad(columns)
+  const body = cells.map(pad)
+
+  return (
+    <div className="tap-table">
+      <input
+        className="form-input"
+        type="text"
+        value={block.title ?? ''}
+        onChange={e => onChange({ title: e.target.value })}
+        placeholder="Rubrik över tabellen (valfritt)"
+      />
+      <div className="tap-table-scroll">
+        <table>
+          <thead>
+            <tr>
+              {head.map((col, ci) => (
+                <th key={ci}>
+                  <input
+                    className="form-input"
+                    type="text"
+                    value={col}
+                    onChange={e => onChange({ columns: head.map((c, i) => (i === ci ? e.target.value : c)) })}
+                    placeholder={`Kolumn ${ci + 1}`}
+                  />
+                  <button
+                    type="button"
+                    className="tap-source-remove"
+                    disabled={width < 2}
+                    onClick={() => onChange({
+                      columns: head.filter((_, i) => i !== ci),
+                      cells: body.map(row => row.filter((_, i) => i !== ci)),
+                    })}
+                    aria-label={`Ta bort kolumn ${ci + 1}`}
+                  >✕</button>
+                </th>
+              ))}
+              <th className="tap-table-gutter" />
+            </tr>
+          </thead>
+          <tbody>
+            {body.map((row, ri) => (
+              <tr key={ri}>
+                {row.map((cell, ci) => (
+                  <td key={ci}>
+                    <input
+                      className="form-input"
+                      type="text"
+                      value={cell}
+                      onChange={e => onChange({
+                        cells: body.map((r, i) => (i === ri ? r.map((c, j) => (j === ci ? e.target.value : c)) : r)),
+                      })}
+                    />
+                  </td>
+                ))}
+                <td className="tap-table-gutter">
+                  <button
+                    type="button"
+                    className="tap-source-remove"
+                    onClick={() => onChange({ cells: body.filter((_, i) => i !== ri) })}
+                    aria-label={`Ta bort rad ${ri + 1}`}
+                  >✕</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="tap-table-actions">
+        <button type="button" className="btn btn-ghost btn-sm" onClick={() => onChange({ cells: [...body, Array.from({ length: width }, () => '')] })}>+ Rad</button>
+        <button type="button" className="btn btn-ghost btn-sm" onClick={() => onChange({ columns: [...head, ''], cells: body.map(row => [...row, '']) })}>+ Kolumn</button>
+      </div>
+    </div>
+  )
+}
+
+/**
  * Visar vad adressen kommer att göra. Det är hela poängen med att bara ha en
  * knapptyp: redaktören väljer inte "intern" eller "extern", utan ser här vad
  * det som skrivits in blev.
@@ -141,7 +231,7 @@ function LinkNote({ url }: { url: string }) {
 const SHORTCUT_KEY: Partial<Record<ContentBlock['type'], string>> = {
   paragraph: 'T', heading: 'R', quote: 'C',
   image: 'B', factbox: 'F', warning: 'V', list: 'L',
-  cta: 'U', video: 'I', button: 'K', links: 'N', comparison: 'J', sources: 'S', divider: 'A',
+  cta: 'U', video: 'I', button: 'K', links: 'N', table: 'E', comparison: 'J', sources: 'S', divider: 'A',
 }
 // e.code (layout-independent, avoids AltGr special chars) → block type.
 const CODE_TO_TYPE = Object.fromEntries(
@@ -159,6 +249,7 @@ function blankBlock(type: ContentBlock['type']): ContentBlock {
   if (type === 'list') { b.title = ''; b.items = [''] }
   if (type === 'cta' || type === 'links') { b.title = ''; b.links = [] }
   if (type === 'comparison') { b.title = ''; b.rows = [] }
+  if (type === 'table') { b.title = ''; b.columns = ['', '']; b.cells = [['', '']] }
   return b
 }
 
@@ -171,6 +262,9 @@ Rubrik                     (understruken rubrik: = ger nivå 1,
 Brödtext. Tom rad ger ett nytt stycke.
 > Citat
 - Punkt i lista
+| Kolumn | Kolumn |         (tabell – raden under
+| --- | --- |                måste vara streck)
+| Cell | Cell |
 ---                        (avdelare)
 ![alt](bildadress "bildtext")
 [Knapptext](https://…)     (ensam på raden = knapp)
@@ -184,6 +278,7 @@ Texten i rutan.
 :::video Rubrik            (videolänken på egen rad)
 :::uppmaning Rubrik        (knappar som - [text](länk))
 :::länkar Rubrik           (länklista som - [text](länk))
+:::tabell Rubrik           (tabell med rubrik över)
 :::jämförelse Rubrik       (rader som - Etikett: Värde)
 :::källor                  (källor som - [text](länk))`
 
@@ -214,6 +309,8 @@ export default function TapEditor({ blocks, onChange }: Props) {
   const mdRef = useRef<HTMLTextAreaElement>(null)
   // Markörens plats efter att ett verktyg skrivit in något i MD-rutan.
   const [mdCaret, setMdCaret] = useState<number | null>(null)
+  const [pdfImport, setPdfImport] = useState(false)
+  const { show } = useToast()
   const documents = usePublishedDocuments()
 
   // Ensure there is always something to type into.
@@ -296,19 +393,23 @@ export default function TapEditor({ blocks, onChange }: Props) {
   }
 
   /**
-   * Skriver in ett stycke markdown vid markören, alltid som ett eget block med
-   * tom rad omkring. {} i mallen är där markören ska stå efteråt.
+   * Skriver in text vid markören i MD-rutan, alltid som ett eget block med tom
+   * rad omkring, och lämnar markören `caretOffset` tecken in i det som lades in.
    */
-  function insertMarkdown(template: string) {
+  function insertAtCaret(snippet: string, caretOffset: number) {
     const text = markdown ?? ''
     const at = mdRef.current?.selectionStart ?? text.length
-    const snippet = template.replace('{}', '')
-    const caretInSnippet = template.indexOf('{}')
     const before = text.slice(0, at).replace(/\s+$/, '')
     const after = text.slice(at).replace(/^\s+/, '')
     const head = before ? before + '\n\n' : ''
     editMarkdown(head + snippet + (after ? '\n\n' + after : '\n'))
-    setMdCaret(head.length + (caretInSnippet < 0 ? snippet.length : caretInSnippet))
+    setMdCaret(head.length + caretOffset)
+  }
+  /** Verktygsradens mallar, där {} markerar var markören ska hamna. */
+  function insertMarkdown(template: string) {
+    const caret = template.indexOf('{}')
+    const snippet = template.replace('{}', '')
+    insertAtCaret(snippet, caret < 0 ? snippet.length : caret)
   }
 
   // MD-läget: på väg in skrivs blocken ut som text, och varje ändring tolkas
@@ -420,6 +521,12 @@ export default function TapEditor({ blocks, onChange }: Props) {
 
       {markdown != null && (
         <div className="tap-md-pane">
+          <div className="tap-md-actions">
+            <button type="button" className="btn btn-secondary btn-sm" onClick={() => setPdfImport(true)}>
+              Hämta text från PDF…
+            </button>
+            <span className="form-hint">Rubriker, listor och tabeller följer med som block.</span>
+          </div>
           <textarea
             ref={mdRef}
             className="tap-md"
@@ -550,6 +657,10 @@ export default function TapEditor({ blocks, onChange }: Props) {
                   </div>
                 )}
 
+                {block.type === 'table' && (
+                  <TableEditor block={block} onChange={updates => set(i, updates)} />
+                )}
+
                 {block.type === 'comparison' && (
                   <div className="tap-sources">
                     <input className="form-input" type="text" value={block.title ?? ''} onChange={e => set(i, { title: e.target.value })} placeholder="Rubrik (valfritt)" />
@@ -607,6 +718,18 @@ export default function TapEditor({ blocks, onChange }: Props) {
           </div>
         ))}
       </div>
+      )}
+
+      {pdfImport && (
+        <PdfImportDialog
+          onClose={() => setPdfImport(false)}
+          onImported={(md, fileName) => {
+            setPdfImport(false)
+            if (!md) return
+            insertAtCaret(md, md.length)
+            show(`Hämtade texten ur ${fileName}`, 'success')
+          }}
+        />
       )}
 
       {uploadFor != null && (

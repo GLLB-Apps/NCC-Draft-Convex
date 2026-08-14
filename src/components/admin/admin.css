@@ -142,6 +142,22 @@
 .admin-modal-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-4); }
 .admin-modal-head h3 { margin: 0; }
 
+/* PDF-import: progressbar som räknar sidor */
+.pdf-import-progress { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-4) 0; }
+.pdf-import-bar {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+.pdf-import-bar-fill {
+  height: 100%;
+  background: var(--primary);
+  border-radius: 999px;
+  transition: width 0.25s ease;
+}
+
 .intdoc-modal-backdrop {
   position: fixed;
   inset: 0;
@@ -1399,6 +1415,8 @@
   tab-size: 2;
 }
 .tap-md:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-bg); }
+.tap-md-actions { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+.tap-md-actions .form-hint { margin: 0; }
 .tap-md-help summary { cursor: pointer; font-size: 0.8rem; color: var(--text-muted); }
 .tap-md-help summary:hover { color: var(--primary); }
 .tap-md-help pre {
@@ -1413,6 +1431,20 @@
   overflow-x: auto;
   white-space: pre;
 }
+
+/* Tabellredigering: rutnät av fält, med egen scroll för breda tabeller */
+.tap-table { display: flex; flex-direction: column; gap: var(--space-2); }
+.tap-table-scroll { overflow-x: auto; }
+.tap-table table { border-collapse: collapse; width: 100%; }
+.tap-table th, .tap-table td { padding: 2px; vertical-align: middle; }
+.tap-table th { display: table-cell; }
+.tap-table th .form-input { min-width: 120px; font-weight: 600; }
+.tap-table td .form-input { min-width: 120px; }
+.tap-table .form-input { padding: var(--space-1) var(--space-2); font-size: 0.9rem; }
+.tap-table th { position: relative; white-space: nowrap; }
+.tap-table th .tap-source-remove { width: 22px; height: 22px; margin-left: 2px; font-size: 0.7rem; }
+.tap-table-gutter { width: 34px; }
+.tap-table-actions { display: flex; gap: var(--space-2); }
 
 /* Länkfältet i knapp-blocket: adress + uppladdningsknapp på samma rad */
 .tap-link-row { display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap; }
