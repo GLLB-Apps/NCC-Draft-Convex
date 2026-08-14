@@ -142,6 +142,44 @@
 .admin-modal-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-4); }
 .admin-modal-head h3 { margin: 0; }
 
+/* Granskningssteget behöver mer plats än en vanlig dialogruta */
+.admin-modal.wide { max-width: 900px; }
+
+.pdf-review-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-3);
+}
+.pdf-review-head .form-hint { margin: 0; }
+.pdf-review-body {
+  min-height: 300px;
+  max-height: 55vh;
+  overflow-y: auto;
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+}
+/* Sajtens blockstilar är satta för hela sidbredder – krymp dem här inne. */
+.pdf-review-body .content-blocks { gap: var(--space-4); }
+.pdf-review-body .block-heading { margin-top: 0; }
+.pdf-review-body h1 { font-size: 1.6rem; }
+.pdf-review-body h2 { font-size: 1.35rem; }
+.pdf-review-body h3 { font-size: 1.15rem; }
+.pdf-review-body img { max-width: 100%; height: auto; }
+.pdf-review-markdown {
+  margin: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.82rem;
+  line-height: 1.6;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 /* PDF-import: progressbar som räknar sidor */
 .pdf-import-progress { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-4) 0; }
 .pdf-import-bar {

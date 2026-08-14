@@ -13,10 +13,10 @@ export default defineConfig(({ mode }) => {
       dedupe: ['react', 'react-dom'],
     },
     server: {
-      // `npm run dev` serverar bara frontend — /api finns inte. Sätt API_PROXY i
+      // `npm run dev` serverar bara frontend — /api finns inte, så kontaktformulär
+      // och administratörsrättigheter går inte att prova lokalt. Sätt API_PROXY i
       // .env.local till en deployad sajt (t.ex. en Vercel-preview) så går
-      // api-anropen dit, och funktioner som PDF-importen fungerar lokalt utan
-      // att `vercel dev` behöver köras.
+      // api-anropen dit, utan att `vercel dev` behöver köras.
       //
       //   API_PROXY=https://ncc-draft-rs-git-min-gren.vercel.app
       proxy: env.API_PROXY

@@ -1,31 +1,30 @@
-import { useEffect, useRef, useState } from 'react'
-import Dropzone from './Dropzone'
-import { createSessionJwt } from '../../lib/supabase'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import type { ContentBlock } from '../../lib/types'
+import { pdfToMarkdown } from '../../lib/pdfToMarkdown'
+import { markdownToBlocks } from '../../lib/markdownBlocks'
+import { ContentBlocks } from '../public/blocks'
 
 // Hämtar texten ur en PDF och lämnar tillbaka den som markdown, redo att läggas
-// in i MD-läget. Själva konverteringen sker i api/pdf2md.py — den bygger på
-// PyMuPDF, som inte kan köras i webbläsaren.
+// in i MD-läget. Allt sker i webbläsaren med pdf.js: filen laddas aldrig upp
+// någonstans, och inget serverpaket behöver installeras.
 //
-// PDF:en laddas först upp till Appwrite (samma storage som editorns övriga
-// filer) och funktionen hämtar den därifrån. Sedan konverteras några sidor per
-// anrop: varje svar säger vilken sida som står på tur, vilket både håller
-// anropen korta och ger en progressbar som räknar riktiga sidor.
+// Läsningen sker i tre steg — välj fil, läs (med progressbar), granska. Steget
+// däremellan finns för att en PDF-tolkning aldrig blir perfekt: här ser man vad
+// den blev, både som block och som markdown, innan något hamnar i editorn.
 
-/** Sidor per anrop. Fler = färre anrop men längre väntan mellan stegen. */
-const PAGE_BATCH = 8
-
-interface Progress {
-  phase: 'uploading' | 'converting' | 'done'
-  done: number
-  total: number
+// Namn i plural för sammanfattningen ("12 rubriker").
+const PLURAL: Partial<Record<ContentBlock['type'], string>> = {
+  heading: 'rubriker', paragraph: 'stycken', quote: 'citat',
+  image: 'bilder', factbox: 'faktarutor', warning: 'varningsrutor',
+  list: 'punktlistor', cta: 'uppmaningar', video: 'videor', button: 'knappar',
+  links: 'länklistor', table: 'tabeller', comparison: 'jämförelser',
+  sources: 'källförteckningar', divider: 'avdelare',
 }
 
-interface Response {
-  pages: number
-  headers: Record<string, unknown>
+interface Result {
   markdown: string
-  next: number | null
-  error?: string
+  blocks: ContentBlock[]
+  fileName: string
 }
 
 interface Props {
@@ -34,110 +33,152 @@ interface Props {
 }
 
 export default function PdfImportDialog({ onImported, onClose }: Props) {
-  const [progress, setProgress] = useState<Progress | null>(null)
+  const [progress, setProgress] = useState<{ page: number; pages: number } | null>(null)
+  const [result, setResult] = useState<Result | null>(null)
+  const [tab, setTab] = useState<'blocks' | 'markdown'>('blocks')
   const [error, setError] = useState<string | null>(null)
-  const abortRef = useRef<AbortController | null>(null)
+  const [over, setOver] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
   const cancelledRef = useRef(false)
 
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && !progress) onClose() }
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [progress, onClose])
+  }, [onClose])
 
-  // Avbryter ett pågående anrop om rutan stängs mitt i.
-  useEffect(() => () => { cancelledRef.current = true; abortRef.current?.abort() }, [])
+  // Läsningen fortsätter annars i bakgrunden om rutan stängs mitt i.
+  useEffect(() => () => { cancelledRef.current = true }, [])
 
-  async function convert(url: string, file: File) {
+  const summary = useMemo(() => {
+    if (!result) return ''
+    const counts = new Map<ContentBlock['type'], number>()
+    for (const block of result.blocks) counts.set(block.type, (counts.get(block.type) ?? 0) + 1)
+    const parts = [...counts]
+      .sort((a, b) => b[1] - a[1])
+      .map(([type, count]) => `${count} ${PLURAL[type] ?? type}`)
+    return `${result.blocks.length} block — ${parts.join(', ')}`
+  }, [result])
+
+  async function read(file: File | undefined) {
+    if (!file || progress) return
+    if (!/\.pdf$/i.test(file.name) && file.type !== 'application/pdf') {
+      setError('Välj en PDF-fil.')
+      return
+    }
     setError(null)
+    setResult(null)
     cancelledRef.current = false
-    setProgress({ phase: 'converting', done: 0, total: 1 })
+    setProgress({ page: 0, pages: 0 })
 
     try {
-      const jwt = await createSessionJwt()
-      const parts: string[] = []
-      let start: number | null = 0
-      let headers: Record<string, unknown> | null = null
-
-      while (start != null && !cancelledRef.current) {
-        const controller = new AbortController()
-        abortRef.current = controller
-        const res = await fetch('/api/pdf2md', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${jwt}` },
-          body: JSON.stringify({ url, start, count: PAGE_BATCH, headers }),
-          signal: controller.signal,
-        })
-        const data = await res.json().catch(() => ({})) as Response
-        if (!res.ok) throw new Error(data.error || `Servern svarade ${res.status}`)
-
-        parts.push(data.markdown)
-        headers = data.headers
-        const from: number = start
-        start = data.next
-        setProgress({ phase: 'converting', done: start ?? data.pages, total: data.pages })
-        // Tomt svar på hela dokumentet betyder oftast en skannad PDF.
-        if (start == null && from === 0 && !parts.join('').trim()) {
-          throw new Error('PDF:en innehåller ingen text att hämta. Är den inskannad behöver den OCR-tolkas först.')
-        }
-      }
-
+      const markdown = await pdfToMarkdown(file, {
+        onProgress: setProgress,
+        isCancelled: () => cancelledRef.current,
+      })
       if (cancelledRef.current) return
-      setProgress({ phase: 'done', done: 1, total: 1 })
-      onImported(parts.join('\n\n').trim(), file.name)
+      if (!markdown.trim()) {
+        throw new Error('PDF:en innehåller ingen text att hämta. Är den inskannad behöver den tolkas med OCR först.')
+      }
+      setResult({ markdown, blocks: markdownToBlocks(markdown), fileName: file.name })
     } catch (e) {
-      if (cancelledRef.current || (e instanceof DOMException && e.name === 'AbortError')) return
+      if (cancelledRef.current) return
       setError(e instanceof Error ? e.message : String(e))
+    } finally {
       setProgress(null)
     }
   }
 
-  const percent = progress && progress.total > 0
-    ? Math.round((progress.done / progress.total) * 100)
-    : 0
   const busy = progress != null
+  const percent = progress && progress.pages > 0 ? Math.round((progress.page / progress.pages) * 100) : 0
 
   return (
-    <div className="admin-modal-backdrop" onClick={() => !busy && onClose()}>
-      <div className="admin-modal" role="dialog" aria-modal="true" aria-label="Hämta text från PDF" onClick={e => e.stopPropagation()}>
+    <div className="admin-modal-backdrop" onClick={onClose}>
+      <div
+        className={result ? 'admin-modal wide' : 'admin-modal'}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Hämta text från PDF"
+        onClick={e => e.stopPropagation()}
+      >
         <div className="admin-modal-head">
-          <h3>Hämta text från PDF</h3>
+          <h3>{result ? `Granska: ${result.fileName}` : 'Hämta text från PDF'}</h3>
           <button type="button" className="btn btn-ghost btn-sm" onClick={onClose}>
             {busy ? 'Avbryt' : 'Stäng'}
           </button>
         </div>
 
-        {busy ? (
+        {busy && (
           <div className="pdf-import-progress">
             <div className="pdf-import-bar">
               <div className="pdf-import-bar-fill" style={{ width: `${percent}%` }} />
             </div>
             <p className="form-hint">
-              {progress.phase === 'converting' && progress.total > 1
-                ? `Läser sida ${progress.done} av ${progress.total}…`
-                : 'Läser dokumentet…'}
+              {progress.pages > 0 ? `Läser sida ${progress.page} av ${progress.pages}…` : 'Öppnar dokumentet…'}
             </p>
           </div>
-        ) : (
-          <Dropzone
-            accept=".pdf,application/pdf"
-            label="Dra och släpp PDF:en här"
-            hint="eller klicka för att välja"
-            onUploaded={(url, file) => {
-              setProgress({ phase: 'uploading', done: 0, total: 1 })
-              return convert(url, file)
-            }}
-            onError={msg => setError('Uppladdningen misslyckades: ' + msg)}
-          />
+        )}
+
+        {!busy && !result && (
+          <div
+            className={`dropzone${over ? ' over' : ''}`}
+            onDragOver={e => { e.preventDefault(); setOver(true) }}
+            onDragLeave={() => setOver(false)}
+            onDrop={e => { e.preventDefault(); setOver(false); read(e.dataTransfer.files[0]) }}
+            onClick={() => inputRef.current?.click()}
+            role="button"
+            tabIndex={0}
+            onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); inputRef.current?.click() } }}
+          >
+            <input
+              ref={inputRef}
+              type="file"
+              accept=".pdf,application/pdf"
+              hidden
+              onChange={e => { read(e.target.files?.[0]); e.target.value = '' }}
+            />
+            <span className="dropzone-icon" aria-hidden="true">⬆</span>
+            <span className="dropzone-label">Dra och släpp PDF:en här</span>
+            <span className="dropzone-hint">eller klicka för att välja</span>
+          </div>
+        )}
+
+        {!busy && result && (
+          <>
+            <div className="pdf-review-head">
+              <p className="form-hint">{summary}</p>
+              <div className="tap-mode-switch" role="group" aria-label="Visa som">
+                <button type="button" className={tab === 'blocks' ? 'tap-mode active' : 'tap-mode'} onClick={() => setTab('blocks')}>Block</button>
+                <button type="button" className={tab === 'markdown' ? 'tap-mode active' : 'tap-mode'} onClick={() => setTab('markdown')}>Markdown</button>
+              </div>
+            </div>
+
+            <div className="pdf-review-body">
+              {tab === 'blocks'
+                ? <ContentBlocks blocks={result.blocks} />
+                : <pre className="pdf-review-markdown">{result.markdown}</pre>}
+            </div>
+
+            <div className="admin-form-actions">
+              <button type="button" className="btn btn-primary" onClick={() => onImported(result.markdown, result.fileName)}>
+                Lägg in i editorn
+              </button>
+              <button type="button" className="btn btn-ghost" onClick={() => { setResult(null); setError(null) }}>
+                Välj en annan fil
+              </button>
+            </div>
+          </>
         )}
 
         {error && <p className="form-hint form-hint-warning">{error}</p>}
 
-        <p className="form-hint">
-          Rubriker, stycken, listor och tabeller följer med som block. Bilder och
-          ritningar gör det inte — dem lägger du in själv. Är PDF:en inskannad
-          finns ingen text att hämta.
-        </p>
+        {!result && (
+          <p className="form-hint">
+            Rubriker, stycken och punktlistor följer med som block. Tabeller
+            kommer in som text, och bilder följer inte med alls. Filen läses här i
+            webbläsaren och laddas inte upp någonstans.
+          </p>
+        )}
       </div>
     </div>
   )

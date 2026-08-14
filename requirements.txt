@@ -1,6 +1,0 @@
-# Beroenden för api/pdf2md.py (Vercels Python-runtime). Övriga api/-funktioner
-# är Node och rörs inte av den här filen.
-#
-# Versionen är låst: pymupdf4llm kräver exakt matchande pymupdf och
-# pymupdf_layout, och rubrikigenkänningen ändras mellan versioner.
-pymupdf4llm==1.28.2

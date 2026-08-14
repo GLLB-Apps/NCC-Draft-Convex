@@ -525,7 +525,7 @@ export default function TapEditor({ blocks, onChange }: Props) {
             <button type="button" className="btn btn-secondary btn-sm" onClick={() => setPdfImport(true)}>
               Hämta text från PDF…
             </button>
-            <span className="form-hint">Rubriker, listor och tabeller följer med som block.</span>
+            <span className="form-hint">Rubriker, stycken och listor följer med som block.</span>
           </div>
           <textarea
             ref={mdRef}
@@ -727,7 +727,15 @@ export default function TapEditor({ blocks, onChange }: Props) {
             setPdfImport(false)
             if (!md) return
             insertAtCaret(md, md.length)
-            show(`Hämtade texten ur ${fileName}`, 'success')
+            // Säg vad som hittades — går rubrikerna förlorade syns det direkt,
+            // i stället för att man får leta i texten efter varför.
+            const added = markdownToBlocks(md)
+            const headings = added.filter(b => b.type === 'heading').length
+            const lists = added.filter(b => b.type === 'list').length
+            show(
+              `${fileName}: ${added.length} block, varav ${headings} rubriker och ${lists} listor`,
+              headings > 0 ? 'success' : 'info',
+            )
           }}
         />
       )}
