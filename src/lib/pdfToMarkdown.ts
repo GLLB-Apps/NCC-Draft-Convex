@@ -55,8 +55,9 @@ export interface TextItem {
 
 // Mellanrum bredare än så (andel av teckenstorleken) är ett mellanslag.
 const SPACE_GAP = 0.25
-// Radavstånd större än så (andel av teckenstorleken) bryter stycket.
-const PARAGRAPH_GAP = 1.7
+// Radavstånd större än så (andel av dokumentets vanliga radavstånd) betyder att
+// en ny tanke börjar: nytt stycke, eller en rubrik.
+const NEW_BLOCK_GAP = 1.3
 // Hur mycket större än brödtexten en storlek måste vara för att vara rubrik.
 // Relativt, inte en fast gräns: i ett dokument med 10-punkters brödtext är en
 // 12-punkters rad en rubrik, i ett med 12-punkters är den brödtext.
@@ -206,18 +207,25 @@ interface Layout {
   levels: Map<number, number>
   bodySize: number
   bodyFont: string
+  /** Dokumentets vanliga radavstånd. Allt större betyder ny tanke. */
+  lineGap: number
 }
 
 function readLayout(lines: Line[]): Layout {
   const chars = new Map<number, number>()
   const lengths = new Map<number, number[]>()
   const fonts = new Map<string, number>()
+  const gaps = new Map<number, number>()
 
   for (const line of lines) {
     const size = Math.round(line.size)
     chars.set(size, (chars.get(size) ?? 0) + line.text.length)
     lengths.set(size, [...(lengths.get(size) ?? []), line.text.length])
     fonts.set(line.font, (fonts.get(line.font) ?? 0) + line.text.length)
+    if (Number.isFinite(line.gapAbove)) {
+      const gap = Math.round(line.gapAbove)
+      if (gap > 0) gaps.set(gap, (gaps.get(gap) ?? 0) + 1)
+    }
   }
 
   const most = <T,>(counts: Map<T, number>, fallback: T): T => {
@@ -229,6 +237,7 @@ function readLayout(lines: Line[]): Layout {
 
   const bodySize = most(chars, FALLBACK_SIZE)
   const bodyFont = most(fonts, '')
+  const lineGap = most(gaps, Math.round(bodySize * 1.2))
 
   const levels = new Map<number, number>()
   const candidates = [...chars.keys()]
@@ -241,27 +250,40 @@ function readLayout(lines: Line[]): Layout {
     .sort((a, b) => b - a)
 
   candidates.slice(0, MAX_HEADING_LEVELS).forEach((size, index) => levels.set(size, index + 1))
-  return { levels, bodySize, bodyFont }
+  return { levels, bodySize, bodyFont, lineGap }
 }
 
+/** true när raden börjar något nytt i stället för att fortsätta föregående. */
+const startsBlock = (line: Line, layout: Layout) => line.gapAbove > layout.lineGap * NEW_BLOCK_GAP
+
 /**
- * Nivån för en rad, eller 0 för brödtext. Storlek först; annars en kort rad i
- * ett avvikande typsnitt, som läggs en nivå under de storleksbaserade.
+ * Nivån för en rad, eller 0 för brödtext. Storleken avgör i första hand.
+ *
+ * Finns ingen storleksskillnad alls — vilket är vanligt i brev och yttranden,
+ * där allt är satt i samma grad — är typsnittet det enda som skiljer. Då krävs
+ * också att raden börjar ett nytt stycke: ett fetat ord mitt i ett stycke ska
+ * inte bli en rubrik bara för att det står i en annan font.
  */
 function levelOf(line: Line, layout: Layout): number {
   const bySize = layout.levels.get(Math.round(line.size))
   if (bySize) return bySize
 
-  const emphasised = line.font !== layout.bodyFont && Math.round(line.size) >= layout.bodySize
-  const short = line.text.length <= HEADING_MAX_LENGTH && !/[.:,;]$/.test(line.text)
-  if (emphasised && short) return Math.min(layout.levels.size + 1, MAX_HEADING_LEVELS)
-  return 0
+  if (line.font === layout.bodyFont || Math.round(line.size) < layout.bodySize) return 0
+  if (!startsBlock(line, layout)) return 0
+  // Rubriker är korta och avslutas inte som en mening. Kolon är däremot vanligt
+  // i rubriker ("Upprepad prövning av samma grundfråga:").
+  if (line.text.length > HEADING_MAX_LENGTH || /[.,;]$/.test(line.text)) return 0
+  return Math.min(layout.levels.size + 1, MAX_HEADING_LEVELS)
 }
 
 /** Rader → markdown-block: rubrik, punktlista eller stycke. */
 function assemble(lines: Line[], layout: Layout): string {
   const out: string[] = []
   let paragraph: string[] = []
+  // Rubriken som just skrevs ut (0 = ingen), så att en radbruten rubrik kan
+  // fortsätta i den i stället för att bli ett stycke.
+  let openLevel = 0
+  let openFont = ''
 
   const flush = () => {
     const text = paragraph.join(' ').replace(/\s+/g, ' ').trim()
@@ -270,13 +292,30 @@ function assemble(lines: Line[], layout: Layout): string {
   }
 
   for (const line of lines) {
-    const level = levelOf(line, layout)
+    const continues = !startsBlock(line, layout)
+    // En rubrik som går över flera rader: raderna efter den första saknar både
+    // luft över sig och rubriknivå, men hör ihop med den — de är satta i samma
+    // typsnitt och står tätt.
+    const carried = openLevel > 0 && continues && line.font === openFont ? openLevel : 0
+    const level = levelOf(line, layout) || carried
     const bullet = BULLET.exec(line.text)
 
-    if (level) {
-      flush()
-      out.push('#'.repeat(level) + ' ' + line.text)
-    } else if (bullet) {
+    if (level > 0) {
+      const marker = '#'.repeat(level) + ' '
+      const last = out[out.length - 1]
+      if (carried === level && last?.startsWith(marker)) {
+        out[out.length - 1] = joinText(last, line.text)
+      } else {
+        flush()
+        out.push(marker + line.text)
+      }
+      openLevel = level
+      openFont = line.font
+      continue
+    }
+    openLevel = 0
+
+    if (bullet) {
       flush()
       const item = '- ' + bullet[1].trim()
       // Punkter efter varandra hör till samma lista, inte till var sitt block.
@@ -284,19 +323,27 @@ function assemble(lines: Line[], layout: Layout): string {
       if (last?.startsWith('- ')) out[out.length - 1] = last + '\n' + item
       else out.push(item)
     } else {
-      if (paragraph.length && line.gapAbove > line.size * PARAGRAPH_GAP) flush()
+      if (paragraph.length && !continues) flush()
       const previous = paragraph[paragraph.length - 1]
-      // Avstavning över radbrytning: "fastig-" + "heten" → "fastigheten".
-      if (previous?.endsWith('-') && /^[a-zåäö]/.test(line.text)) {
-        paragraph[paragraph.length - 1] = previous.slice(0, -1) + line.text
-      } else {
-        paragraph.push(line.text)
-      }
+      if (previous != null) paragraph[paragraph.length - 1] = joinText(previous, line.text)
+      else paragraph.push(line.text)
     }
   }
   flush()
 
   return out.join('\n\n')
+}
+
+// "transport- och logistikkedjor": bindestrecket hör till ordet, inte till
+// radbrytningen, och ska vara kvar.
+const HANGING_HYPHEN = /^(och|eller|samt)\b/i
+
+/** Lägger ihop två rader, med avstavningen lagad: "fastig-" + "heten". */
+function joinText(before: string, after: string): string {
+  if (before.endsWith('-') && /^[a-zåäöéü]/.test(after) && !HANGING_HYPHEN.test(after)) {
+    return before.slice(0, -1) + after
+  }
+  return before + ' ' + after
 }
 
 /** Sista städningen, samma som pdf2md gör på sin råoutput. */
