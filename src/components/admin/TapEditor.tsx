@@ -6,6 +6,7 @@ import { useToast } from '../../lib/toast'
 import { headingLevel, internalPath, normalizeUrl } from '../../lib/utils'
 import { blocksToMarkdown, markdownToBlocks } from '../../lib/markdownBlocks'
 import HeadingMenu from './HeadingMenu'
+import MediaPicker from './MediaPicker'
 import PdfImportDialog from './PdfImportDialog'
 import UploadDialog from './UploadDialog'
 
@@ -337,6 +338,8 @@ export default function TapEditor({ blocks, onChange }: Props) {
   const [pending, setPending] = useState<{ index: number; caret: number } | null>(null)
   // Blocket vars länk uppladdningsrutan fyller i, null när rutan är stängd.
   const [uploadFor, setUploadFor] = useState<number | null>(null)
+  // Detsamma för bildväljaren.
+  const [mediaFor, setMediaFor] = useState<number | null>(null)
   // Markdown-läget: texten redigeras här och tolkas till block för varje
   // tangenttryck, så att ett byte tillbaka till Vanlig visar samma innehåll.
   // null = vanligt läge.
@@ -647,7 +650,10 @@ export default function TapEditor({ blocks, onChange }: Props) {
 
                 {block.type === 'image' && (
                   <>
-                    <input className="form-input" type="url" value={block.image_url ?? ''} onChange={e => set(i, { image_url: e.target.value })} placeholder="Klistra in bildadress (URL)" />
+                    <div className="tap-link-row">
+                      <input className="form-input" type="url" value={block.image_url ?? ''} onChange={e => set(i, { image_url: e.target.value })} placeholder="Klistra in bildadress (URL)" />
+                      <button type="button" className="btn btn-secondary btn-sm" onClick={() => setMediaFor(i)}>Välj bild…</button>
+                    </div>
                     <input className="form-input" type="text" value={block.alt_text ?? ''} onChange={e => set(i, { alt_text: e.target.value })} placeholder="Beskriv bilden (alt-text)" />
                     <input className="form-input" type="text" value={block.text ?? ''} onChange={e => set(i, { text: e.target.value })} placeholder="Bildtext (valfritt)" />
                     {block.image_url && <img src={block.image_url} alt="" className="tap-image-preview" />}
@@ -800,6 +806,20 @@ export default function TapEditor({ blocks, onChange }: Props) {
               `${fileName}: ${added.length} block, varav ${headings} rubriker och ${lists} listor`,
               headings > 0 ? 'success' : 'info',
             )
+          }}
+        />
+      )}
+
+      {mediaFor != null && (
+        <MediaPicker
+          onClose={() => setMediaFor(null)}
+          onPick={media => {
+            // Alt-texten från biblioteket skriver inte över en egen beskrivning.
+            set(mediaFor, {
+              image_url: media.url,
+              alt_text: list[mediaFor].alt_text?.trim() ? list[mediaFor].alt_text : media.alt,
+            })
+            setMediaFor(null)
           }}
         />
       )}

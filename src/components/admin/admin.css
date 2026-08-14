@@ -142,6 +142,28 @@
 .admin-modal-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-4); }
 .admin-modal-head h3 { margin: 0; }
 
+/* Bildväljaren: mediarutnätet som klickbara kort, i en scrollande yta */
+.media-picker-grid {
+  margin-top: var(--space-3);
+  max-height: 45vh;
+  overflow-y: auto;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: var(--space-3);
+  padding: 2px;
+}
+.media-picker-card {
+  padding: 0;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  cursor: pointer;
+  text-align: left;
+  transition: all var(--transition);
+}
+.media-picker-card:hover,
+.media-picker-card:focus-visible { border-color: var(--primary); box-shadow: 0 0 0 2px var(--primary-bg); }
+.media-picker-card .media-card-thumb { height: 110px; }
+.media-picker-card .media-card-body { padding: var(--space-2); }
+
 /* Granskningssteget behöver mer plats än en vanlig dialogruta */
 .admin-modal.wide { max-width: 900px; }
 
