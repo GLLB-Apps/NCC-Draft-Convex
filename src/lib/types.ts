@@ -10,6 +10,8 @@ export interface ContentBlock {
   text?: string
   title?: string
   url?: string
+  /** Rubriknivå 1–6 (markdownens # … ######). Saknas den är rubriken nivå 2. */
+  level?: number
   /** Knapptext för t.ex. resurs-blocket ("Öppna enkäten"). */
   button_label?: string
   items?: string[]

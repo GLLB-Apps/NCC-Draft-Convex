@@ -1474,6 +1474,15 @@
 .content-blocks { display: flex; flex-direction: column; gap: var(--space-5); }
 
 .block-heading { margin-top: var(--space-4); }
+/* h1–h4 har storlek globalt; de två minsta nivåerna sätts här så att de inte
+   blir mindre än brödtexten (webbläsarens standard för h5/h6). */
+.block-heading-5 { font-size: 1rem; }
+.block-heading-6 {
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
 .block-paragraph { line-height: 1.7; }
 
 /* Bullet-list block (card with check bullets) */

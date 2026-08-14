@@ -1,12 +1,13 @@
 import { Link } from 'react-router-dom'
 import type { ContentBlock } from '../../lib/types'
 import LucideIcon from '../../lib/lucide'
+import { headingLevel, internalPath, normalizeUrl } from '../../lib/utils'
 
 // Renders a single content block. Shared across pages that show free-form
 // block content (background, press, …).
 export function RenderBlock({ block }: { block: ContentBlock }) {
   switch (block.type) {
-    case 'heading': return <h2 className="block-heading">{block.text}</h2>
+    case 'heading': return <BlockHeading block={block} />
     case 'paragraph': return <p className="block-paragraph">{block.text}</p>
     case 'quote': return <blockquote className="block-quote">{block.text}</blockquote>
     case 'list': return <BlockList block={block} />
@@ -45,9 +46,7 @@ export function RenderBlock({ block }: { block: ContentBlock }) {
       </div>
     )
     case 'divider': return <hr className="block-divider" />
-    case 'button': return (
-      <a href={block.url} target="_blank" rel="noopener noreferrer" className="block-button">{block.text}</a>
-    )
+    case 'button': return <BlockButton block={block} />
     case 'sources': return (
       <div className="block-sources">
         <h4>Källförteckning</h4>
@@ -98,6 +97,14 @@ export function ContentBlocks({ blocks }: { blocks: ContentBlock[] }) {
   )
 }
 
+// Rubrik i vald nivå — h2 när inget valts, eftersom sidans titel redan är h1.
+// Nivån styr både taggen (för skärmläsare och sökmotorer) och storleken.
+export function BlockHeading({ block }: { block: ContentBlock }) {
+  const level = headingLevel(block.level)
+  const Tag = `h${level}` as 'h1'
+  return <Tag className={`block-heading block-heading-${level}`}>{block.text}</Tag>
+}
+
 // Bullet-list card block.
 export function BlockList({ block }: { block: ContentBlock }) {
   const items = (block.items ?? []).filter(Boolean)
@@ -112,9 +119,27 @@ export function BlockList({ block }: { block: ContentBlock }) {
   )
 }
 
+// Knapp: en enda blocktyp för alla länkknappar. Adressen avgör beteendet — en
+// sida på sajten navigeras utan omladdning, medan en extern adress (eller en
+// uppladdad fil) öppnas i nytt fönster och märks med en ikon.
+export function BlockButton({ block }: { block: ContentBlock }) {
+  const href = normalizeUrl(block.url)
+  if (!href) return null
+  const label = block.text?.trim() || 'Öppna'
+  const path = internalPath(block.url)
+  if (path) return <Link to={path} className="block-button">{label}</Link>
+  return (
+    <a href={href} target="_blank" rel="noopener noreferrer" className="block-button">
+      {label}
+      <LucideIcon icon="external-link" size={16} />
+    </a>
+  )
+}
+
 // External resource block: a uniform card for surveys, petitions, reports and
 // other external forms — icon + title + description + a button, all opening in
-// a new tab.
+// a new tab. Ersatt av knapp-blocket ovan; finns kvar för sidor som redan
+// innehåller rutan.
 export function BlockResource({ block }: { block: ContentBlock }) {
   if (!block.url && !block.title) return null
   const label = block.button_label?.trim() || 'Öppna'
@@ -150,9 +175,10 @@ export function BlockCta({ block }: { block: ContentBlock }) {
         <div className="cta-actions">
           {links.map((l, i) => {
             const cls = i === 0 ? 'btn btn-primary' : 'btn btn-secondary'
-            return l.url.startsWith('/')
-              ? <Link key={i} to={l.url} className={cls}>{l.label}</Link>
-              : <a key={i} href={l.url} target="_blank" rel="noopener noreferrer" className={cls}>{l.label}</a>
+            const path = internalPath(l.url)
+            return path
+              ? <Link key={i} to={path} className={cls}>{l.label}</Link>
+              : <a key={i} href={normalizeUrl(l.url)} target="_blank" rel="noopener noreferrer" className={cls}>{l.label}</a>
           })}
         </div>
       )}

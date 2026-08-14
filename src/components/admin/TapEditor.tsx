@@ -2,6 +2,10 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { KeyboardEvent } from 'react'
 import type { ContentBlock, DocumentItem } from '../../lib/types'
 import { supabase } from '../../lib/supabase'
+import { headingLevel, internalPath, normalizeUrl } from '../../lib/utils'
+import { blocksToMarkdown, markdownToBlocks } from '../../lib/markdownBlocks'
+import HeadingMenu from './HeadingMenu'
+import UploadDialog from './UploadDialog'
 
 // A document-style editor for non-technical admins: click anywhere and type,
 // press Enter for a new line, and tap the toolbar to turn a line into a heading
@@ -21,10 +25,40 @@ const INSERTS: { type: ContentBlock['type']; label: string }[] = [
   { type: 'cta', label: 'Uppmaning' },
   { type: 'video', label: 'Video' },
   { type: 'button', label: 'Knapp' },
-  { type: 'resource', label: 'Extern resurs' },
+  { type: 'links', label: 'Länklista' },
+  { type: 'comparison', label: 'Jämförelse' },
   { type: 'sources', label: 'Källor' },
   { type: 'divider', label: 'Avdelare' },
 ]
+
+// Vad varje verktyg skriver in i MD-läget — samma knapp, samma block, oavsett
+// läge. {} markerar var markören ska stå efteråt.
+const MD_SNIPPET: Partial<Record<ContentBlock['type'], string>> = {
+  paragraph: '{}',
+  quote: '> {}',
+  image: '![{}](bildadress "bildtext")',
+  factbox: ':::fakta {}\nText i rutan.\n:::',
+  warning: ':::varning {}\nText i rutan.\n:::',
+  list: '- {}',
+  cta: ':::uppmaning {}\n- [Knapptext](https://…)\n:::',
+  video: ':::video {}\nhttps://…\n:::',
+  button: '[{}](https://…)',
+  links: ':::länkar {}\n- [Text](https://…)\n:::',
+  comparison: ':::jämförelse {}\n- Etikett: Värde\n:::',
+  sources: ':::källor\n- [{}](https://…)\n:::',
+  divider: '---{}',
+}
+const headingSnippet = (level: number) => `${'#'.repeat(level)} {}`
+
+// Blocktyper som inte går att lägga till längre men som finns i redan sparat
+// innehåll. "Extern resurs" ersattes av knappen, som själv känner igen en
+// extern adress — gamla rutor går fortfarande att redigera och visa.
+const LEGACY_LABELS: Partial<Record<ContentBlock['type'], string>> = {
+  resource: 'Extern resurs (äldre ruta)',
+}
+
+const blockLabel = (type: ContentBlock['type']) =>
+  INSERTS.find(x => x.type === type)?.label ?? LEGACY_LABELS[type] ?? type
 
 /** Publicerade dokument att länka till, hämtas en gång per editor. */
 function usePublishedDocuments() {
@@ -79,6 +113,26 @@ function DocumentPicker({ docs, url, onPick }: {
   )
 }
 
+/**
+ * Visar vad adressen kommer att göra. Det är hela poängen med att bara ha en
+ * knapptyp: redaktören väljer inte "intern" eller "extern", utan ser här vad
+ * det som skrivits in blev.
+ */
+function LinkNote({ url }: { url: string }) {
+  if (!url.trim()) {
+    return <p className="form-hint">Ingen länk vald ännu — klistra in en adress, välj ett dokument eller ladda upp en fil.</p>
+  }
+  const path = internalPath(url)
+  if (path) return <p className="form-hint">Sida på webbplatsen ({path}) — öppnas direkt, utan nytt fönster.</p>
+  const normalized = normalizeUrl(url)
+  return (
+    <p className="form-hint">
+      Extern länk — öppnas automatiskt i ett nytt fönster.
+      {normalized !== url.trim() && <> Adressen sparas som <code>{normalized}</code>.</>}
+    </p>
+  )
+}
+
 // Alt+<letter> quick-inserts a block (or, for text styles, applies the style),
 // so you rarely need to reach for the toolbar. Letters follow the Swedish label
 // where it doesn't clash (Faktaruta→F, Varningsruta→V, Uppmaning→U …); Video
@@ -87,7 +141,7 @@ function DocumentPicker({ docs, url, onPick }: {
 const SHORTCUT_KEY: Partial<Record<ContentBlock['type'], string>> = {
   paragraph: 'T', heading: 'R', quote: 'C',
   image: 'B', factbox: 'F', warning: 'V', list: 'L',
-  cta: 'U', video: 'I', button: 'K', resource: 'X', sources: 'S', divider: 'A',
+  cta: 'U', video: 'I', button: 'K', links: 'N', comparison: 'J', sources: 'S', divider: 'A',
 }
 // e.code (layout-independent, avoids AltGr special chars) → block type.
 const CODE_TO_TYPE = Object.fromEntries(
@@ -101,12 +155,40 @@ function blankBlock(type: ContentBlock['type']): ContentBlock {
   if (type === 'image') { b.image_url = ''; b.alt_text = ''; b.text = '' }
   if (type === 'video') { b.video_url = ''; b.title = '' }
   if (type === 'button') { b.text = ''; b.url = '' }
-  if (type === 'resource') { b.title = ''; b.text = ''; b.url = ''; b.button_label = '' }
   if (type === 'sources') { b.sources = [] }
   if (type === 'list') { b.title = ''; b.items = [''] }
-  if (type === 'cta') { b.title = ''; b.links = [] }
+  if (type === 'cta' || type === 'links') { b.title = ''; b.links = [] }
+  if (type === 'comparison') { b.title = ''; b.rows = [] }
   return b
 }
+
+// Hjälpen i MD-läget. Håll den i takt med src/lib/markdownBlocks.ts.
+const MD_CHEATSHEET = `# Rubrik 1 … ###### Rubrik 6
+## Rubrik ##               (avslutande # går också bra)
+Rubrik                     (understruken rubrik: = ger nivå 1,
+======                      - ger nivå 2)
+
+Brödtext. Tom rad ger ett nytt stycke.
+> Citat
+- Punkt i lista
+---                        (avdelare)
+![alt](bildadress "bildtext")
+[Knapptext](https://…)     (ensam på raden = knapp)
+
+:::fakta Rubrik            (faktaruta)
+Texten i rutan.
+:::
+
+:::varning Rubrik          (varningsruta)
+:::lista Rubrik            (punktlista med rubrik)
+:::video Rubrik            (videolänken på egen rad)
+:::uppmaning Rubrik        (knappar som - [text](länk))
+:::länkar Rubrik           (länklista som - [text](länk))
+:::jämförelse Rubrik       (rader som - Etikett: Värde)
+:::källor                  (källor som - [text](länk))`
+
+/** "Yttrande NCC 2024.pdf" → "Yttrande NCC 2024", som förslag på knapptext. */
+const fileTitle = (name: string) => name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim() || name
 
 function autosize(el: HTMLTextAreaElement | null) {
   if (!el) return
@@ -123,6 +205,15 @@ export default function TapEditor({ blocks, onChange }: Props) {
   const refs = useRef<(HTMLTextAreaElement | null)[]>([])
   const [focused, setFocused] = useState<number | null>(null)
   const [pending, setPending] = useState<{ index: number; caret: number } | null>(null)
+  // Blocket vars länk uppladdningsrutan fyller i, null när rutan är stängd.
+  const [uploadFor, setUploadFor] = useState<number | null>(null)
+  // Markdown-läget: texten redigeras här och tolkas till block för varje
+  // tangenttryck, så att ett byte tillbaka till Vanlig visar samma innehåll.
+  // null = vanligt läge.
+  const [markdown, setMarkdown] = useState<string | null>(null)
+  const mdRef = useRef<HTMLTextAreaElement>(null)
+  // Markörens plats efter att ett verktyg skrivit in något i MD-rutan.
+  const [mdCaret, setMdCaret] = useState<number | null>(null)
   const documents = usePublishedDocuments()
 
   // Ensure there is always something to type into.
@@ -144,14 +235,25 @@ export default function TapEditor({ blocks, onChange }: Props) {
     setPending(null)
   }, [pending])
 
+  useLayoutEffect(() => {
+    if (mdCaret == null) return
+    const el = mdRef.current
+    if (el) {
+      el.focus()
+      const c = Math.min(mdCaret, el.value.length)
+      el.setSelectionRange(c, c)
+    }
+    setMdCaret(null)
+  }, [mdCaret])
+
   function commit(next: ContentBlock[]) {
     onChange(next.length ? next : [{ type: 'paragraph', text: '' }])
   }
   function set(index: number, updates: Partial<ContentBlock>) {
     commit(list.map((b, i) => (i === index ? { ...b, ...updates } : b)))
   }
-  function setType(index: number, type: ContentBlock['type']) {
-    commit(list.map((b, i) => (i === index ? { ...b, type } : b)))
+  function setType(index: number, type: ContentBlock['type'], extra?: Partial<ContentBlock>) {
+    commit(list.map((b, i) => (i === index ? { ...b, type, ...extra } : b)))
     setPending({ index, caret: (list[index].text ?? '').length })
   }
   function removeAt(index: number) {
@@ -165,18 +267,61 @@ export default function TapEditor({ blocks, onChange }: Props) {
     ;[next[index], next[target]] = [next[target], next[index]]
     commit(next)
   }
-  function insertAfter(index: number | null, type: ContentBlock['type']) {
+  function insertAfter(index: number | null, type: ContentBlock['type'], extra?: Partial<ContentBlock>) {
     const at = index == null ? list.length : index + 1
-    commit([...list.slice(0, at), blankBlock(type), ...list.slice(at)])
+    commit([...list.slice(0, at), { ...blankBlock(type), ...extra }, ...list.slice(at)])
     if (isText(type)) setPending({ index: at, caret: 0 })
   }
   // The text-style buttons double as a way to "break free" from an element
   // block: with a text line focused they convert it, but with an element
   // (bild, faktaruta, …) focused — or nothing focused — they add a fresh text
   // line after it so you can keep writing freely.
-  function applyText(type: TextType) {
-    if (focused != null && isText(list[focused].type)) setType(focused, type)
+  function applyText(type: TextType, extra?: Partial<ContentBlock>) {
+    if (markdown != null) {
+      insertMarkdown(type === 'heading' ? headingSnippet(headingLevel(extra?.level)) : MD_SNIPPET[type] ?? '{}')
+      return
+    }
+    if (focused != null && isText(list[focused].type)) setType(focused, type, extra)
+    else insertAfter(focused, type, extra)
+  }
+  /** Rubrikval ur popovern eller Ctrl+Shift+1…6 — nivåerna är markdownens # … ######. */
+  function applyHeading(level: number) {
+    applyText('heading', { level })
+  }
+  // Verktygsraden och kortkommandona gör samma sak i båda lägena: i Vanlig
+  // läggs blocket in, i MD skrivs dess markdown in vid markören.
+  function addBlock(type: ContentBlock['type']) {
+    if (markdown != null) insertMarkdown(MD_SNIPPET[type] ?? '{}')
     else insertAfter(focused, type)
+  }
+
+  /**
+   * Skriver in ett stycke markdown vid markören, alltid som ett eget block med
+   * tom rad omkring. {} i mallen är där markören ska stå efteråt.
+   */
+  function insertMarkdown(template: string) {
+    const text = markdown ?? ''
+    const at = mdRef.current?.selectionStart ?? text.length
+    const snippet = template.replace('{}', '')
+    const caretInSnippet = template.indexOf('{}')
+    const before = text.slice(0, at).replace(/\s+$/, '')
+    const after = text.slice(at).replace(/^\s+/, '')
+    const head = before ? before + '\n\n' : ''
+    editMarkdown(head + snippet + (after ? '\n\n' + after : '\n'))
+    setMdCaret(head.length + (caretInSnippet < 0 ? snippet.length : caretInSnippet))
+  }
+
+  // MD-läget: på väg in skrivs blocken ut som text, och varje ändring tolkas
+  // direkt tillbaka till block. Vägen ut behöver därför inget eget steg — det
+  // som står i rutan är redan sparat som block.
+  function enterMarkdown() {
+    refs.current = []
+    setFocused(null)
+    setMarkdown(blocksToMarkdown(list))
+  }
+  function editMarkdown(text: string) {
+    setMarkdown(text)
+    commit(markdownToBlocks(text))
   }
 
   // Ctrl+Alt+<letter> anywhere in the editor quick-inserts the matching block
@@ -185,12 +330,34 @@ export default function TapEditor({ blocks, onChange }: Props) {
   // chosen letters don't produce AltGr characters on those layouts, so typing is
   // unaffected.
   function onEditorKeyDown(e: KeyboardEvent<HTMLDivElement>) {
+    // Ctrl+Shift+1…6 sätter rubriknivå. Siffrorna kan inte ligga på Ctrl+Alt:
+    // det är AltGr på svenskt tangentbord och skriver @, £, $ …
+    if (e.ctrlKey && e.shiftKey && !e.altKey && !e.metaKey) {
+      const digit = /^(?:Digit|Numpad)([1-6])$/.exec(e.code)
+      if (digit) {
+        e.preventDefault()
+        applyHeading(Number(digit[1]))
+        return
+      }
+    }
     if (!e.altKey || !e.ctrlKey || e.metaKey) return
     const type = CODE_TO_TYPE[e.code]
     if (!type) return
     e.preventDefault()
     if (isText(type)) applyText(type)
-    else insertAfter(focused, type)
+    else addBlock(type)
+  }
+
+  /**
+   * Skriver man "## " först på en rad blir raden en rubrik på den nivån, precis
+   * som i MD-läget. Returnerar true när raden togs om hand.
+   */
+  function autoHeading(index: number, value: string): boolean {
+    const m = /^(#{1,6}) ([^]*)$/.exec(value)
+    if (!m || !isText(list[index].type)) return false
+    commit(list.map((b, i) => (i === index ? { ...b, type: 'heading', level: m[1].length, text: m[2] } : b)))
+    setPending({ index, caret: 0 })
+    return true
   }
 
   function onTextKeyDown(e: KeyboardEvent<HTMLTextAreaElement>, index: number) {
@@ -221,30 +388,55 @@ export default function TapEditor({ blocks, onChange }: Props) {
 
   const focusedIsText = focused != null && list[focused] && isText(list[focused].type)
   const focusedType = focusedIsText ? list[focused!].type : null
+  const focusedLevel = focusedType === 'heading' ? headingLevel(list[focused!].level) : null
 
-  const placeholder = (type: string, index: number) =>
-    type === 'heading' ? 'Rubrik'
-      : type === 'quote' ? 'Citat…'
+  const placeholder = (block: ContentBlock, index: number) =>
+    block.type === 'heading' ? `Rubrik ${headingLevel(block.level)}`
+      : block.type === 'quote' ? 'Citat…'
         : index === 0 ? 'Börja skriva…' : 'Skriv här…'
 
   return (
     <div className="tap-editor" onKeyDown={onEditorKeyDown}>
       <div className="tap-toolbar">
+        <div className="tap-mode-switch" role="group" aria-label="Redigeringsläge">
+          <button type="button" className={markdown == null ? 'tap-mode active' : 'tap-mode'} title="Vanlig editor – ett block i taget" onMouseDown={e => e.preventDefault()} onClick={() => setMarkdown(null)}>Vanlig</button>
+          <button type="button" className={markdown != null ? 'tap-mode active' : 'tap-mode'} title="Markdown – hela innehållet som text" onMouseDown={e => e.preventDefault()} onClick={enterMarkdown}>MD</button>
+        </div>
+        <span className="tap-toolbar-sep" />
         <div className="tap-toolbar-group">
           <button type="button" title="Text (Ctrl+Alt+T)" className={focusedType === 'paragraph' ? 'tap-tool active' : 'tap-tool'} onMouseDown={e => e.preventDefault()} onClick={() => applyText('paragraph')}>Text</button>
-          <button type="button" title="Rubrik (Ctrl+Alt+R)" className={focusedType === 'heading' ? 'tap-tool active' : 'tap-tool'} onMouseDown={e => e.preventDefault()} onClick={() => applyText('heading')}>Rubrik</button>
+          <HeadingMenu level={focusedLevel} onPick={applyHeading} />
           <button type="button" title="Citat (Ctrl+Alt+C)" className={focusedType === 'quote' ? 'tap-tool active' : 'tap-tool'} onMouseDown={e => e.preventDefault()} onClick={() => applyText('quote')}>Citat</button>
         </div>
         <span className="tap-toolbar-sep" />
         <div className="tap-toolbar-group">
           {INSERTS.map(ins => (
-            <button key={ins.type} type="button" title={`${ins.label} (Ctrl+Alt+${SHORTCUT_KEY[ins.type]})`} className="tap-tool tap-tool-insert" onMouseDown={e => e.preventDefault()} onClick={() => insertAfter(focused, ins.type)}>
+            <button key={ins.type} type="button" title={`${ins.label} (Ctrl+Alt+${SHORTCUT_KEY[ins.type]})`} className="tap-tool tap-tool-insert" onMouseDown={e => e.preventDefault()} onClick={() => addBlock(ins.type)}>
               + {ins.label} <span className="tap-tool-key">{SHORTCUT_KEY[ins.type]}</span>
             </button>
           ))}
         </div>
       </div>
 
+      {markdown != null && (
+        <div className="tap-md-pane">
+          <textarea
+            ref={mdRef}
+            className="tap-md"
+            value={markdown}
+            onChange={e => editMarkdown(e.target.value)}
+            placeholder={'Klistra in eller skriv markdown här…\n\n## Rubrik\nBrödtext.\n\n- Punkt\n- Punkt'}
+            spellCheck={false}
+            autoFocus
+          />
+          <details className="tap-md-help">
+            <summary>Så skrivs blocken</summary>
+            <pre>{MD_CHEATSHEET}</pre>
+          </details>
+        </div>
+      )}
+
+      {markdown == null && (
       <div className="tap-doc">
         {list.map((block, i) => (
           <div className="tap-block" key={i}>
@@ -257,17 +449,21 @@ export default function TapEditor({ blocks, onChange }: Props) {
             {isText(block.type) ? (
               <textarea
                 ref={el => { refs.current[i] = el }}
-                className={`tap-text tap-${block.type}`}
+                className={`tap-text tap-${block.type}${block.type === 'heading' ? ` tap-h${headingLevel(block.level)}` : ''}`}
                 value={block.text ?? ''}
                 rows={1}
-                placeholder={placeholder(block.type, i)}
+                placeholder={placeholder(block, i)}
                 onFocus={() => setFocused(i)}
-                onChange={e => { set(i, { text: e.target.value }); autosize(e.target) }}
+                onChange={e => {
+                  if (autoHeading(i, e.target.value)) return
+                  set(i, { text: e.target.value })
+                  autosize(e.target)
+                }}
                 onKeyDown={e => onTextKeyDown(e, i)}
               />
             ) : (
               <div className="tap-element" onFocus={() => setFocused(i)}>
-                <span className="tap-element-tag">{INSERTS.find(x => x.type === block.type)?.label ?? block.type}</span>
+                <span className="tap-element-tag">{blockLabel(block.type)}</span>
 
                 {block.type === 'divider' && <hr className="tap-divider" />}
 
@@ -297,7 +493,18 @@ export default function TapEditor({ blocks, onChange }: Props) {
                 {block.type === 'button' && (
                   <>
                     <input className="form-input" type="text" value={block.text ?? ''} onChange={e => set(i, { text: e.target.value })} placeholder="Knapptext" />
-                    <input className="form-input" type="url" value={block.url ?? ''} onChange={e => set(i, { url: e.target.value })} placeholder="Länk (URL)" />
+                    <div className="tap-link-row">
+                      <input
+                        className="form-input"
+                        type="text"
+                        value={block.url ?? ''}
+                        onChange={e => set(i, { url: e.target.value })}
+                        onBlur={e => { const n = normalizeUrl(e.target.value); if (n !== e.target.value) set(i, { url: n }) }}
+                        placeholder="Länk – webbadress eller /sida på webbplatsen"
+                      />
+                      <button type="button" className="btn btn-secondary btn-sm" onClick={() => setUploadFor(i)}>Ladda upp fil…</button>
+                    </div>
+                    <LinkNote url={block.url ?? ''} />
                     <DocumentPicker
                       docs={documents}
                       url={block.url ?? ''}
@@ -308,6 +515,10 @@ export default function TapEditor({ blocks, onChange }: Props) {
 
                 {block.type === 'resource' && (
                   <>
+                    <p className="form-hint">
+                      Den här rutan ersätts av <strong>Knapp</strong>, som blir extern av sig själv när adressen är det.
+                      Den befintliga rutan går att redigera vidare, men nya lägger du till som knapp.
+                    </p>
                     <input className="form-input" type="text" value={block.title ?? ''} onChange={e => set(i, { title: e.target.value })} placeholder="Rubrik – t.ex. Enkät om Rögleskogen" />
                     <textarea className="form-textarea" rows={2} value={block.text ?? ''} onChange={e => set(i, { text: e.target.value })} placeholder="Kort beskrivning (valfritt)" />
                     <input className="form-input" type="url" value={block.url ?? ''} onChange={e => set(i, { url: e.target.value })} placeholder="Länk (URL) – öppnas i nytt fönster" />
@@ -339,9 +550,27 @@ export default function TapEditor({ blocks, onChange }: Props) {
                   </div>
                 )}
 
-                {block.type === 'cta' && (
+                {block.type === 'comparison' && (
                   <div className="tap-sources">
                     <input className="form-input" type="text" value={block.title ?? ''} onChange={e => set(i, { title: e.target.value })} placeholder="Rubrik (valfritt)" />
+                    {(block.rows ?? []).map((row, ri) => (
+                      <div key={ri} className="tap-source-row">
+                        <input className="form-input" type="text" value={row.label} onChange={e => {
+                          const rows = [...(block.rows ?? [])]; rows[ri] = { ...rows[ri], label: e.target.value }; set(i, { rows })
+                        }} placeholder="Etikett – t.ex. Avstånd till bostad" />
+                        <input className="form-input" type="text" value={row.value} onChange={e => {
+                          const rows = [...(block.rows ?? [])]; rows[ri] = { ...rows[ri], value: e.target.value }; set(i, { rows })
+                        }} placeholder="Värde – t.ex. 400 meter" />
+                        <button type="button" className="tap-source-remove" onClick={() => set(i, { rows: (block.rows ?? []).filter((_, j) => j !== ri) })} aria-label="Ta bort rad">✕</button>
+                      </div>
+                    ))}
+                    <button type="button" className="btn btn-ghost btn-sm" onClick={() => set(i, { rows: [...(block.rows ?? []), { label: '', value: '' }] })}>+ Lägg till rad</button>
+                  </div>
+                )}
+
+                {(block.type === 'cta' || block.type === 'links') && (
+                  <div className="tap-sources">
+                    <input className="form-input" type="text" value={block.title ?? ''} onChange={e => set(i, { title: e.target.value })} placeholder={block.type === 'links' ? 'Rubrik (valfritt, standard: ”Relaterade länkar”)' : 'Rubrik (valfritt)'} />
                     {(block.links ?? []).map((lnk, li) => (
                       <div key={li} className="tap-source-row">
                         <input className="form-input" type="text" value={lnk.label} onChange={e => {
@@ -378,8 +607,25 @@ export default function TapEditor({ blocks, onChange }: Props) {
           </div>
         ))}
       </div>
+      )}
 
-      <p className="tap-hint">Klicka och skriv. Tryck <kbd>Enter</kbd> för ny rad. Markera en rad och tryck <strong>Rubrik</strong> eller <strong>Citat</strong> för att ändra stil. Står du i en ruta (bild, faktaruta …) kan du trycka <strong>Text</strong>, <strong>Rubrik</strong> eller <strong>Citat</strong> för att fortsätta skriva under den. Håll <kbd>Ctrl</kbd>+<kbd>Alt</kbd> och tryck bokstaven på en knapp för att lägga till blocket direkt.</p>
+      {uploadFor != null && (
+        <UploadDialog
+          title="Ladda upp fil till knappen"
+          onClose={() => setUploadFor(null)}
+          onUploaded={(url, file) => set(uploadFor, { url, text: list[uploadFor].text || fileTitle(file.name) })}
+        />
+      )}
+
+      {markdown != null ? (
+        <p className="tap-hint">
+          Allt du skriver här blir block direkt — byt till <strong>Vanlig</strong> när du vill se resultatet.
+          Knapparna i verktygsraden och <kbd>Ctrl</kbd>+<kbd>Alt</kbd>-kommandona fungerar även här: de skriver in blockets markdown vid markören.
+          Innehåll som inte finns i vanlig markdown (faktarutor, videor, uppmaningar …) står som <code>:::</code>-block och följer med tillbaka oförändrat.
+        </p>
+      ) : (
+      <p className="tap-hint">Klicka och skriv. Tryck <kbd>Enter</kbd> för ny rad. Markera en rad och tryck <strong>Rubrik</strong> (nivå 1–6 i listan, <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>1</kbd>–<kbd>6</kbd>, eller <code>##</code> först på raden) eller <strong>Citat</strong> för att ändra stil. Står du i en ruta (bild, faktaruta …) kan du trycka <strong>Text</strong>, <strong>Rubrik</strong> eller <strong>Citat</strong> för att fortsätta skriva under den. Håll <kbd>Ctrl</kbd>+<kbd>Alt</kbd> och tryck bokstaven på en knapp för att lägga till blocket direkt.</p>
+      )}
     </div>
   )
 }

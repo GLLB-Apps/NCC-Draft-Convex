@@ -149,6 +149,65 @@ export function statusBadgeClass(status: string): string {
   return map[status] ?? 'badge-muted'
 }
 
+/** Rubriknivåerna, samma sex som markdownens # … ######. */
+export const HEADING_LEVELS = [1, 2, 3, 4, 5, 6] as const
+
+/**
+ * Nivån på ett rubrikblock. Sidans egen titel är h1, så en rubrik i innehållet
+ * är nivå 2 om inget annat valts — det gäller även alla rubriker som skrevs
+ * innan nivåerna fanns.
+ */
+export function headingLevel(level: number | undefined | null): number {
+  const n = Math.round(Number(level))
+  return Number.isFinite(n) && n >= 1 && n <= 6 ? n : 2
+}
+
+// En adress som skrivs in i editorn ska bete sig rätt utan att redaktören
+// behöver välja "intern" eller "extern": normalizeUrl gör om det som skrivits
+// till en användbar adress, och internalPath avgör om den leder till sajten
+// själv (då navigeras den utan omladdning) eller bort från den (då öppnas den
+// i ett nytt fönster).
+
+const HAS_SCHEME = /^[a-z][a-z0-9+.-]*:/i
+// "lund.se", "www.lund.se/planer?x=1" – en domän utan protokoll.
+const BARE_DOMAIN = /^[\w-]+(\.[\w-]+)+([/?#]|$)/
+
+/** "www.lund.se" → "https://www.lund.se". Interna sökvägar lämnas orörda. */
+export function normalizeUrl(url: string | null | undefined): string {
+  const u = (url ?? '').trim()
+  if (!u) return ''
+  if (u.startsWith('/') || u.startsWith('#')) return u
+  if (u.startsWith('//')) return 'https:' + u
+  if (HAS_SCHEME.test(u)) return u
+  if (BARE_DOMAIN.test(u)) return 'https://' + u
+  return u
+}
+
+/**
+ * Sökvägen inom sajten om adressen pekar hit (även när den skrivits som full
+ * adress till den egna domänen), annars null – dvs. "det här är en extern
+ * länk".
+ */
+export function internalPath(url: string | null | undefined): string | null {
+  const u = normalizeUrl(url)
+  if (!u) return null
+  if (u.startsWith('/') || u.startsWith('#')) return u
+  if (!/^https?:\/\//i.test(u)) return null
+  if (typeof window === 'undefined') return null
+  try {
+    const parsed = new URL(u)
+    if (parsed.origin !== window.location.origin) return null
+    return parsed.pathname + parsed.search + parsed.hash
+  } catch {
+    return null
+  }
+}
+
+/** true när länken leder bort från sajten och alltså ska öppnas i nytt fönster. */
+export function isExternalUrl(url: string | null | undefined): boolean {
+  return normalizeUrl(url) !== '' && internalPath(url) === null
+}
+
 export function truncate(text: string, maxLen: number): string {
   if (text.length <= maxLen) return text
   return text.substring(0, maxLen).replace(/\s+\S*$/, '') + '…'
