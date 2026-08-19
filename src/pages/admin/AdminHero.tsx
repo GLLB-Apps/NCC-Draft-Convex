@@ -108,7 +108,7 @@ export default function AdminHero() {
         <h3 style={{ marginBottom: 'var(--space-2)' }}>Knappar</h3>
         <p className="form-hint" style={{ marginBottom: 'var(--space-4)' }}>
           Knapparna visas under rubriken. En knapp kan sättas till <strong>Kampanj-CTA</strong> – då följer text och länk
-          automatiskt namninsamlings-/donationsläget (just nu: ”{campaign.ctaLabel}”).
+          automatiskt kampanjläget (namninsamling, donation eller samråd; just nu: ”{campaign.ctaLabel}”).
         </p>
 
         {buttons.length === 0 && (

@@ -34,12 +34,22 @@ export interface SiteSettings {
   logo_url: string | null
   favicon_url: string | null
   petition_url: string
-  /** 'petition' visar namninsamling/underskrifter, 'donate' ersätter med ett donationsflöde. */
-  campaign_mode: 'petition' | 'donate'
+  /**
+   * 'petition' visar namninsamling/underskrifter, 'donate' ersätter med ett
+   * donationsflöde, 'consult' leder vidare till kontaktsidan för samrådet.
+   */
+  campaign_mode: 'petition' | 'donate' | 'consult'
   donate_url: string | null
   donate_title: string | null
   donate_text: string | null
   donate_button: string | null
+  /** Vart samrådsläget leder. Tom = kontaktsidan (/kontakt). */
+  consult_url: string | null
+  consult_title: string | null
+  consult_text: string | null
+  consult_button: string | null
+  /** Förifyller kontaktformulärets ämnesrad när CTA:n leder dit. */
+  consult_subject: string | null
   default_share_image: string | null
   contact_email: string | null
   contact_phone: string | null

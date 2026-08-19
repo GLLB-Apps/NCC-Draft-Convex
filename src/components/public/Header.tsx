@@ -9,6 +9,7 @@ import NavIcon from './NavIcon'
 import LucideIcon, { resolveIconName } from '../../lib/lucide'
 import CountUp from './CountUp'
 import { getCampaign } from '../../lib/campaign'
+import CampaignLink from './CampaignLink'
 
 export default function Header({ settings }: { settings: SiteSettings | null }) {
   const [navItems, setNavItems] = useState<NavigationItem[]>([])
@@ -148,14 +149,7 @@ export default function Header({ settings }: { settings: SiteSettings | null }) 
               <span className="header-logout-label">Logga ut</span>
             </button>
           )}
-          <a
-            href={campaign.ctaUrl}
-            className="btn btn-primary btn-sm"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            {campaign.ctaLabel}
-          </a>
+          <CampaignLink campaign={campaign} className="btn btn-primary btn-sm" />
           <button
             className={mobileOpen ? 'mobile-toggle open' : 'mobile-toggle'}
             onClick={() => setMobileOpen(!mobileOpen)}
@@ -236,15 +230,7 @@ export default function Header({ settings }: { settings: SiteSettings | null }) 
               <p className="vote-widget-text">{campaign.blurb}</p>
             </>
           )}
-          <a
-            href={campaign.ctaUrl}
-            className="vote-widget-btn"
-            target="_blank"
-            rel="noopener noreferrer"
-            tabIndex={mobileOpen ? 0 : -1}
-          >
-            {campaign.ctaLabel}
-          </a>
+          <CampaignLink campaign={campaign} className="vote-widget-btn" tabIndex={mobileOpen ? 0 : -1} />
         </div>
       </nav>
     </>

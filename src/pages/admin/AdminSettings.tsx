@@ -35,6 +35,11 @@ export default function AdminSettings() {
       donate_title: settings.donate_title,
       donate_text: settings.donate_text,
       donate_button: settings.donate_button,
+      consult_url: settings.consult_url,
+      consult_title: settings.consult_title,
+      consult_text: settings.consult_text,
+      consult_button: settings.consult_button,
+      consult_subject: settings.consult_subject,
       default_share_image: settings.default_share_image,
       contact_email: settings.contact_email,
       contact_phone: settings.contact_phone,
@@ -139,7 +144,9 @@ export default function AdminSettings() {
         <h3 style={{ marginBottom: 'var(--space-3)' }}>Kampanjläge</h3>
         <p className="text-muted" style={{ fontSize: '0.85rem', marginBottom: 'var(--space-4)' }}>
           Styr webbplatsens uppmaningar. <strong>Namninsamling</strong> visar underskrifter och "Skriv under".
-          <strong> Donera</strong> döljer namninsamlingsdelarna och visar ett donationsflöde i stället. Går att växla fram och tillbaka.
+          <strong> Donera</strong> döljer namninsamlingsdelarna och visar ett donationsflöde i stället.
+          <strong> Mejla samrådet</strong> leder besökaren vidare till kontaktsidan med en förifylld ämnesrad.
+          Går att växla fram och tillbaka.
         </p>
         <div className="form-group">
           <label className="form-label" htmlFor="campaign_mode">Läge</label>
@@ -151,9 +158,42 @@ export default function AdminSettings() {
           >
             <option value="petition">Namninsamling (underskrifter)</option>
             <option value="donate">Donera</option>
+            <option value="consult">Mejla samrådet (kontaktsidan)</option>
           </select>
         </div>
-        {settings.campaign_mode === 'donate' ? (
+        {settings.campaign_mode === 'consult' ? (
+          <>
+            <div className="form-group">
+              <label className="form-label" htmlFor="consult_url">Länk</label>
+              <input id="consult_url" className="form-input" type="text" maxLength={2000} placeholder="/kontakt" value={settings.consult_url ?? ''} onChange={e => update('consult_url', e.target.value || null)} />
+              <p className="text-muted" style={{ fontSize: '0.8rem', marginTop: 'var(--space-2)' }}>
+                Lämnas tom = kontaktsidan (<code>/kontakt</code>). Adresser som börjar med <code>/</code> öppnas på webbplatsen,
+                övriga i en ny flik.
+              </p>
+            </div>
+            <div className="grid grid-2">
+              <div className="form-group">
+                <label className="form-label" htmlFor="consult_title">Rubrik</label>
+                <input id="consult_title" className="form-input" type="text" maxLength={255} placeholder="Säg din mening i samrådet" value={settings.consult_title ?? ''} onChange={e => update('consult_title', e.target.value || null)} />
+              </div>
+              <div className="form-group">
+                <label className="form-label" htmlFor="consult_button">Knapptext</label>
+                <input id="consult_button" className="form-input" type="text" maxLength={100} placeholder="Mejla samrådet" value={settings.consult_button ?? ''} onChange={e => update('consult_button', e.target.value || null)} />
+              </div>
+            </div>
+            <div className="form-group">
+              <label className="form-label" htmlFor="consult_text">Kort text</label>
+              <textarea id="consult_text" className="form-textarea" rows={2} maxLength={1000} placeholder="Under samrådet kan du lämna synpunkter på planerna för Rögleskogen." value={settings.consult_text ?? ''} onChange={e => update('consult_text', e.target.value || null)} />
+            </div>
+            <div className="form-group">
+              <label className="form-label" htmlFor="consult_subject">Förifylld ämnesrad</label>
+              <input id="consult_subject" className="form-input" type="text" maxLength={255} placeholder="Synpunkt inför samrådet" value={settings.consult_subject ?? ''} onChange={e => update('consult_subject', e.target.value || null)} />
+              <p className="text-muted" style={{ fontSize: '0.8rem', marginTop: 'var(--space-2)' }}>
+                Fylls i automatiskt i kontaktformulärets ämnesfält när besökaren följer knappen. Gäller bara länkar på webbplatsen.
+              </p>
+            </div>
+          </>
+        ) : settings.campaign_mode === 'donate' ? (
           <>
             <div className="form-group">
               <label className="form-label" htmlFor="donate_url">Länk till donation</label>
@@ -176,7 +216,8 @@ export default function AdminSettings() {
           </>
         ) : (
           <p className="text-muted" style={{ fontSize: '0.82rem' }}>
-            Donationsuppgifter (länk, rubrik, text) visas här när du väljer läget <strong>Donera</strong>.
+            Inställningar för länk, rubrik och text visas här när du väljer läget <strong>Donera</strong> eller
+            <strong> Mejla samrådet</strong>.
           </p>
         )}
       </div>

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import type { Contact, SiteSettings } from '../../lib/types'
 import { supabase } from '../../lib/supabase'
 import { useToast } from '../../lib/toast'
-import { useOutletContext } from 'react-router-dom'
+import { useOutletContext, useSearchParams } from 'react-router-dom'
 import { usePage } from '../../lib/usePage'
 
 export default function ContactPage() {
@@ -13,8 +13,11 @@ export default function ContactPage() {
   const { show } = useToast()
   const [submitting, setSubmitting] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  // ?amne=… förifyller ämnesraden – används av kampanjlägets samråds-CTA.
+  const [params] = useSearchParams()
+  const presetSubject = params.get('amne') ?? ''
   const [form, setForm] = useState({
-    name: '', email: '', subject: '', message: '', website: '',
+    name: '', email: '', subject: presetSubject, message: '', website: '',
   })
 
   useEffect(() => {
@@ -42,7 +45,7 @@ export default function ContactPage() {
   function done(ok: boolean) {
     if (ok) {
       show(page.text('success'), 'success')
-      setForm({ name: '', email: '', subject: '', message: '', website: '' })
+      setForm({ name: '', email: '', subject: presetSubject, message: '', website: '' })
     } else {
       show('Något gick fel. Försök igen senare.', 'error')
     }

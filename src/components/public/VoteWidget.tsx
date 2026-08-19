@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { SiteSettings } from '../../lib/types'
 import { getCampaign } from '../../lib/campaign'
+import CampaignLink from './CampaignLink'
 import CountUp from './CountUp'
 
 function Bullhorn() {
@@ -22,7 +23,7 @@ export default function VoteWidget({ settings }: { settings: SiteSettings | null
   )
   const count = settings?.signature_count ?? 0
   const c = getCampaign(settings)
-  const asideLabel = c.isDonate ? 'Donera' : 'Namninsamling'
+  const asideLabel = c.shortLabel
 
   return (
     <>
@@ -37,13 +38,13 @@ export default function VoteWidget({ settings }: { settings: SiteSettings | null
           <span className="vote-widget-label">{c.headline}</span>
         )}
         <p className="vote-widget-text">{c.showSignatures ? 'Var med och gör skillnad – skriv under du också.' : c.blurb}</p>
-        <a href={c.ctaUrl} target="_blank" rel="noopener noreferrer" className="vote-widget-btn">{c.ctaLabel}</a>
+        <CampaignLink campaign={c} className="vote-widget-btn" />
       </aside>
 
       <button
         className={collapsed ? 'vote-widget-tab is-visible' : 'vote-widget-tab'}
         onClick={() => setCollapsed(false)}
-        aria-label={c.isDonate ? 'Visa donera' : 'Visa namninsamling'}
+        aria-label={'Visa ' + asideLabel.toLowerCase()}
         title={asideLabel}
       >
         <Bullhorn />

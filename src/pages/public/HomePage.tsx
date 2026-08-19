@@ -9,6 +9,7 @@ import VoteWidget from '../../components/public/VoteWidget'
 import SponsorTicker from '../../components/public/SponsorTicker'
 import { usePage } from '../../lib/usePage'
 import { getCampaign } from '../../lib/campaign'
+import CampaignLink from '../../components/public/CampaignLink'
 
 export default function HomePage() {
   const { settings } = useOutletContext<{ settings: SiteSettings | null }>()
@@ -71,7 +72,7 @@ export default function HomePage() {
             {(settings?.hero_buttons?.length ? settings.hero_buttons : null)
               ? settings!.hero_buttons.map((b, i) => {
                   const cls = `btn btn-${b.style === 'primary' ? 'primary' : 'secondary'}`
-                  if (b.cta) return <a key={i} href={campaign.ctaUrl} target="_blank" rel="noopener noreferrer" className={cls}>{campaign.ctaLabel}</a>
+                  if (b.cta) return <CampaignLink key={i} campaign={campaign} className={cls} />
                   if (!b.label) return null
                   return b.url.startsWith('/')
                     ? <Link key={i} to={b.url} className={cls}>{b.label}</Link>
@@ -80,7 +81,7 @@ export default function HomePage() {
               : (
                 <>
                   <Link to="/amnen" className="btn btn-primary">Läs om planerna</Link>
-                  <a href={campaign.ctaUrl} target="_blank" rel="noopener noreferrer" className="btn btn-secondary">{campaign.ctaLabel}</a>
+                  <CampaignLink campaign={campaign} className="btn btn-secondary" />
                   <Link to="/karta" className="btn btn-secondary">Se området på karta</Link>
                 </>
               )}
@@ -124,9 +125,9 @@ export default function HomePage() {
             ) : (
               <div className="status-item">
                 <span className="status-label">{campaign.headline}</span>
-                <a href={campaign.ctaUrl} target="_blank" rel="noopener noreferrer" className="status-value status-value-link">
+                <CampaignLink campaign={campaign} className="status-value status-value-link">
                   {campaign.ctaLabel} →
-                </a>
+                </CampaignLink>
               </div>
             )}
           </div>
@@ -218,7 +219,7 @@ export default function HomePage() {
             <h2>{page.text('cta_heading')}</h2>
             <p className="text-muted">{page.text('cta_text')}</p>
             <div className="cta-actions">
-              <a href={campaign.ctaUrl} target="_blank" rel="noopener noreferrer" className="btn btn-primary">{campaign.ctaLabel}</a>
+              <CampaignLink campaign={campaign} className="btn btn-primary" />
               <Link to="/vittnesmal" className="btn btn-secondary">Lämna ett vittnesmål</Link>
               <Link to="/kontakt" className="btn btn-secondary">Kontakta initiativet</Link>
             </div>

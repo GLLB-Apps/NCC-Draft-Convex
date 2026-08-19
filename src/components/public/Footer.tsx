@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import type { SiteSettings } from '../../lib/types'
 import { useAuth } from '../../lib/auth'
 import { getCampaign } from '../../lib/campaign'
+import CampaignLink from './CampaignLink'
 import {
   DEFAULT_FOOTER_LINKS, FOOTER_CTA_KEY, FOOTER_LINKS_KEY,
   fillFooterTokens, footerText, parseFooterLinks, serializeFooterLinks, useFooterTexts,
@@ -63,9 +64,9 @@ export default function Footer({ settings }: { settings: SiteSettings | null }) 
             <h3>{campaign.headline}</h3>
             <p>{campaign.blurb}</p>
           </div>
-          <a href={campaign.ctaUrl} target="_blank" rel="noopener noreferrer" className="btn btn-primary">
-            {campaign.isDonate ? campaign.ctaLabel : 'Skriv under namninsamlingen'}
-          </a>
+          <CampaignLink campaign={campaign} className="btn btn-primary">
+            {campaign.ctaLabelLong}
+          </CampaignLink>
         </div>
       </div>
 
@@ -90,7 +91,7 @@ export default function Footer({ settings }: { settings: SiteSettings | null }) 
             <h4 className="footer-heading">{text('links_heading')}</h4>
             <ul className="footer-links">
               {showCtaLink && (
-                <li><a href={campaign.ctaUrl} target="_blank" rel="noopener noreferrer">{campaign.ctaLabel}</a></li>
+                <li><CampaignLink campaign={campaign} /></li>
               )}
               {links.map((l, i) => (
                 <li key={i}>
