@@ -4,9 +4,14 @@ import { getCampaign } from '../../lib/campaign'
 import CampaignLink from './CampaignLink'
 import CountUp from './CountUp'
 
+const iconProps = {
+  viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: '1.8',
+  strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true,
+} as const
+
 function Bullhorn() {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg {...iconProps}>
       <path d="M3 11l13-5v12L3 13z" />
       <path d="M16 8.5a4 4 0 0 1 0 7" />
       <path d="M6 13.2V17a2 2 0 0 0 3.9.6" />
@@ -14,8 +19,18 @@ function Bullhorn() {
   )
 }
 
+function Envelope() {
+  return (
+    <svg {...iconProps}>
+      <rect x="2.5" y="5" width="19" height="14" rx="2" />
+      <path d="M3 6.5l9 6 9-6" />
+    </svg>
+  )
+}
+
 // Floating call-to-action (desktop): live signature count + a "sign" button.
-// Can be folded into a small bullhorn tab at the screen edge and slid back out.
+// Can be folded into a small tab at the screen edge and slid back out — en
+// megafon, eller ett kuvert när CTA:n leder till samrådets kontaktformulär.
 export default function VoteWidget({ settings }: { settings: SiteSettings | null }) {
   // Start folded (just the bullhorn tab) on small screens so it doesn't cover content.
   const [collapsed, setCollapsed] = useState(() =>
@@ -47,7 +62,7 @@ export default function VoteWidget({ settings }: { settings: SiteSettings | null
         aria-label={'Visa ' + asideLabel.toLowerCase()}
         title={asideLabel}
       >
-        <Bullhorn />
+        {c.mode === 'consult' ? <Envelope /> : <Bullhorn />}
       </button>
     </>
   )
