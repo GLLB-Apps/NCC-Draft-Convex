@@ -1560,6 +1560,10 @@
   background: var(--primary-bg);
   border-radius: 0 var(--radius-md) var(--radius-md) 0;
 }
+/* Flerstyckigt citat: styckena särskiljs med luft, inte med marginal utanför
+   ramen — annars glappar citatets bakgrund mot kanterna. */
+.block-quote p { margin: 0; }
+.block-quote p + p { margin-top: var(--space-3); }
 
 .block-factbox {
   background: var(--secondary-bg);

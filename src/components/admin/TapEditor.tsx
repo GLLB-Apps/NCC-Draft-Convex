@@ -261,7 +261,8 @@ Rubrik                     (understruken rubrik: = ger nivå 1,
 ======                      - ger nivå 2)
 
 Brödtext. Tom rad ger ett nytt stycke.
-> Citat
+> Citat                     (tom >-rad ger nytt stycke
+>                            i citatet)
 - Punkt i lista
 | Kolumn | Kolumn |         (tabell – raden under
 | --- | --- |                måste vara streck)
@@ -530,7 +531,15 @@ export default function TapEditor({ blocks, onChange }: Props) {
 
   function onTextKeyDown(e: KeyboardEvent<HTMLTextAreaElement>, index: number) {
     const el = e.currentTarget
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === 'Enter' && e.shiftKey && list[index].type === 'quote') {
+      // Skift+Enter delar citatet i stycken. Det skrivs in som en tom rad, samma
+      // form som markdown använder och som sidan visar som nytt stycke — en
+      // ensam radbrytning skulle rinna ihop igen när citatet renderas.
+      e.preventDefault()
+      const caret = el.selectionStart
+      set(index, { text: el.value.slice(0, caret) + '\n\n' + el.value.slice(el.selectionEnd) })
+      setPending({ index, caret: caret + 2 })
+    } else if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       const caret = el.selectionStart
       const before = el.value.slice(0, caret)
@@ -839,7 +848,7 @@ export default function TapEditor({ blocks, onChange }: Props) {
           Innehåll som inte finns i vanlig markdown (faktarutor, videor, uppmaningar …) står som <code>:::</code>-block och följer med tillbaka oförändrat.
         </p>
       ) : (
-      <p className="tap-hint">Klicka och skriv. Tryck <kbd>Enter</kbd> för ny rad. Markera en rad och tryck <strong>Rubrik</strong> (nivå 1–6 i listan, <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>1</kbd>–<kbd>6</kbd>, eller <code>##</code> först på raden) eller <strong>Citat</strong> för att ändra stil. Står du i en ruta (bild, faktaruta …) kan du trycka <strong>Text</strong>, <strong>Rubrik</strong> eller <strong>Citat</strong> för att fortsätta skriva under den. Håll <kbd>Ctrl</kbd>+<kbd>Alt</kbd> och tryck bokstaven på en knapp: står du <strong>mitt i</strong> ett block byter det typ på blocket med innehållet kvar, står du i slutet av raden eller på en tom rad läggs blocket till.</p>
+      <p className="tap-hint">Klicka och skriv. Tryck <kbd>Enter</kbd> för ny rad. I ett citat ger <kbd>Skift</kbd>+<kbd>Enter</kbd> ett nytt stycke inuti citatet. Markera en rad och tryck <strong>Rubrik</strong> (nivå 1–6 i listan, <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>1</kbd>–<kbd>6</kbd>, eller <code>##</code> först på raden) eller <strong>Citat</strong> för att ändra stil. Står du i en ruta (bild, faktaruta …) kan du trycka <strong>Text</strong>, <strong>Rubrik</strong> eller <strong>Citat</strong> för att fortsätta skriva under den. Håll <kbd>Ctrl</kbd>+<kbd>Alt</kbd> och tryck bokstaven på en knapp: står du <strong>mitt i</strong> ett block byter det typ på blocket med innehållet kvar, står du i slutet av raden eller på en tom rad läggs blocket till.</p>
       )}
     </div>
   )

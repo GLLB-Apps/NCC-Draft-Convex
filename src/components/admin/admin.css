@@ -1221,14 +1221,19 @@
 .tap-editor {
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  overflow: hidden;
+  /* clip, inte hidden: hidden gör editorn till en egen scrollport och då fäster
+     verktygsradens position: sticky mot editorn (som aldrig scrollar) i stället
+     för mot .admin-content. clip klipper likadant mot de rundade hörnen utan att
+     bli scrollport, så raden följer med när sidan rullas. */
+  overflow: clip;
   background: var(--bg-card);
 }
 
 .tap-toolbar {
   position: sticky;
   top: 0;
-  z-index: 5;
+  /* Över blockens kontrollknappar och rutor, annars rullar texten ovanpå raden. */
+  z-index: 20;
   display: flex;
   align-items: center;
   gap: var(--space-2);
@@ -1241,7 +1246,7 @@
 .tap-toolbar-group { display: flex; gap: 4px; flex-wrap: wrap; }
 
 /* Popover i verktygsraden, t.ex. rubriknivåerna. Ritas i en portal på body och
-   placeras mot knappen, eftersom .tap-editor har overflow: hidden. */
+   placeras mot knappen, eftersom .tap-editor klipper sitt innehåll. */
 .tap-tool-caret { font-size: 0.65em; opacity: 0.7; }
 .tap-menu {
   position: fixed;

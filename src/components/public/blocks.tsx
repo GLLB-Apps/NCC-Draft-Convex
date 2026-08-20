@@ -9,7 +9,7 @@ export function RenderBlock({ block }: { block: ContentBlock }) {
   switch (block.type) {
     case 'heading': return <BlockHeading block={block} />
     case 'paragraph': return <p className="block-paragraph">{block.text}</p>
-    case 'quote': return <blockquote className="block-quote">{block.text}</blockquote>
+    case 'quote': return <BlockQuote block={block} />
     case 'list': return <BlockList block={block} />
     case 'cta': return <BlockCta block={block} />
     case 'factbox': return (
@@ -100,6 +100,21 @@ export function ContentBlocks({ blocks }: { blocks: ContentBlock[] }) {
 
 // Rubrik i vald nivå — h2 när inget valts, eftersom sidans titel redan är h1.
 // Nivån styr både taggen (för skärmläsare och sökmotorer) och storleken.
+// Ett citat kan vara flera stycken. En tom rad i texten delar av dem, precis som
+// i markdown (och som Skift+Enter skriver in i editorn); en ensam radbrytning är
+// mjuk radbrytning och rinner ihop som förr, så inklistrade radbrutna citat inte
+// blir hackiga.
+export function BlockQuote({ block }: { block: ContentBlock }) {
+  const paragraphs = (block.text ?? '').split(/\n[^\S\n]*\n/).filter(p => p.trim())
+  return (
+    <blockquote className="block-quote">
+      {paragraphs.length > 1
+        ? paragraphs.map((p, i) => <p key={i}>{p}</p>)
+        : block.text}
+    </blockquote>
+  )
+}
+
 export function BlockHeading({ block }: { block: ContentBlock }) {
   const level = headingLevel(block.level)
   const Tag = `h${level}` as 'h1'
