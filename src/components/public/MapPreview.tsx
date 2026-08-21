@@ -23,15 +23,26 @@ interface Props {
   /** Områdespolygoner som ska ritas. Redan filtrerade av anroparen. */
   areas?: MapArea[]
   height?: number
+  /**
+   * Id på en punkt att flyga till och öppna. Sätts om från punktväljaren; att
+   * välja samma punkt igen ska zooma dit på nytt, vilket `focusNonce` löser.
+   */
+  focusId?: string | null
+  focusNonce?: number
 }
 
-export default function MapPreview({ points, areas = [], height = 350 }: Props) {
+/** Zoomnivå när man hoppar till en enskild punkt ur väljaren. */
+const FOCUS_ZOOM = 16
+
+export default function MapPreview({ points, areas = [], height = 350, focusId = null, focusNonce = 0 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<L.Map | null>(null)
   // Punkter och områden hålls i egna lagergrupper så att uppdatering av det ena
   // inte rensar bort det andra (L.Polygon ärver från L.Polyline).
   const pointLayerRef = useRef<L.LayerGroup | null>(null)
   const areaLayerRef = useRef<L.LayerGroup | null>(null)
+  // Markörer per punkt-id, så att väljaren kan öppna rätt popup.
+  const markersRef = useRef<Map<string, L.Marker>>(new Map())
   // Leaflet-markörer/popuper byggs som HTML-strängar. Vi renderar därför varje
   // ikon (React) i en gömd behållare och klonar dess <svg>-uppmärkning därifrån
   // — så slipper vi dra in react-dom/server bara för att göra strängar av dem.
@@ -98,6 +109,7 @@ export default function MapPreview({ points, areas = [], height = 350 }: Props) 
     if (!map || !group) return
 
     group.clearLayers()
+    markersRef.current.clear()
 
     // Klonad <svg>-sträng för en ikon ur den gömda behållaren (färg ärvs via
     // currentColor från markören/popupen).
@@ -143,6 +155,7 @@ export default function MapPreview({ points, areas = [], height = 350 }: Props) 
       }
 
       const marker = L.marker([point.lat, point.lng], { icon }).addTo(group)
+      markersRef.current.set(point.id, marker)
       marker.bindPopup(`
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
           <span style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:${color};color:#fff;flex-shrink:0;">${svgFor(iconName)}</span>
@@ -154,6 +167,22 @@ export default function MapPreview({ points, areas = [], height = 350 }: Props) 
       `)
     })
   }, [points])
+
+  // Flyg till den valda punkten och öppna dess popup. Ligger efter effekten som
+  // ritar markörerna, så att markören hunnit skapas när vi letar upp den.
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !focusId) return
+    const point = points.find(p => p.id === focusId)
+    if (!point) return
+    const marker = markersRef.current.get(focusId)
+    map.flyTo([point.lat, point.lng], Math.max(map.getZoom(), FOCUS_ZOOM), { duration: 0.8 })
+    // Popupen öppnas först när flygturen landat — öppnas den under tiden slåss
+    // dess autopanorering med rörelsen. Timer och inte 'moveend', eftersom det
+    // uteblir när kartan redan står på punkten.
+    const timer = window.setTimeout(() => marker?.openPopup(), 850)
+    return () => window.clearTimeout(timer)
+  }, [focusId, focusNonce, points])
 
   return (
     <>

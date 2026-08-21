@@ -19,6 +19,10 @@ export default function MapPage() {
   // Ihopfällbara kategorier i teckenförklaringen ("Områden" / "Punkter").
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
   const [tab, setTab] = useState<'area' | 'testimonies'>('area')
+  // Punkten som väljaren senast hoppade till. Räknaren gör att samma val två
+  // gånger i rad zoomar dit igen i stället för att inte hända någonting.
+  const [focusId, setFocusId] = useState<string | null>(null)
+  const [focusNonce, setFocusNonce] = useState(0)
   const [selectedT, setSelectedT] = useState<string | null>(null)
   const page = usePage('karta')
   const [searchParams] = useSearchParams()
@@ -47,7 +51,12 @@ export default function MapPage() {
   const testimonyPoints = useMemo(() => points.filter(p => p.point_type === 'testimony_point'), [points])
   const areaPoints = useMemo(() => points.filter(p => p.point_type !== 'testimony_point'), [points])
 
-  const filteredPoints = activeTypes.size === 0 ? areaPoints : areaPoints.filter(p => activeTypes.has(p.point_type))
+  // Memoiseras: listan skickas vidare till kartan, som ritar om markörerna och
+  // skulle flyga om till en vald punkt varje gång referensen bytte.
+  const filteredPoints = useMemo(
+    () => activeTypes.size === 0 ? areaPoints : areaPoints.filter(p => activeTypes.has(p.point_type)),
+    [areaPoints, activeTypes],
+  )
 
   // useMemo hindrar att polygonerna ritas om vid varje render.
   const visibleAreas = useMemo(() => areas.filter(a => !hiddenAreas.has(a.id)), [areas, hiddenAreas])
@@ -72,6 +81,26 @@ export default function MapPage() {
   }
 
   const uniqueTypes = Array.from(new Set(areaPoints.map(p => p.point_type)))
+
+  // Väljarens innehåll följer kartan: bara punkter som faktiskt syns, grupperade
+  // per punkttyp och i bokstavsordning inom gruppen.
+  const jumpGroups = useMemo(() => {
+    const map = new Map<string, MapLocation[]>()
+    for (const p of filteredPoints) {
+      if (!map.has(p.point_type)) map.set(p.point_type, [])
+      map.get(p.point_type)!.push(p)
+    }
+    for (const arr of map.values()) arr.sort((a, b) => a.title.localeCompare(b.title, 'sv'))
+    return Array.from(map.entries())
+  }, [filteredPoints])
+
+  // Släcks lagret som den valda punkten låg i försvinner den ur väljaren också.
+  const focusValue = filteredPoints.some(p => p.id === focusId) ? (focusId ?? '') : ''
+
+  function jumpTo(id: string) {
+    setFocusId(id || null)
+    setFocusNonce(n => n + 1)
+  }
 
   function toggleCollapse(key: string) {
     setCollapsed(prev => {
@@ -105,6 +134,25 @@ export default function MapPage() {
             <aside className="map-filters">
               <h2 className="map-filters-title">{page.text('layers_heading')}</h2>
               <p className="map-filters-hint">{page.text('layers_hint')}</p>
+
+              {jumpGroups.length > 0 && (
+                <div className="map-jump">
+                  <label className="map-jump-label" htmlFor="map-jump">Hoppa till punkt</label>
+                  <select
+                    id="map-jump"
+                    className="form-select map-jump-select"
+                    value={focusValue}
+                    onChange={e => jumpTo(e.target.value)}
+                  >
+                    <option value="">Välj en punkt…</option>
+                    {jumpGroups.map(([type, pts]) => (
+                      <optgroup key={type} label={mapPointTypeLabel(type)}>
+                        {pts.map(p => <option key={p.id} value={p.id}>{p.title}</option>)}
+                      </optgroup>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               {areas.length > 0 && (
                 <div className="map-filter-group">
@@ -178,7 +226,7 @@ export default function MapPage() {
               )}
             </aside>
             <div className="map-container">
-              <MapPreview points={filteredPoints} areas={visibleAreas} height={520} />
+              <MapPreview points={filteredPoints} areas={visibleAreas} height={520} focusId={focusId} focusNonce={focusNonce} />
             </div>
           </div>
         )
