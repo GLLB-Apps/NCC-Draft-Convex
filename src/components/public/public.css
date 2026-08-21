@@ -522,13 +522,17 @@
   gap: var(--space-2);
 }
 
-.footer-links a {
+/* Kampanjlänken i listan är en <button> när den öppnar mejlrutan — den ska se ut
+   som grannarna, inte som en knapp. */
+.footer-links a,
+.footer-links button {
   color: rgba(255, 255, 255, 0.8);
   text-decoration: none;
   font-size: 0.9rem;
   transition: color var(--transition);
 }
-.footer-links a:hover { color: white; }
+.footer-links a:hover,
+.footer-links button:hover { color: white; }
 
 .footer-contact a { color: rgba(255, 255, 255, 0.8); }
 .footer-contact a:hover { color: white; }
@@ -2222,6 +2226,115 @@
 .principle-card.accent-alt .principle-list li::before { color: #4a6c7f; }
 
 /* 404 */
+/* Förklaringsrutan innan mejlprogrammet öppnas (samrådsläget). Formspråket är
+   404-sidans: stort urblekt tecken, torr rubrik, knappar på rad. */
+.mail-consent-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(3px);
+  animation: confirmFade 0.15s ease;
+}
+.mail-consent {
+  position: relative;
+  width: min(660px, 100%);
+  max-height: min(92vh, 780px);
+  overflow-y: auto;
+  padding: clamp(var(--space-5), 5vw, var(--space-8));
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  text-align: center;
+  animation: confirmPop 0.18s ease;
+}
+.mail-consent-close {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-3);
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: var(--text-muted);
+  font-size: 1rem;
+  cursor: pointer;
+}
+.mail-consent-close:hover { background: var(--bg-alt); color: var(--text-heading); }
+.mail-consent-badge {
+  font-size: clamp(3.5rem, 12vw, 6rem);
+  font-weight: 800;
+  line-height: 1;
+  color: var(--primary);
+  opacity: 0.18;
+}
+.mail-consent-title { margin: var(--space-3) 0; }
+.mail-consent-text { color: var(--text-muted); line-height: 1.7; margin: 0 auto var(--space-5); max-width: 46ch; }
+.mail-consent-facts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0 0 var(--space-6);
+  padding: var(--space-4);
+  background: var(--bg-alt);
+  border-radius: var(--radius-md);
+  text-align: left;
+}
+.mail-consent-facts dt {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+}
+.mail-consent-facts dd { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
+.mail-consent-address { font-weight: 600; word-break: break-all; }
+.mail-consent-copy {
+  padding: 2px 10px;
+  font-size: 0.78rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.mail-consent-copy:hover { border-color: var(--primary); color: var(--primary); }
+.mail-consent-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  justify-content: center;
+}
+.mail-consent-note { margin: var(--space-5) 0 0; font-size: 0.85rem; color: var(--text-muted); line-height: 1.6; }
+
+@media (max-width: 600px) {
+  .mail-consent-backdrop { padding: 0; }
+  .mail-consent { width: 100%; max-height: 100vh; min-height: 100vh; border-radius: 0; }
+  .mail-consent-actions .btn { width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mail-consent-backdrop, .mail-consent { animation: none; }
+}
+
+/* Kampanjknappen är en <button> när den öppnar rutan ovan i stället för att
+   länka. :where() ger noll specificitet, så .btn (och andra klasser den får på
+   sig) fortsätter bestämma utseendet — det här nollar bara webbläsarens
+   knappstilar för de ytor som inte är knappformade, t.ex. statuslänken. */
+:where(button.campaign-cta) {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: inherit;
+  cursor: pointer;
+}
+
 .notfound {
   max-width: 560px;
   margin: clamp(3rem, 10vh, 7rem) auto;

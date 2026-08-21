@@ -2,7 +2,8 @@
 // och går att växla fram och tillbaka:
 //   'petition' → namninsamling: "Skriv under" + antal underskrifter
 //   'donate'   → donationsflöde: "Donera", namninsamlingsgrejerna döljs
-//   'consult'  → samråd: "Mejla samrådet", leder vidare till kontaktsidan
+//   'consult'  → samråd: "Mejla samrådet", öppnar besökarens eget mejlprogram
+//                med NCC:s samrådsadress ifylld (efter en förklaringsruta)
 //
 // All publik CTA-yta (hero, sidfot, header, flytande widget) läser detta objekt
 // i stället för att peka direkt på petition_url, så växlingen sker på ett ställe.
@@ -28,6 +29,14 @@ export interface Campaign {
   showSignatures: boolean
   /** false = mål på egna webbplatsen, renderas med <Link> i stället för ny flik. */
   external: boolean
+  /**
+   * Adressen mejlet går till, utan mailto:. Satt bara när CTA:n är ett
+   * mejlutskick — då visas en förklaringsruta innan mejlprogrammet öppnas,
+   * i stället för att knappen länkar rakt iväg.
+   */
+  mailTo: string | null
+  /** Ämnesraden som fylls i åt besökaren. Följs åt med mailTo. */
+  mailSubject: string | null
 }
 
 const DONATE = {
@@ -44,19 +53,13 @@ const PETITION = {
 const CONSULT = {
   label: 'Mejla samrådet',
   headline: 'Säg din mening i samrådet',
-  blurb: 'Under samrådet kan du lämna synpunkter på planerna för Rögleskogen. Skriv till oss så hjälper vi dig vidare.',
-  url: '/kontakt',
-  subject: 'Synpunkt inför samrådet',
+  blurb: 'Under samrådet kan du lämna synpunkter på planerna för Rögleskogen – direkt till NCC, i ditt eget namn.',
+  email: 'samrad.sodrasandby@ncc.se',
+  subject: 'Synpunkt inför samrådet – Rögleskogen',
 }
 
 /** Interna mål (t.ex. /kontakt) navigeras i appen; allt annat öppnas som länk. */
 const isInternal = (url: string) => url.startsWith('/')
-
-/** Lägger på ämnesraden som frågeparameter, så kontaktformuläret kan förifyllas. */
-function withSubject(url: string, subject: string): string {
-  if (!isInternal(url) || !subject) return url
-  return url + (url.includes('?') ? '&' : '?') + 'amne=' + encodeURIComponent(subject)
-}
 
 export function getCampaign(s: SiteSettings | null): Campaign {
   // Saknat läge tolkas som petition, så en oprovisionerad databas beter sig som förr.
@@ -73,22 +76,30 @@ export function getCampaign(s: SiteSettings | null): Campaign {
       blurb: s.donate_text?.trim() || DONATE.blurb,
       showSignatures: false,
       external: !isInternal(ctaUrl),
+      mailTo: null,
+    mailSubject: null,
     }
   }
   if (s?.campaign_mode === 'consult') {
     const ctaLabel = s.consult_button?.trim() || CONSULT.label
-    const base = s.consult_url?.trim() || CONSULT.url
-    const ctaUrl = withSubject(base, s.consult_subject?.trim() || CONSULT.subject)
+    // consult_url håller mottagaradressen. Äldre inställningar kan innehålla en
+    // sidadress från när läget ledde till kontaktsidan — utan @ är det ingen
+    // mejladress, och då är standardadressen det som faktiskt fungerar.
+    const saved = (s.consult_url ?? '').trim().replace(/^mailto:/i, '')
+    const mailTo = saved.includes('@') ? saved : CONSULT.email
+    const subject = s.consult_subject?.trim() || CONSULT.subject
     return {
       mode: 'consult',
-      ctaUrl,
+      ctaUrl: `mailto:${mailTo}?subject=${encodeURIComponent(subject)}`,
       ctaLabel,
       ctaLabelLong: ctaLabel,
       shortLabel: 'Samråd',
       headline: s.consult_title?.trim() || CONSULT.headline,
       blurb: s.consult_text?.trim() || CONSULT.blurb,
       showSignatures: false,
-      external: !isInternal(ctaUrl),
+      external: true,
+      mailTo,
+      mailSubject: subject,
     }
   }
   const ctaUrl = s?.petition_url || '#'
@@ -102,5 +113,7 @@ export function getCampaign(s: SiteSettings | null): Campaign {
     blurb: PETITION.blurb,
     showSignatures: true,
     external: !isInternal(ctaUrl),
+    mailTo: null,
+    mailSubject: null,
   }
 }

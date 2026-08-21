@@ -145,7 +145,8 @@ export default function AdminSettings() {
         <p className="text-muted" style={{ fontSize: '0.85rem', marginBottom: 'var(--space-4)' }}>
           Styr webbplatsens uppmaningar. <strong>Namninsamling</strong> visar underskrifter och "Skriv under".
           <strong> Donera</strong> döljer namninsamlingsdelarna och visar ett donationsflöde i stället.
-          <strong> Mejla samrådet</strong> leder besökaren vidare till kontaktsidan med en förifylld ämnesrad.
+          <strong> Mejla samrådet</strong> öppnar besökarens eget mejlprogram med NCC:s samrådsadress ifylld,
+          efter en ruta som förklarar vad som händer.
           Går att växla fram och tillbaka.
         </p>
         <div className="form-group">
@@ -164,11 +165,12 @@ export default function AdminSettings() {
         {settings.campaign_mode === 'consult' ? (
           <>
             <div className="form-group">
-              <label className="form-label" htmlFor="consult_url">Länk</label>
-              <input id="consult_url" className="form-input" type="text" maxLength={2000} placeholder="/kontakt" value={settings.consult_url ?? ''} onChange={e => update('consult_url', e.target.value || null)} />
+              <label className="form-label" htmlFor="consult_url">Mottagaradress (e-post)</label>
+              <input id="consult_url" className="form-input" type="email" maxLength={255} placeholder="samrad.sodrasandby@ncc.se" value={settings.consult_url ?? ''} onChange={e => update('consult_url', e.target.value || null)} />
               <p className="text-muted" style={{ fontSize: '0.8rem', marginTop: 'var(--space-2)' }}>
-                Lämnas tom = kontaktsidan (<code>/kontakt</code>). Adresser som börjar med <code>/</code> öppnas på webbplatsen,
-                övriga i en ny flik.
+                Knappen visar först en ruta som förklarar vad som händer, och öppnar sedan besökarens eget
+                mejlprogram med den här adressen och ämnesraden ifyllda. Mejlet skickas av besökaren själv och
+                passerar aldrig webbplatsen. Lämnas tom = <code>samrad.sodrasandby@ncc.se</code>.
               </p>
             </div>
             <div className="grid grid-2">
@@ -186,10 +188,10 @@ export default function AdminSettings() {
               <textarea id="consult_text" className="form-textarea" rows={2} maxLength={1000} placeholder="Under samrådet kan du lämna synpunkter på planerna för Rögleskogen." value={settings.consult_text ?? ''} onChange={e => update('consult_text', e.target.value || null)} />
             </div>
             <div className="form-group">
-              <label className="form-label" htmlFor="consult_subject">Förifylld ämnesrad</label>
-              <input id="consult_subject" className="form-input" type="text" maxLength={255} placeholder="Synpunkt inför samrådet" value={settings.consult_subject ?? ''} onChange={e => update('consult_subject', e.target.value || null)} />
+              <label className="form-label" htmlFor="consult_subject">Ämnesrad i mejlet</label>
+              <input id="consult_subject" className="form-input" type="text" maxLength={255} placeholder="Synpunkt inför samrådet – Rögleskogen" value={settings.consult_subject ?? ''} onChange={e => update('consult_subject', e.target.value || null)} />
               <p className="text-muted" style={{ fontSize: '0.8rem', marginTop: 'var(--space-2)' }}>
-                Fylls i automatiskt i kontaktformulärets ämnesfält när besökaren följer knappen. Gäller bara länkar på webbplatsen.
+                Fylls i åt besökaren och går att ändra innan mejlet skickas.
               </p>
             </div>
           </>

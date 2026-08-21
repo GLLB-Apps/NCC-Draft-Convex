@@ -43,12 +43,16 @@ export interface SiteSettings {
   donate_title: string | null
   donate_text: string | null
   donate_button: string | null
-  /** Vart samrådsläget leder. Tom = kontaktsidan (/kontakt). */
+  /**
+   * Mottagaradressen i samrådsläget — mejlet öppnas i besökarens eget program.
+   * Tom = NCC:s samrådsadress. Hette så här när läget i stället länkade till
+   * kontaktsidan; fältet är kvar för att slippa migrera en ny kolumn.
+   */
   consult_url: string | null
   consult_title: string | null
   consult_text: string | null
   consult_button: string | null
-  /** Förifyller kontaktformulärets ämnesrad när CTA:n leder dit. */
+  /** Ämnesraden som fylls i åt besökaren. */
   consult_subject: string | null
   default_share_image: string | null
   contact_email: string | null
