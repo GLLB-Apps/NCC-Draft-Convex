@@ -248,6 +248,29 @@ Innehåll har genomgående en `status`: `draft`, `published` och `archived`,
 och för nyheter och ämnen dessutom `review`. Publika sidor hämtar bara
 `published`. Utkastsidan räknar `draft` och `review` som opublicerat.
 
+### Behörigheter på innehåll
+
+Statusfiltret i klienten är ingen säkerhetsgräns — det avgör bara vad sidan
+*visar*. Gränsen sitter i behörigheterna, och den ligger på **dokumentet**, inte
+på kollektionen: innehållskollektionerna har `documentSecurity` påslaget och
+släpper bara in admin-labeln för läsning, medan varje publicerat dokument bär
+sin egen `read("any")`.
+
+`permissionsFor()` i `src/lib/supabase.ts` sätter den rätten vid varje skrivning
+som nämner `status`, och tar aktivt bort den vid avpublicering. Skrivningar utan
+`status` lämnar rättigheterna orörda, så att ändra en rubrik inte kan publicera
+något av misstag. Listan över kollektioner och deras publika tillstånd måste
+hållas i synk med `PUBLIC_WHEN` i `scripts/appwrite-lock-drafts.mjs`.
+
+`profiles` är stängd för gäster (`read("users")`) eftersom presentationstexten
+är personlig. `create("any")` är kvar där och på `testimonies`, så registrering
+och det publika vittnesmålsformuläret fungerar utan inloggning.
+
+Kvar att lösa: Appwrite har ingen behörighet per fält, så ett **godkänt**
+vittnesmål är läsbart i sin helhet — inklusive `email` och `internal_note`. Vill
+man skydda inskickarens adress behöver den flyttas till en egen, adminskyddad
+kollektion.
+
 ---
 
 ## Komma igång
@@ -311,6 +334,7 @@ node scripts/appwrite-add-consult-dialog.mjs   # texterna i mejlrutan
 node scripts/appwrite-add-changelog.mjs        # kollektionen för ändringsloggen
 node scripts/appwrite-add-custom-icons.mjs     # kollektionen för egna ikoner
 node scripts/appwrite-add-changelog-commit.mjs # commit_sha på ändringsloggen
+node scripts/appwrite-lock-drafts.mjs          # flyttar läsrätten till dokumentnivå
 ```
 
 Skripten är skrivna för att kunna köras om: befintliga kollektioner och fält
