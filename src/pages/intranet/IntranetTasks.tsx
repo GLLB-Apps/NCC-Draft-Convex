@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Plus, Trash2, Check } from 'lucide-react'
+import { Plus, Trash2, Check, Pencil } from 'lucide-react'
 import type { IntranetTask } from '../../lib/types'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../lib/auth'
@@ -9,6 +9,10 @@ import { useMarkIntranetRead } from '../../lib/intranetNotifications'
 
 // Delade uppgiftslistor. Poster grupperas på fältet "list"; avklarade hamnar
 // längst ned inom sin grupp. Vem som helst i intranätet kan bocka av och lägga till.
+//
+// Både gruppens rubrik och uppgiftens text går att skriva om på plats. En grupp
+// är inget eget objekt utan bara ett värde på "list", så att byta namn betyder
+// att skriva om fältet på varje uppgift i gruppen.
 const UNGROUPED = 'Att göra'
 
 export default function IntranetTasks() {
@@ -19,6 +23,10 @@ export default function IntranetTasks() {
   const [loading, setLoading] = useState(true)
   const [text, setText] = useState('')
   const [list, setList] = useState('')
+  // Vad som redigeras just nu: en uppgift (id) eller en grupp (dess namn).
+  const [editingTask, setEditingTask] = useState<string | null>(null)
+  const [editingGroup, setEditingGroup] = useState<string | null>(null)
+  const [editValue, setEditValue] = useState('')
   useMarkIntranetRead('tasks', !loading)
 
   useEffect(() => { load() }, [])
@@ -69,6 +77,58 @@ export default function IntranetTasks() {
     if (error) { show('Kunde inte spara: ' + error.message, 'error'); load() }
   }
 
+  function startEditTask(t: IntranetTask) {
+    setEditingGroup(null)
+    setEditingTask(t.id)
+    setEditValue(t.text)
+  }
+
+  function startEditGroup(name: string) {
+    setEditingTask(null)
+    setEditingGroup(name)
+    // Den namnlösa gruppen har inget sparat värde – börja tomt i stället för
+    // med platshållarrubriken, så att den inte råkar sparas som riktigt namn.
+    setEditValue(name === UNGROUPED ? '' : name)
+  }
+
+  function cancelEdit() {
+    setEditingTask(null)
+    setEditingGroup(null)
+    setEditValue('')
+  }
+
+  /** Skriver om texten på en uppgift. */
+  async function saveTaskText(t: IntranetTask) {
+    const next = editValue.trim()
+    if (!next || next === t.text) { cancelEdit(); return }
+    setTasks(prev => prev.map(x => x.id === t.id ? { ...x, text: next } : x))
+    cancelEdit()
+    const { error } = await supabase.from('intranet_tasks').update({ text: next }).eq('id', t.id)
+    if (error) { show('Kunde inte spara: ' + error.message, 'error'); load() }
+  }
+
+  /**
+   * Döper om en grupp. Gruppen finns bara som värdet på "list", så varje
+   * uppgift i den skrivs om. Tomt namn flyttar tillbaka dem till den namnlösa
+   * gruppen.
+   */
+  async function saveGroupName(name: string, items: IntranetTask[]) {
+    const next = editValue.trim()
+    const nextValue = next || null
+    const current = name === UNGROUPED ? null : name
+    if (nextValue === current) { cancelEdit(); return }
+    if (nextValue && lists.some(l => l !== current && l.toLowerCase() === nextValue.toLowerCase())) {
+      if (!(await confirm({ message: `Det finns redan en lista som heter "${nextValue}". Slå ihop grupperna?`, confirmText: 'Slå ihop' }))) return
+    }
+    const ids = items.map(t => t.id)
+    setTasks(prev => prev.map(x => ids.includes(x.id) ? { ...x, list: nextValue } : x))
+    cancelEdit()
+    for (const id of ids) {
+      const { error } = await supabase.from('intranet_tasks').update({ list: nextValue }).eq('id', id)
+      if (error) { show('Kunde inte byta namn: ' + error.message, 'error'); load(); return }
+    }
+  }
+
   async function remove(t: IntranetTask) {
     if (!(await confirm({ message: 'Ta bort uppgiften?', confirmText: 'Ta bort', danger: true }))) return
     const { error } = await supabase.from('intranet_tasks').delete().eq('id', t.id)
@@ -116,17 +176,69 @@ export default function IntranetTasks() {
           const openCount = items.filter(t => !t.done).length
           return (
             <section key={name} className="intranet-task-group">
-              <h2 className="intranet-task-group-title">{name} <span className="intranet-task-count">{openCount} kvar</span></h2>
+              {editingGroup === name ? (
+                <div className="intranet-task-edit intranet-task-edit-group">
+                  <input
+                    className="form-input"
+                    autoFocus
+                    placeholder="Rubrik på gruppen (tom = ingen)"
+                    value={editValue}
+                    onChange={e => setEditValue(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') saveGroupName(name, items)
+                      if (e.key === 'Escape') cancelEdit()
+                    }}
+                  />
+                  <button className="btn btn-primary btn-sm" onClick={() => saveGroupName(name, items)}>Spara</button>
+                  <button className="btn btn-ghost btn-sm" onClick={cancelEdit}>Avbryt</button>
+                </div>
+              ) : (
+                <h2 className="intranet-task-group-title">
+                  {name} <span className="intranet-task-count">{openCount} kvar</span>
+                  {canWriteIntranet && (
+                    <button
+                      className="intdoc-icon-btn intranet-task-rename"
+                      title="Byt namn på gruppen"
+                      aria-label={`Byt namn på gruppen ${name}`}
+                      onClick={() => startEditGroup(name)}
+                    >
+                      <Pencil size={13} />
+                    </button>
+                  )}
+                </h2>
+              )}
               <ul className="intranet-task-list">
                 {items.map(t => (
                   <li key={t.id} className={t.done ? 'intranet-task is-done' : 'intranet-task'}>
                     <button className="intranet-task-check" onClick={() => canWriteIntranet && toggle(t)} disabled={!canWriteIntranet} aria-pressed={t.done} aria-label={t.done ? 'Markera som ej klar' : 'Markera som klar'}>
                       {t.done && <Check size={14} aria-hidden="true" />}
                     </button>
-                    <span className="intranet-task-text">{t.text}</span>
-                    {t.done && t.done_by && <span className="intranet-task-by">{t.done_by}</span>}
-                    {canRemove(t) && (
-                      <button className="intdoc-icon-btn danger intranet-task-remove" title="Ta bort" onClick={() => remove(t)}><Trash2 size={14} /></button>
+                    {editingTask === t.id ? (
+                      <span className="intranet-task-edit">
+                        <input
+                          className="form-input"
+                          autoFocus
+                          value={editValue}
+                          onChange={e => setEditValue(e.target.value)}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') saveTaskText(t)
+                            if (e.key === 'Escape') cancelEdit()
+                          }}
+                        />
+                        <button className="btn btn-primary btn-sm" onClick={() => saveTaskText(t)}>Spara</button>
+                        <button className="btn btn-ghost btn-sm" onClick={cancelEdit}>Avbryt</button>
+                      </span>
+                    ) : (
+                      <>
+                        <span className="intranet-task-text">{t.text}</span>
+                        {t.done && t.done_by && <span className="intranet-task-by">{t.done_by}</span>}
+                        {canWriteIntranet && (
+                          <button className="intdoc-icon-btn intranet-task-edit-btn" title="Ändra texten" aria-label="Ändra texten" onClick={() => startEditTask(t)}><Pencil size={14} /></button>
+                        )}
+                        {canRemove(t) && (
+                          <button className="intdoc-icon-btn danger intranet-task-remove" title="Ta bort" onClick={() => remove(t)}><Trash2 size={14} /></button>
+                        )}
+                      </>
                     )}
                   </li>
                 ))}

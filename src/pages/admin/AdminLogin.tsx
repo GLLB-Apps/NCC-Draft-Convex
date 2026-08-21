@@ -5,6 +5,11 @@ import { useAuth } from '../../lib/auth'
 import { useToast } from '../../lib/toast'
 import MobileAdminNotice from '../../components/admin/MobileAdminNotice'
 
+// Presentationen är obligatorisk vid registrering: den som tilldelar behörighet
+// ska veta vem personen är innan de släpps in. Minimilängden hindrar "hej".
+const INTRO_MIN = 40
+const INTRO_MAX = 1000
+
 export default function AdminLogin() {
   const { session, isAdmin, loading } = useAuth()
   const { show } = useToast()
@@ -23,6 +28,7 @@ export default function AdminLogin() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [displayName, setDisplayName] = useState('')
+  const [intro, setIntro] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [signupDone, setSignupDone] = useState(false)
 
@@ -42,6 +48,9 @@ export default function AdminLogin() {
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault()
     if (password.length < 8) { show('Lösenordet måste vara minst 8 tecken', 'error'); return }
+    if (intro.trim().length < INTRO_MIN) {
+      show(`Skriv några rader om dig själv – minst ${INTRO_MIN} tecken`, 'error'); return
+    }
     setSubmitting(true)
     const { data, error } = await supabase.auth.signUp({ email, password })
     if (error) {
@@ -49,8 +58,19 @@ export default function AdminLogin() {
       show(error.message, 'error')
       return
     }
-    if (data.user && displayName.trim()) {
-      await supabase.from('profiles').upsert({ id: data.user.id, display_name: displayName.trim() })
+    // insert, inte upsert: kontot har ännu ingen session efter registreringen,
+    // och profiles tillåter bara gäster att *skapa* sin egen rad.
+    if (data.user) {
+      const { error: profileError } = await supabase.from('profiles').insert({
+        id: data.user.id,
+        display_name: displayName.trim(),
+        intro: intro.trim(),
+      })
+      if (profileError) {
+        setSubmitting(false)
+        show('Kontot skapades, men presentationen kunde inte sparas: ' + profileError.message, 'error')
+        return
+      }
     }
     setSubmitting(false)
     setSignupDone(true)
@@ -144,6 +164,23 @@ export default function AdminLogin() {
                   <div className="form-group">
                     <label className="form-label" htmlFor="password">Lösenord (minst 8 tecken)</label>
                     <input id="password" className="form-input" type="password" autoComplete="new-password" minLength={8} value={password} onChange={e => setPassword(e.target.value)} required />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label" htmlFor="intro">Presentera dig</label>
+                    <textarea
+                      id="intro"
+                      className="form-textarea"
+                      rows={4}
+                      minLength={INTRO_MIN}
+                      maxLength={INTRO_MAX}
+                      placeholder="Vem är du, hur hänger du ihop med initiativet och vad vill du hjälpa till med?"
+                      value={intro}
+                      onChange={e => setIntro(e.target.value)}
+                      required
+                    />
+                    <p className="admin-login-hint" style={{ textAlign: 'left', marginTop: 'var(--space-2)' }}>
+                      Den som godkänner ditt konto läser det här. {intro.trim().length}/{INTRO_MIN} tecken.
+                    </p>
                   </div>
                   <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: 'var(--space-3)' }} disabled={submitting}>
                     {submitting ? 'Skapar konto…' : 'Skapa konto'}

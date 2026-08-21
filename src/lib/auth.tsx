@@ -69,8 +69,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(session)
       setUser(session?.user ?? null)
       if (session?.user) {
+        // `loading` sätts om medan rollen hämtas. Utan det syns sessionen ett
+        // ögonblick innan rollen gjort det, och allt som läser `isAdmin` dömer
+        // på `role === null`: inloggningen skickade admins till intranätet, och
+        // AdminGuard hann visa "Åtkomst nekad". Guarderna visar spinner så länge.
+        setLoading(true)
         ;(async () => {
           await Promise.all([fetchRole(session.user.id), fetchMember(session.user.id)])
+          setLoading(false)
         })()
       } else {
         setRole(null)

@@ -2309,3 +2309,155 @@
 .admin-level-legend { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }
 .admin-level-legend li { display: flex; align-items: baseline; gap: var(--space-3); font-size: 0.88rem; }
 .admin-level-legend .badge { flex-shrink: 0; min-width: 84px; text-align: center; }
+
+/* Presentationen personen skrev vid registreringen (Användare). */
+.admin-user-intro {
+  margin: var(--space-2) 0 0;
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-alt);
+  border-left: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.86rem;
+  line-height: 1.5;
+  color: var(--text);
+  white-space: pre-wrap;
+  max-width: 68ch;
+}
+.admin-user-intro.is-missing { color: var(--text-muted); font-style: italic; white-space: normal; }
+
+/* Listan med kommande viktiga datum (Webbplatsinställningar). */
+.important-date-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+.important-date-row .form-input { margin: 0; }
+.important-date-day { flex: 0 0 11rem; }
+.important-date-row > .form-input:not(.important-date-day) { flex: 1; min-width: 0; }
+.important-date-badge { flex-shrink: 0; }
+.important-date-row .btn { flex-shrink: 0; }
+
+/* Redigering på plats av uppgifter och gruppnamn (intranätets Uppgifter). */
+.intranet-task-edit { flex: 1; display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
+.intranet-task-edit .form-input { flex: 1; min-width: 0; margin: 0; }
+.intranet-task-edit .btn { flex-shrink: 0; }
+.intranet-task-edit-group { max-width: 760px; margin-bottom: var(--space-2); }
+.intranet-task-edit-group .form-input { max-width: 22rem; }
+/* Pennan på gruppen syns först när man är i närheten av rubriken. */
+.intranet-task-rename { opacity: 0; transition: opacity 0.15s ease; }
+.intranet-task-group:hover .intranet-task-rename,
+.intranet-task-rename:focus-visible { opacity: 1; }
+.intranet-task-edit-btn { margin-left: auto; }
+.intranet-task-edit-btn + .intranet-task-remove { margin-left: 0; }
+
+/* Ändringslogg */
+.changelog-filters { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-bottom: var(--space-5); }
+.changelog-year { margin-bottom: var(--space-6); }
+.changelog-year-title {
+  font-family: var(--font-heading);
+  font-size: 1.05rem;
+  color: var(--text-muted);
+  margin: 0 0 var(--space-3);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--border-light);
+}
+/* Rutnät, inte en kolumn: en logg som växer med varje release blir annars en
+   enda lång rullning. auto-fill packar så många kort som får plats. */
+.changelog-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--space-3);
+}
+.changelog-item {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  padding: var(--space-4);
+}
+.changelog-item-head { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
+.changelog-date { font-size: 0.8rem; color: var(--text-muted); }
+.changelog-version { font-family: monospace; font-size: 0.78rem; color: var(--text-muted); }
+.changelog-actions { margin-left: auto; display: flex; gap: var(--space-1); }
+.changelog-title { font-size: 0.98rem; margin: var(--space-2) 0 0; overflow-wrap: anywhere; }
+/* Två rader, inte fler: ett enda långt kort drar annars upp höjden på hela sin
+   rad i rutnätet och lämnar grannarna ihåliga. Hela texten står kvar i
+   redigeringsvyn – kortet visar början. */
+.changelog-body {
+  margin: var(--space-2) 0 0;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+/* Trycks ned mot kortets underkant så raden ligger i linje mellan korten. */
+.changelog-by { margin: auto 0 0; padding-top: var(--space-3); font-size: 0.75rem; color: var(--text-muted); }
+
+/* Egna ikoner + inhämtad ikon i ikonväljaren */
+.icon-picker-found { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
+.icon-picker-found .icon-picker-btn { width: 38px; flex-shrink: 0; }
+.icon-picker-found-name { font-family: monospace; font-size: 0.8rem; color: var(--text-muted); }
+.icon-picker-found-note { font-size: 0.78rem; color: var(--text-muted); }
+.icon-picker-own { position: relative; display: block; }
+.icon-picker-own .icon-picker-btn { width: 100%; }
+.icon-picker-own-remove {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--bg-card);
+  color: var(--text-muted);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity var(--transition), color var(--transition), border-color var(--transition);
+}
+.icon-picker-own:hover .icon-picker-own-remove,
+.icon-picker-own-remove:focus-visible { opacity: 1; }
+.icon-picker-own-remove:hover { color: var(--error); border-color: var(--error); }
+
+/* Import av commits till ändringsloggen */
+.changelog-import-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-4); }
+.changelog-import-actions { display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-3); flex-wrap: wrap; }
+.changelog-import-actions > span { margin-right: auto; }
+.changelog-import-list {
+  list-style: none;
+  margin: 0 0 var(--space-4);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-height: 60vh;
+  overflow-y: auto;
+}
+.changelog-import-row {
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+}
+.changelog-import-row.is-off { opacity: 0.55; background: var(--bg-alt); }
+.changelog-import-check { margin-top: 6px; flex-shrink: 0; width: 16px; height: 16px; cursor: pointer; }
+.changelog-import-body { flex: 1; min-width: 0; }
+.changelog-import-meta { display: flex; align-items: center; gap: var(--space-3); font-size: 0.78rem; color: var(--text-muted); margin-bottom: var(--space-2); }
+.changelog-import-sha { display: inline-flex; align-items: center; gap: 3px; font-family: monospace; color: var(--text-muted); text-decoration: none; }
+.changelog-import-sha:hover { color: var(--primary); }
+.changelog-import-body .form-input { width: 100%; margin: 0; }
+.changelog-import-original { margin: var(--space-2) 0 0; font-size: 0.78rem; color: var(--text-muted); font-style: italic; }

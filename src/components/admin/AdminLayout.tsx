@@ -49,7 +49,7 @@ const MENU_GROUPS: { title: string | null; items: MenuItem[] }[] = [
       { label: 'Sidfot', path: '/admin/sidfot', roles: ['superadmin', 'redaktor'] },
       { label: 'Meny', path: '/admin/meny', roles: ['superadmin', 'redaktor'] },
       { label: 'Inställningar', path: '/admin/inställningar', roles: ['superadmin'] },
-      { label: 'Administratörer', path: '/admin/administratörer', roles: ['superadmin'] },
+      { label: 'Användare', path: '/admin/administratörer', roles: ['superadmin'] },
     ],
   },
   {
@@ -62,6 +62,7 @@ const MENU_GROUPS: { title: string | null; items: MenuItem[] }[] = [
     title: 'Hjälp',
     items: [
       { label: 'Handbok', path: '/admin/handbok', roles: ['superadmin', 'redaktor', 'skribent'] },
+      { label: 'Ändringslogg', path: '/admin/andringslogg', roles: ['superadmin', 'redaktor', 'skribent'] },
     ],
   },
 ]

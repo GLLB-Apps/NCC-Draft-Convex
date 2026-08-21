@@ -30,9 +30,11 @@ interface Person {
   user_id: string
   level: Level
   display_name: string | null
+  /** Presentationen personen skrev när kontot skapades. */
+  intro: string | null
   created_at: string
 }
-interface PendingUser { id: string; display_name: string | null; created_at: string }
+interface PendingUser { id: string; display_name: string | null; intro: string | null; created_at: string }
 
 export default function AdminAdmins() {
   const { user: currentUser, role: currentRole } = useAuth()
@@ -45,6 +47,9 @@ export default function AdminAdmins() {
   const [pwdFor, setPwdFor] = useState<string | null>(null)
   const [pwdValue, setPwdValue] = useState('')
   const [pwdBusy, setPwdBusy] = useState(false)
+  // Presentationer fälls ut en i taget i listan över aktiva – i väntelistan
+  // står de alltid framme, för där är de underlaget för beslutet.
+  const [introFor, setIntroFor] = useState<string | null>(null)
 
   useEffect(() => { load() }, [])
 
@@ -52,7 +57,7 @@ export default function AdminAdmins() {
     setLoading(true)
     const [rolesRes, profilesRes, membersRes] = await Promise.all([
       supabase.from('user_roles').select('user_id, role, created_at').order('created_at'),
-      supabase.from('profiles').select('id, display_name, created_at').order('created_at'),
+      supabase.from('profiles').select('id, display_name, intro, created_at').order('created_at'),
       supabase.from('intranet_members').select('user_id, display_name, read_only, created_at').order('created_at'),
     ])
     const roleRows = (rolesRes.data ?? []) as Array<Record<string, unknown>>
@@ -60,12 +65,14 @@ export default function AdminAdmins() {
     const memberRows = (membersRes.data ?? []) as Array<Record<string, unknown>>
 
     const nameById = new Map(profileRows.map(p => [p.id as string, (p.display_name as string | null) ?? null]))
+    const introById = new Map(profileRows.map(p => [p.id as string, (p.intro as string | null) ?? null]))
     const adminIds = new Set(roleRows.map(r => r.user_id as string))
 
     const list: Person[] = roleRows.map(r => ({
       user_id: r.user_id as string,
       level: r.role as Level,
       display_name: nameById.get(r.user_id as string) ?? null,
+      intro: introById.get(r.user_id as string) ?? null,
       created_at: r.created_at as string,
     }))
     // Medlemmar som inte också är admins (admins har redan intranätsåtkomst).
@@ -75,6 +82,7 @@ export default function AdminAdmins() {
         user_id: m.user_id as string,
         level: m.read_only ? 'viewer' : 'intranet',
         display_name: nameById.get(m.user_id as string) ?? (m.display_name as string | null) ?? null,
+        intro: introById.get(m.user_id as string) ?? null,
         created_at: m.created_at as string,
       })
     }
@@ -82,7 +90,7 @@ export default function AdminAdmins() {
 
     setPeople(list)
     setPending(profileRows.filter(p => !accessIds.has(p.id as string))
-      .map(p => ({ id: p.id as string, display_name: p.display_name as string | null, created_at: p.created_at as string })))
+      .map(p => ({ id: p.id as string, display_name: p.display_name as string | null, intro: p.intro as string | null, created_at: p.created_at as string })))
     setLoading(false)
   }
 
@@ -199,7 +207,7 @@ export default function AdminAdmins() {
   return (
     <div className="fade-in">
       <div className="admin-page-header">
-        <h1>Behörigheter</h1>
+        <h1>Användare</h1>
       </div>
 
       {/* Förklaring av nivåerna */}
@@ -227,13 +235,17 @@ export default function AdminAdmins() {
           </h2>
           <div className="admin-list">
             {pending.map(u => (
-              <div key={u.id} className="admin-list-item">
+              <div key={u.id} className="admin-list-item" style={{ flexWrap: 'wrap' }}>
                 <div className="admin-list-item-info">
                   <div className="admin-list-item-title">{u.display_name ?? 'Namnlös användare'}</div>
                   <div className="admin-list-item-meta">
                     <span className="badge badge-warning">Ingen åtkomst</span>
                     <span style={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>{u.id.slice(0, 8)}…</span>
+                    <span>{formatDateShort(u.created_at)}</span>
                   </div>
+                  {u.intro
+                    ? <p className="admin-user-intro">{u.intro}</p>
+                    : <p className="admin-user-intro is-missing">Ingen presentation – kontot skapades innan presentation blev obligatorisk.</p>}
                 </div>
                 <div className="admin-table-actions">
                   <select
@@ -286,6 +298,15 @@ export default function AdminAdmins() {
                   >
                     {LEVELS.map(l => <option key={l.value} value={l.value}>{l.label}</option>)}
                   </select>
+                  {p.intro && (
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      aria-expanded={introFor === p.user_id}
+                      onClick={() => setIntroFor(introFor === p.user_id ? null : p.user_id)}
+                    >
+                      {introFor === p.user_id ? 'Dölj presentation' : 'Presentation'}
+                    </button>
+                  )}
                   <button className="btn btn-ghost btn-sm" onClick={() => { setPwdFor(pwdFor === p.user_id ? null : p.user_id); setPwdValue('') }}>
                     Byt lösenord
                   </button>
@@ -293,6 +314,9 @@ export default function AdminAdmins() {
                     <button className="btn btn-danger btn-sm" disabled={busy === p.user_id} onClick={() => removeAccess(p)}>Ta bort</button>
                   )}
                 </div>
+                {introFor === p.user_id && p.intro && (
+                  <p className="admin-user-intro" style={{ flexBasis: '100%' }}>{p.intro}</p>
+                )}
                 {pwdFor === p.user_id && (
                   <div className="admin-pwd-row">
                     <input
@@ -315,8 +339,8 @@ export default function AdminAdmins() {
 
       <div className="card" style={{ marginTop: 'var(--space-6)', background: 'var(--bg-alt)' }}>
         <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-          Ny person: den skapar ett konto via <a href="/admin/login" className="section-link">/admin/login</a> och
-          dyker sedan upp under "Väntar på nivå", där du väljer behörighet.
+          Ny person: den skapar ett konto via <a href="/admin/login" className="section-link">/admin/login</a>, presenterar
+          sig i formuläret och dyker sedan upp under "Väntar på nivå" – med presentationen synlig – där du väljer behörighet.
         </p>
       </div>
     </div>
