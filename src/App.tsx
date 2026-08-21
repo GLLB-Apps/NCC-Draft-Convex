@@ -67,6 +67,7 @@ const AdminAdmins = lazy(() => import('./pages/admin/AdminAdmins'))
 const AdminBackground = lazy(() => import('./pages/admin/AdminBackground'))
 const AdminSponsors = lazy(() => import('./pages/admin/AdminSponsors'))
 const AdminHandbook = lazy(() => import('./pages/admin/AdminHandbook'))
+const AdminChangelog = lazy(() => import('./pages/admin/AdminChangelog'))
 
 function PageSpinner() {
   return <div className="loading"><div className="spinner" /></div>
@@ -161,6 +162,7 @@ export default function App() {
                 <Route path="inställningar" element={<AdminSettings />} />
                 <Route path="administratörer" element={<AdminAdmins />} />
                 <Route path="handbok" element={<AdminHandbook />} />
+                <Route path="andringslogg" element={<AdminChangelog />} />
               </Route>
 
               {/* Intranät — inloggningsskyddat arbetsrum för medlemmar och admins */}
