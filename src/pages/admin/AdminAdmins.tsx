@@ -50,8 +50,27 @@ export default function AdminAdmins() {
   // Presentationer fälls ut en i taget i listan över aktiva – i väntelistan
   // står de alltid framme, för där är de underlaget för beslutet.
   const [introFor, setIntroFor] = useState<string | null>(null)
+  // Adresserna ligger i Appwrites konton, inte i någon kollektion, och hämtas
+  // via /api/list-users. Funktionen finns bara i den publicerade versionen —
+  // lokalt visas namnet utan adress i stället för ett felmeddelande.
+  const [emails, setEmails] = useState<Record<string, string | null>>({})
 
-  useEffect(() => { load() }, [])
+  useEffect(() => { load(); loadEmails() }, [])
+
+  async function loadEmails() {
+    try {
+      const jwt = await createSessionJwt()
+      const res = await fetch('/api/list-users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${jwt}` },
+      })
+      if (!res.ok) return
+      const data = await res.json()
+      if (data?.emails) setEmails(data.emails)
+    } catch {
+      // Körs lokalt utan serverfunktioner – listan fungerar ändå.
+    }
+  }
 
   async function load() {
     setLoading(true)
@@ -240,7 +259,7 @@ export default function AdminAdmins() {
                   <div className="admin-list-item-title">{u.display_name ?? 'Namnlös användare'}</div>
                   <div className="admin-list-item-meta">
                     <span className="badge badge-warning">Ingen åtkomst</span>
-                    <span style={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>{u.id.slice(0, 8)}…</span>
+                    {emails[u.id] && <span className="admin-user-email">{emails[u.id]}</span>}
                     <span>{formatDateShort(u.created_at)}</span>
                   </div>
                   {u.intro
@@ -284,7 +303,7 @@ export default function AdminAdmins() {
                   </div>
                   <div className="admin-list-item-meta">
                     <span className={isAdminLevel(p.level) ? 'badge badge-muted' : 'badge badge-success'}>{levelLabel(p.level)}</span>
-                    <span style={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>{p.user_id.slice(0, 8)}…</span>
+                    {emails[p.user_id] && <span className="admin-user-email">{emails[p.user_id]}</span>}
                     <span>{formatDateShort(p.created_at)}</span>
                   </div>
                 </div>

@@ -2464,3 +2464,6 @@
 
 /* Uppgifter som bara redaktionen ser (granskning av vittnesmål). */
 .testimony-private { color: var(--warning); font-style: italic; }
+
+/* Kontots e-postadress i användarlistan. */
+.admin-user-email { overflow-wrap: anywhere; }
