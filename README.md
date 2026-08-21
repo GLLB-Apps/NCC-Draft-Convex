@@ -67,6 +67,19 @@ som objekt i appen (`JSON_FIELDS` överst i filen).
 | `/fragor-och-svar` | Vanliga frågor |
 | `/kontakt` | Kontaktuppgifter och kontaktformulär |
 
+### Headern
+
+Logotypbrickan hänger ned över heron högst upp på en sida och fälls ihop när man
+rullar. Både höjden och bredden den lämnar efter sig är konstant — brickan växer
+utanför sin plats i stället för att knuffa menyn — så ingenting i sidan flyttar
+sig när läget växlar. Talen står som kommentarer vid `.site-logo-slot` och
+`.site-logo-badge` i `public.css` och måste räknas om om logotypen byts mot en
+med annat höjd/bredd-förhållande.
+
+Menyn är redigerbar och kan bli lång. Under 1500 px döljs menyikonerna och
+posterna dras ihop; under 1200 px tar mobilmenyn över. Utan det sköt menyn ut
+genom fönsterkanten och gav en horisontell rullningslist.
+
 ### Kartan
 
 Kartan har två flikar.
@@ -98,6 +111,11 @@ uppmaning att byta enhet.
 
 Rollen ligger i kollektionen `user_roles`. Skrivbehörighet i databasen styrs
 dessutom av att kontot har etiketten `admin` i Appwrite — båda behövs.
+
+Den som registrerar sig får presentera sig i formuläret — vem de är och hur de
+hänger ihop med initiativet. Texten sparas på profilen och visas under
+**Användare**, både för dem som väntar på behörighet och för dem som redan har
+en, så att den som tilldelar nivå vet vem personen är.
 
 ### Översikt och utkast
 
@@ -133,9 +151,49 @@ nytt. "Rensa lästa" gömmer det man redan sett utan att röra olästa poster.
 | Karta | Två flikar: **Polygoner** för områdesgränser, **Punkter** för enskilda platser |
 | Tidslinje | Händelser i ärendet |
 | FAQ | Frågor och svar, grupperade i kategorier |
+| Ändringslogg | Datumsorterad historik över vad som byggts, ändrats och rättats i systemet |
 
 Sidorna konfigureras i `src/lib/pages.ts`, som kopplar varje publik route till
-sina redigerbara texter och genvägar.
+sina redigerbara texter och genvägar. Startsidans texter — statusrutan, de tre
+blocken under sammanfattningen och uppmaningarna — ligger under Sidor →
+Startsida, och den flytande "Redigera sidan"-knappen på webbplatsen leder dit.
+
+**Viktiga datum** är en lista i webbplatsinställningarna i stället för ett enda
+fält. Startsidan visar det närmast kommande och går vidare till nästa av sig
+själv när dagen passerat — passerade datum ligger kvar i listan men visas inte.
+
+**Ändringsloggen** sorteras på det datum man anger, inte på när posten skrevs,
+så historiken går att fylla på i efterhand. Den läses bara av admin-labeln och
+syns aldrig publikt.
+
+Knappen **Hämta från GitHub** listar de commits på `main` som inte redan
+importerats. Bara rubriken följer med — commit-texten, versioner och typ
+lämnas därhän — och rubrikerna översätts till svenska på vägen, eftersom
+commits skrivs på engelska för utvecklare men loggen läses av redaktionen.
+Man bockar för vad som ska med och kan skriva om texten innan den sparas.
+Commitens sha sparas på posten, så samma commit inte kan importeras två gånger.
+
+Hämtningen sker direkt från webbläsaren mot GitHubs API — repot är publikt, så
+varken token eller serverfunktion behövs för den delen. Utan token är taket 60
+anrop per timme och IP, vilket räcker för en knapp som gör ett anrop per import.
+Blir repot privat igen slutar hämtningen att fungera och måste flyttas
+server-side.
+
+Översättningen går däremot via `api/translate-commits`, som anropar Claude med
+`ANTHROPIC_API_KEY`. Hela listan översätts i ett anrop. Anroparen måste ha
+admin-labeln — annars vore det en öppen endpoint som kostar pengar per anrop,
+och repots adress är numera publik. Saknas nyckeln, eller körs appen lokalt där
+`api/`-funktionerna inte finns, visas originalrubrikerna på engelska i stället
+och man får skriva om dem för hand. Inget blockeras.
+
+### Ikoner
+
+Ikonerna är Lucide-namn i kebab-case. `src/lib/lucide.tsx` håller en kurerad
+uppsättning för väljaren, men hela biblioteket går att rendera. I ikonväljaren
+kan man därför skriva ett ikonnamn rakt av eller klistra in en adress från
+lucide.dev — och spara träffen i **egna ikoner** (kollektionen `custom_icons`),
+som då ligger överst i väljaren nästa gång. Bara namnet lagras; ritningen kommer
+som vanligt från `lucide-react`.
 
 ### Kartredigeraren
 
@@ -181,7 +239,9 @@ Kollektioner i Appwrite:
 | `testimonies` | Vittnesmål |
 | `contact_messages` | Kontaktformuläret |
 | `contacts` | Kontaktpersoner |
-| `user_roles`, `profiles` | Roller och användarprofiler |
+| `user_roles`, `profiles` | Roller och användarprofiler (inkl. presentationen från registreringen) |
+| `changelog_entries` | Systemets ändringslogg — bara läsbar för admin |
+| `custom_icons` | Sparade Lucide-ikoner utanför den kurerade uppsättningen |
 | `audit_log` | Loggade ändringar |
 
 Innehåll har genomgående en `status`: `draft`, `published` och `archived`,
@@ -242,6 +302,17 @@ node scripts/appwrite-seed-content.mjs      # exempelinnehåll
 node scripts/appwrite-verify.mjs            # kontrollerar att schemat stämmer
 ```
 
+Tillägg som körs en gång vid uppgradering:
+
+```bash
+node scripts/appwrite-add-profile-intro.mjs    # presentationen på profiles
+node scripts/appwrite-add-important-dates.mjs  # listan med kommande datum
+node scripts/appwrite-add-consult-dialog.mjs   # texterna i mejlrutan
+node scripts/appwrite-add-changelog.mjs        # kollektionen för ändringsloggen
+node scripts/appwrite-add-custom-icons.mjs     # kollektionen för egna ikoner
+node scripts/appwrite-add-changelog-commit.mjs # commit_sha på ändringsloggen
+```
+
 Skripten är skrivna för att kunna köras om: befintliga kollektioner och fält
 hoppas över i stället för att skrivas över, och seed körs bara mot en tom
 kollektion.
@@ -258,4 +329,7 @@ Vercel bygger och publicerar automatiskt från `main`. Miljövariablerna med
 sköter routingen så att djuplänkar fungerar i en single-page-app.
 
 Funktionerna under `api/` körs som serverlösa endpoints och behöver
-`APPWRITE_API_KEY` satt i Vercel — den ska aldrig ligga i klientbygget.
+`APPWRITE_API_KEY` satt i Vercel — den ska aldrig ligga i klientbygget. Samma
+sak gäller `RESEND_API_KEY` (kontaktformulärets e-postutskick) och
+`ANTHROPIC_API_KEY` (översättningen av commit-rubriker till ändringsloggen).
+Ingen av dem får `VITE_`-prefix.
