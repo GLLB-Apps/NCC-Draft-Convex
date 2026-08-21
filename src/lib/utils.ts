@@ -1,4 +1,4 @@
-import type { LatLngTuple } from './types'
+import type { ImportantDate, LatLngTuple, SiteSettings } from './types'
 
 export function slugify(text: string): string {
   return text
@@ -20,6 +20,34 @@ export function formatDate(date: string | null | undefined, opts?: Intl.DateTime
 export function formatDateShort(date: string | null | undefined): string {
   if (!date) return ''
   return new Date(date).toLocaleDateString('sv-SE', { year: 'numeric', month: 'short', day: 'numeric' })
+}
+
+/** Dagens datum som YYYY-MM-DD i lokal tid — jämförbart med sparade datum. */
+export function todayIso(): string {
+  const d = new Date()
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
+/** Kommande datum först, passerade bortsorterade. Sorterar på ISO-strängen. */
+export function upcomingDates(dates: ImportantDate[] | null | undefined): ImportantDate[] {
+  const today = todayIso()
+  return (dates ?? [])
+    .filter(d => d?.date && d.date >= today)
+    .sort((a, b) => a.date.localeCompare(b.date))
+}
+
+/**
+ * Nästa viktiga datum. Läser listan `important_dates` och tar det första som
+ * inte passerat — därför byter startsidan av sig själv när dagen infaller.
+ * Faller tillbaka på det gamla enskilda fältet för inställningar som sparades
+ * innan listan fanns. null = inget kommande datum.
+ */
+export function nextImportantDate(settings: SiteSettings | null): ImportantDate | null {
+  const next = upcomingDates(settings?.important_dates)[0]
+  if (next) return next
+  const legacy = settings?.next_important_date
+  return legacy && legacy >= todayIso() ? { date: legacy, label: '' } : null
 }
 
 export function senderTypeLabel(type: string | null): string {

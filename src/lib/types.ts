@@ -54,6 +54,15 @@ export interface SiteSettings {
   consult_button: string | null
   /** Ämnesraden som fylls i åt besökaren. */
   consult_subject: string | null
+  /**
+   * Texterna i mellanlandningsrutan som visas innan besökarens mejlprogram
+   * öppnas. Tomt fält = den inbyggda standardtexten (se MAIL_DIALOG i campaign.ts).
+   */
+  consult_dialog_title: string | null
+  consult_dialog_text: string | null
+  consult_dialog_note: string | null
+  consult_dialog_confirm: string | null
+  consult_dialog_cancel: string | null
   default_share_image: string | null
   contact_email: string | null
   contact_phone: string | null
@@ -69,13 +78,30 @@ export interface SiteSettings {
   cookie_text: string | null
   status_message: string | null
   status_phase: string | null
+  /**
+   * Enstaka viktigt datum — ersatt av `important_dates`, men kvar som reserv
+   * för inställningar som sparades innan listan fanns.
+   */
   next_important_date: string | null
+  /** Kommande viktiga datum. Startsidan visar det närmast kommande. */
+  important_dates: ImportantDate[]
   signature_count: number
   hero_title: string
   hero_intro: string
   hero_image: string | null
   hero_buttons: HeroButton[]
   background_blocks: ContentBlock[]
+}
+
+/**
+ * Ett kommande viktigt datum i processen. Startsidan väljer själv det första
+ * som inte passerat, så listan behöver inte städas när ett datum infaller.
+ */
+export interface ImportantDate {
+  /** ISO-datum, YYYY-MM-DD. */
+  date: string
+  /** Vad som händer, t.ex. "Samrådet stänger". */
+  label: string
 }
 
 /** En knapp i heron. `cta: true` följer kampanjläget (namninsamling/donation). */
@@ -416,6 +442,37 @@ export interface NavigationItem {
 export interface UserProfile {
   id: string
   display_name: string | null
+  /** Presentationen personen skrev när kontot skapades. */
+  intro: string | null
+}
+
+/** En post i systemets ändringslogg (adminpanelen → Ändringslogg). */
+export type ChangelogCategory = 'feature' | 'improvement' | 'fix' | 'other'
+
+export interface ChangelogEntry {
+  id: string
+  title: string
+  body: string | null
+  /** ISO-datum, YYYY-MM-DD. Listan sorteras fallande på det här fältet. */
+  entry_date: string | null
+  category: ChangelogCategory | null
+  version: string | null
+  /** Sha:t på commiten posten importerades från. null = skriven för hand. */
+  commit_sha: string | null
+  created_by: string | null
+  created_by_name: string | null
+  created_at: string
+  updated_at: string
+}
+
+/** En sparad Lucide-ikon utanför den kurerade uppsättningen. */
+export interface CustomIcon {
+  id: string
+  /** Lucide-namn i kebab-case, t.ex. "anchor". */
+  name: string
+  label: string | null
+  added_by: string | null
+  created_at: string
 }
 
 export interface AuditLogEntry {
