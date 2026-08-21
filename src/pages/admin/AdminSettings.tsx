@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import type { SiteSettings } from '../../lib/types'
+import type { ImportantDate, SiteSettings } from '../../lib/types'
 import { supabase } from '../../lib/supabase'
 import { useToast } from '../../lib/toast'
+import { MAIL_DIALOG_DEFAULTS } from '../../lib/campaign'
+import { formatDate, todayIso, upcomingDates } from '../../lib/utils'
 
 export default function AdminSettings() {
   const [settings, setSettings] = useState<SiteSettings | null>(null)
@@ -12,7 +14,16 @@ export default function AdminSettings() {
 
   useEffect(() => {
     supabase.from('site_settings').select('*').maybeSingle().then(({ data }) => {
-      setSettings(data as SiteSettings | null)
+      const s = data as SiteSettings | null
+      if (s) {
+        // Listan ersätter det gamla enskilda datumfältet. Finns bara det gamla
+        // värdet flyttas det in som första rad, så inget tappas bort.
+        if (!Array.isArray(s.important_dates)) s.important_dates = []
+        if (s.important_dates.length === 0 && s.next_important_date) {
+          s.important_dates = [{ date: s.next_important_date, label: '' }]
+        }
+      }
+      setSettings(s)
       setLoading(false)
     })
   }, [])
@@ -21,9 +32,17 @@ export default function AdminSettings() {
     setSettings(prev => prev ? { ...prev, [key]: value } : prev)
   }
 
+  function updateDates(fn: (prev: ImportantDate[]) => ImportantDate[]) {
+    setSettings(prev => prev ? { ...prev, important_dates: fn(prev.important_dates ?? []) } : prev)
+  }
+
   async function save() {
     if (!settings) return
     setSaving(true)
+    // Tomma rader tas bort och datumen sorteras, så listan är städad när den sparas.
+    const sortedDates = (settings.important_dates ?? [])
+      .filter(d => d.date)
+      .sort((a, b) => a.date.localeCompare(b.date))
     const { error } = await supabase.from('site_settings').update({
       site_name: settings.site_name,
       site_subtitle: settings.site_subtitle,
@@ -52,7 +71,15 @@ export default function AdminSettings() {
       cookie_text: settings.cookie_text,
       status_message: settings.status_message,
       status_phase: settings.status_phase,
-      next_important_date: settings.next_important_date,
+      important_dates: sortedDates,
+      // Speglar det närmast kommande datumet, så att äldre läsare av fältet
+      // fortsätter visa rätt sak.
+      next_important_date: upcomingDates(sortedDates)[0]?.date ?? null,
+      consult_dialog_title: settings.consult_dialog_title,
+      consult_dialog_text: settings.consult_dialog_text,
+      consult_dialog_note: settings.consult_dialog_note,
+      consult_dialog_confirm: settings.consult_dialog_confirm,
+      consult_dialog_cancel: settings.consult_dialog_cancel,
       signature_count: settings.signature_count,
     }).eq('id', settings.id)
     setSaving(false)
@@ -76,6 +103,10 @@ export default function AdminSettings() {
   }
 
   if (loading || !settings) return <div className="loading"><div className="spinner"></div></div>
+
+  const dates = settings.important_dates ?? []
+  const upcoming = upcomingDates(dates)
+  const today = todayIso()
 
   return (
     <div className="fade-in">
@@ -113,6 +144,15 @@ export default function AdminSettings() {
       </div>
 
       <div className="admin-form-card" style={{ marginTop: 'var(--space-5)' }}>
+        <h3 style={{ marginBottom: 'var(--space-2)' }}>Startsidans texter och block</h3>
+        <p className="form-hint" style={{ marginBottom: 'var(--space-3)' }}>
+          Rubrikerna på startsidan och de tre blocken under sammanfattningen – bland dem
+          "Vad händer nu?" – redigeras under Sidor → Startsida.
+        </p>
+        <Link to="/admin/sidor/hem" className="btn btn-secondary btn-sm">Redigera startsidans texter →</Link>
+      </div>
+
+      <div className="admin-form-card" style={{ marginTop: 'var(--space-5)' }}>
         <h3 style={{ marginBottom: 'var(--space-5)' }}>Aktuell status</h3>
         <div className="form-group">
           <label className="form-label" htmlFor="status_message">Statusmeddelande</label>
@@ -122,11 +162,63 @@ export default function AdminSettings() {
           <label className="form-label" htmlFor="status_phase">Aktuell fas</label>
           <input id="status_phase" className="form-input" type="text" value={settings.status_phase ?? ''} onChange={e => update('status_phase', e.target.value || null)} />
         </div>
+        <div className="form-group">
+          <span className="form-label">Viktiga datum</span>
+          <p className="form-hint" style={{ marginBottom: 'var(--space-3)' }}>
+            Lägg in alla kommande datum du känner till. Startsidan visar det närmast kommande under
+            "Nästa viktiga datum" och går vidare till nästa av sig själv när dagen passerat – passerade
+            datum ligger kvar här men visas inte.
+          </p>
+          {dates.length === 0 && (
+            <p className="text-muted" style={{ fontSize: '0.85rem', marginBottom: 'var(--space-3)' }}>Inga datum inlagda ännu.</p>
+          )}
+          {dates.map((d, i) => {
+            const passed = !!d.date && d.date < today
+            return (
+              <div className="important-date-row" key={i}>
+                <input
+                  className="form-input important-date-day"
+                  type="date"
+                  value={d.date ?? ''}
+                  aria-label="Datum"
+                  onChange={e => updateDates(prev => prev.map((x, xi) => xi === i ? { ...x, date: e.target.value } : x))}
+                />
+                <input
+                  className="form-input"
+                  type="text"
+                  maxLength={120}
+                  placeholder="Vad händer? T.ex. Samrådet stänger"
+                  value={d.label ?? ''}
+                  aria-label="Vad datumet gäller"
+                  onChange={e => updateDates(prev => prev.map((x, xi) => xi === i ? { ...x, label: e.target.value } : x))}
+                />
+                {passed && <span className="badge badge-muted important-date-badge">Passerat</span>}
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-sm"
+                  aria-label="Ta bort datum"
+                  onClick={() => updateDates(prev => prev.filter((_, xi) => xi !== i))}
+                >
+                  Ta bort
+                </button>
+              </div>
+            )
+          })}
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            style={{ marginTop: 'var(--space-2)' }}
+            onClick={() => updateDates(prev => [...prev, { date: '', label: '' }])}
+          >
+            + Lägg till datum
+          </button>
+          <p className="text-muted" style={{ fontSize: '0.8rem', marginTop: 'var(--space-3)', marginBottom: 0 }}>
+            {upcoming.length > 0
+              ? <>Visas just nu: <strong>{formatDate(upcoming[0].date)}</strong>{upcoming[0].label ? ` – ${upcoming[0].label}` : ''}{upcoming.length > 1 ? ` (${upcoming.length - 1} till på kö)` : ''}</>
+              : 'Inget kommande datum – startsidan visar "Ännu ej fastställt".'}
+          </p>
+        </div>
         <div className="grid grid-2">
-          <div className="form-group">
-            <label className="form-label" htmlFor="next_important_date">Nästa viktiga datum</label>
-            <input id="next_important_date" className="form-input" type="date" value={settings.next_important_date ?? ''} onChange={e => update('next_important_date', e.target.value || null)} />
-          </div>
           <div className="form-group">
             <label className="form-label" htmlFor="signature_count">Antal underskrifter</label>
             <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
@@ -192,6 +284,38 @@ export default function AdminSettings() {
               <input id="consult_subject" className="form-input" type="text" maxLength={255} placeholder="Synpunkt inför samrådet – Rögleskogen" value={settings.consult_subject ?? ''} onChange={e => update('consult_subject', e.target.value || null)} />
               <p className="text-muted" style={{ fontSize: '0.8rem', marginTop: 'var(--space-2)' }}>
                 Fylls i åt besökaren och går att ändra innan mejlet skickas.
+              </p>
+            </div>
+
+            <h4 style={{ margin: 'var(--space-5) 0 var(--space-2)', fontSize: '0.95rem' }}>Rutan innan mejlprogrammet öppnas</h4>
+            <p className="text-muted" style={{ fontSize: '0.85rem', marginBottom: 'var(--space-4)' }}>
+              Mellanlandningen som förklarar att besökaren skickar mejlet själv, från sitt eget program.
+              Mottagaradressen och ämnesraden visas alltid i rutan och behöver inte upprepas i texten.
+              Lämna ett fält tomt så används standardtexten som står som exempel.
+            </p>
+            <div className="form-group">
+              <label className="form-label" htmlFor="consult_dialog_title">Rubrik i rutan</label>
+              <input id="consult_dialog_title" className="form-input" type="text" maxLength={160} placeholder={MAIL_DIALOG_DEFAULTS.title} value={settings.consult_dialog_title ?? ''} onChange={e => update('consult_dialog_title', e.target.value || null)} />
+            </div>
+            <div className="form-group">
+              <label className="form-label" htmlFor="consult_dialog_text">Förklarande text</label>
+              <textarea id="consult_dialog_text" className="form-textarea" rows={4} maxLength={1000} placeholder={MAIL_DIALOG_DEFAULTS.text} value={settings.consult_dialog_text ?? ''} onChange={e => update('consult_dialog_text', e.target.value || null)} />
+            </div>
+            <div className="grid grid-2">
+              <div className="form-group">
+                <label className="form-label" htmlFor="consult_dialog_confirm">Knapp: gå vidare</label>
+                <input id="consult_dialog_confirm" className="form-input" type="text" maxLength={80} placeholder={MAIL_DIALOG_DEFAULTS.confirm} value={settings.consult_dialog_confirm ?? ''} onChange={e => update('consult_dialog_confirm', e.target.value || null)} />
+              </div>
+              <div className="form-group">
+                <label className="form-label" htmlFor="consult_dialog_cancel">Knapp: avbryt</label>
+                <input id="consult_dialog_cancel" className="form-input" type="text" maxLength={80} placeholder={MAIL_DIALOG_DEFAULTS.cancel} value={settings.consult_dialog_cancel ?? ''} onChange={e => update('consult_dialog_cancel', e.target.value || null)} />
+              </div>
+            </div>
+            <div className="form-group">
+              <label className="form-label" htmlFor="consult_dialog_note">Fotnot</label>
+              <textarea id="consult_dialog_note" className="form-textarea" rows={3} maxLength={600} placeholder={MAIL_DIALOG_DEFAULTS.note} value={settings.consult_dialog_note ?? ''} onChange={e => update('consult_dialog_note', e.target.value || null)} />
+              <p className="text-muted" style={{ fontSize: '0.8rem', marginTop: 'var(--space-2)' }}>
+                Står längst ned i rutan – tänkt för den vars dator saknar mejlprogram.
               </p>
             </div>
           </>

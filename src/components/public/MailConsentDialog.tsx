@@ -1,16 +1,20 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { MAIL_DIALOG_DEFAULTS, type MailDialogTexts } from '../../lib/campaign'
 
 // Mellanlandning innan besökarens mejlprogram öppnas. Poängen är att ingen ska
 // bli överraskad av att ett fönster hoppar upp utanför webbläsaren, och att det
 // framgår att mejlet skrivs och skickas av besökaren själv — vi varken läser
-// eller förmedlar det. Tonen följer 404-sidans: torr och skogsnära.
-export default function MailConsentDialog({ mailUrl, address, subject, onClose }: {
+// eller förmedlar det. Texterna redigeras i webbplatsinställningar; utelämnas de
+// används standardtexterna (MAIL_DIALOG_DEFAULTS i lib/campaign).
+export default function MailConsentDialog({ mailUrl, address, subject, texts, onClose }: {
   mailUrl: string
   address: string
   subject: string
+  texts?: MailDialogTexts | null
   onClose: () => void
 }) {
+  const t = texts ?? MAIL_DIALOG_DEFAULTS
   const confirmRef = useRef<HTMLAnchorElement>(null)
   const [copied, setCopied] = useState(false)
 
@@ -51,13 +55,9 @@ export default function MailConsentDialog({ mailUrl, address, subject, onClose }
         <button type="button" className="mail-consent-close" onClick={onClose} aria-label="Stäng">✕</button>
 
         <div className="mail-consent-badge" aria-hidden="true">@</div>
-        <h2 id="mail-consent-title" className="mail-consent-title">Nu lämnar vi skogen och går in i din inkorg</h2>
+        <h2 id="mail-consent-title" className="mail-consent-title">{t.title}</h2>
 
-        <p className="mail-consent-text">
-          Trycker du vidare öppnas ditt vanliga mejlprogram med adressen och ämnesraden redan ifyllda.
-          Sedan tar du över: du skriver dina synpunkter och du trycker skicka. Mejlet går direkt till
-          NCC:s samråd, i ditt namn – ingenting passerar den här sidan, och vi läser det inte.
-        </p>
+        <p className="mail-consent-text">{t.text}</p>
 
         <dl className="mail-consent-facts">
           <div>
@@ -84,17 +84,14 @@ export default function MailConsentDialog({ mailUrl, address, subject, onClose }
             className="btn btn-primary"
             onClick={() => window.setTimeout(onClose, 300)}
           >
-            Öppna mejlprogrammet
+            {t.confirm}
           </a>
           <button type="button" className="btn btn-ghost" onClick={onClose}>
-            Nej, stanna kvar
+            {t.cancel}
           </button>
         </div>
 
-        <p className="mail-consent-note">
-          Händer ingenting när du trycker? Då har datorn inget mejlprogram uppsatt. Kopiera adressen
-          ovan och skriv i webbmejlen i stället – det duger lika bra.
-        </p>
+        <p className="mail-consent-note">{t.note}</p>
       </div>
     </div>,
     document.body,

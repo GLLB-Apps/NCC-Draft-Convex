@@ -31,16 +31,18 @@ export const PAGES: PageConfig[] = [
   {
     slug: 'hem', label: 'Startsida', route: '/', defaultTitle: 'Startsida', defaultIntro: '', headerless: true,
     manage: [{ label: 'Redigera hero (bild, text, knappar)', to: '/admin/hero' }, { label: 'Webbplatsinställningar', to: '/admin/inställningar' }],
+    // Startsidans texter ligger i "fields" nedan: statusrutan, de tre blocken
+    // under sammanfattningen, ämnes- och nyhetsrubrikerna samt uppmaningen.
     fields: [
       { key: 'status_heading', label: 'Status: rubrik', default: 'Aktuell status' },
       { key: 'status_intro', label: 'Status: text', default: 'Översikt över var i processen vi befinner oss.' },
-      { key: 'summary_heading', label: 'Sammanfattning: rubrik', default: 'Kort sammanfattning' },
-      { key: 'card1_title', label: 'Kort 1: rubrik', default: 'Vad planeras?' },
-      { key: 'card1_text', label: 'Kort 1: text', multiline: true, default: 'NCC har informerat om planer på att ansöka om tillstånd för en ny bergtäkt i Rögleskogen mellan Södra Sandby och Dalby i Lunds kommun.' },
-      { key: 'card2_title', label: 'Kort 2: rubrik', default: 'Varför väcker det frågor?' },
-      { key: 'card2_text', label: 'Kort 2: text', multiline: true, default: 'Boende och naturintresserade har frågor om buller, damm, trafik, naturvärden och påverkan på närmiljö och livsmiljö.' },
-      { key: 'card3_title', label: 'Kort 3: rubrik', default: 'Vad händer nu?' },
-      { key: 'card3_text', label: 'Kort 3: text', multiline: true, default: 'Processen befinner sig i ett tidigt skede. Information samlas här kontinuerligt. Håll dig uppdaterad via tidslinjen och nyheterna.' },
+      { key: 'summary_heading', label: 'Rubrik över de tre blocken', default: 'Kort sammanfattning', hint: 'Står ovanför blocken nedan.' },
+      { key: 'card1_title', label: 'Block 1 – rubrik', default: 'Vad planeras?', hint: 'De tre blocken ligger i rad på startsidan, i den ordning de står här.' },
+      { key: 'card1_text', label: 'Block 1 – text', multiline: true, default: 'NCC har informerat om planer på att ansöka om tillstånd för en ny bergtäkt i Rögleskogen mellan Södra Sandby och Dalby i Lunds kommun.' },
+      { key: 'card2_title', label: 'Block 2 – rubrik', default: 'Varför väcker det frågor?' },
+      { key: 'card2_text', label: 'Block 2 – text', multiline: true, default: 'Boende och naturintresserade har frågor om buller, damm, trafik, naturvärden och påverkan på närmiljö och livsmiljö.' },
+      { key: 'card3_title', label: 'Block 3 – rubrik', default: 'Vad händer nu?', hint: 'Rubriken är fri text – blocket heter "Vad händer nu?" tills du skriver om den.' },
+      { key: 'card3_text', label: 'Block 3 – text', multiline: true, default: 'Processen befinner sig i ett tidigt skede. Information samlas här kontinuerligt. Håll dig uppdaterad via tidslinjen och nyheterna.' },
       { key: 'topics_heading', label: 'Ämnesområden: rubrik', default: 'Ämnesområden' },
       { key: 'topics_intro', label: 'Ämnesområden: text', default: 'Utforska olika aspekter av den planerade bergtäkten.' },
       { key: 'news_heading', label: 'Nyheter: rubrik', default: 'Senaste nytt' },

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useOutletContext } from 'react-router-dom'
 import type { SiteSettings, Topic, Post } from '../../lib/types'
 import { supabase } from '../../lib/supabase'
-import { formatDate, formatDateShort, truncate } from '../../lib/utils'
+import { formatDate, formatDateShort, nextImportantDate, truncate } from '../../lib/utils'
 import LucideIcon from '../../lib/lucide'
 import CountUp from '../../components/public/CountUp'
 import VoteWidget from '../../components/public/VoteWidget'
@@ -56,6 +56,10 @@ export default function HomePage() {
   if (loading) return <div className="loading"><div className="spinner"></div></div>
 
   const campaign = getCampaign(settings)
+  // Väljs ur listan av viktiga datum vid varje rendering: det första som inte
+  // passerat. Så byter rutan av sig själv när dagen infaller, utan att någon
+  // behöver gå in i admin.
+  const nextDate = nextImportantDate(settings)
 
   return (
     <div className="fade-in">
@@ -103,7 +107,8 @@ export default function HomePage() {
             </div>
             <div className="status-item">
               <span className="status-label">Nästa viktiga datum</span>
-              <span className="status-value">{settings?.next_important_date ? formatDate(settings.next_important_date) : 'Ännu ej fastställt'}</span>
+              <span className="status-value">{nextDate ? formatDate(nextDate.date) : 'Ännu ej fastställt'}</span>
+              {nextDate?.label && <span className="status-note">{nextDate.label}</span>}
             </div>
             <div className="status-item">
               <span className="status-label">Senast uppdaterad</span>

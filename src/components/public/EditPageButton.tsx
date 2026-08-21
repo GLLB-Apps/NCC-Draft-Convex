@@ -6,10 +6,13 @@ import { useEditLinkContext } from '../../lib/editLink'
 
 // Default edit target for a public page: its primary dynamic-content manager
 // (e.g. "Hantera ämnen"), falling back to the "Sidor" hub for pure text pages.
-// The start page ('/') is intentionally excluded.
+// Startsidan pekar på sin textredigerare i stället för på hero-editorn: det är
+// där rubrikerna, statusrutan och de tre blocken under sammanfattningen ligger,
+// och därifrån länkar sidopanelen vidare till hero och inställningar.
 function targetForPath(pathname: string): string | null {
   const cfg = PAGES.find(p => p.route === pathname)
-  if (!cfg || cfg.route === '/') return null
+  if (!cfg) return null
+  if (cfg.route === '/') return '/admin/sidor/hem'
   return cfg.manage[0]?.to ?? `/admin/sidor/${cfg.slug}`
 }
 
@@ -19,7 +22,7 @@ export default function EditPageButton() {
   const { pathname } = useLocation()
   const { override } = useEditLinkContext()
 
-  if (!isAdmin || pathname === '/') return null
+  if (!isAdmin) return null
   const to = override ?? targetForPath(pathname)
   if (!to) return null
 

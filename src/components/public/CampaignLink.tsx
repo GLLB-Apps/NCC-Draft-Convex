@@ -37,6 +37,7 @@ export default function CampaignLink({
             mailUrl={campaign.ctaUrl}
             address={campaign.mailTo}
             subject={campaign.mailSubject ?? ''}
+            texts={campaign.mailDialog}
             onClose={() => setAsking(false)}
           />
         )}

@@ -37,6 +37,32 @@ export interface Campaign {
   mailTo: string | null
   /** Ämnesraden som fylls i åt besökaren. Följs åt med mailTo. */
   mailSubject: string | null
+  /** Texterna i förklaringsrutan. Satt bara när CTA:n är ett mejlutskick. */
+  mailDialog: MailDialogTexts | null
+}
+
+/**
+ * Texterna i mellanlandningsrutan innan mejlprogrammet öppnas. Redigeras i
+ * webbplatsinställningar; ett tomt fält faller tillbaka på standardtexten.
+ */
+export interface MailDialogTexts {
+  title: string
+  text: string
+  note: string
+  confirm: string
+  cancel: string
+}
+
+/** Standardtexterna i rutan. Tonen följer 404-sidans: torr och skogsnära. */
+export const MAIL_DIALOG_DEFAULTS: MailDialogTexts = {
+  title: 'Nu lämnar vi skogen och går in i din inkorg',
+  text: 'Trycker du vidare öppnas ditt vanliga mejlprogram med adressen och ämnesraden redan ifyllda. '
+    + 'Sedan tar du över: du skriver dina synpunkter och du trycker skicka. Mejlet går direkt till '
+    + 'NCC:s samråd, i ditt namn – ingenting passerar den här sidan, och vi läser det inte.',
+  note: 'Händer ingenting när du trycker? Då har datorn inget mejlprogram uppsatt. Kopiera adressen '
+    + 'ovan och skriv i webbmejlen i stället – det duger lika bra.',
+  confirm: 'Öppna mejlprogrammet',
+  cancel: 'Nej, stanna kvar',
 }
 
 const DONATE = {
@@ -77,7 +103,8 @@ export function getCampaign(s: SiteSettings | null): Campaign {
       showSignatures: false,
       external: !isInternal(ctaUrl),
       mailTo: null,
-    mailSubject: null,
+      mailSubject: null,
+      mailDialog: null,
     }
   }
   if (s?.campaign_mode === 'consult') {
@@ -100,6 +127,13 @@ export function getCampaign(s: SiteSettings | null): Campaign {
       external: true,
       mailTo,
       mailSubject: subject,
+      mailDialog: {
+        title: s.consult_dialog_title?.trim() || MAIL_DIALOG_DEFAULTS.title,
+        text: s.consult_dialog_text?.trim() || MAIL_DIALOG_DEFAULTS.text,
+        note: s.consult_dialog_note?.trim() || MAIL_DIALOG_DEFAULTS.note,
+        confirm: s.consult_dialog_confirm?.trim() || MAIL_DIALOG_DEFAULTS.confirm,
+        cancel: s.consult_dialog_cancel?.trim() || MAIL_DIALOG_DEFAULTS.cancel,
+      },
     }
   }
   const ctaUrl = s?.petition_url || '#'
@@ -115,5 +149,6 @@ export function getCampaign(s: SiteSettings | null): Campaign {
     external: !isInternal(ctaUrl),
     mailTo: null,
     mailSubject: null,
+    mailDialog: null,
   }
 }
