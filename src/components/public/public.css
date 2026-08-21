@@ -23,10 +23,11 @@
   padding: var(--space-2) var(--space-5);
   gap: var(--space-5);
   position: relative;
-  transition: padding 0.32s cubic-bezier(0.22, 1, 0.36, 1);
 }
-/* On the start page at the top the header breathes a little more */
-.site-header.header-expanded .header-inner { padding-top: var(--space-4); padding-bottom: var(--space-4); }
+/* Höjden är medvetet konstant. Växte headern när logotypen fälldes ut flyttades
+   allt innehåll under den samtidigt, och i Chrome hann sidan hoppa mellan de två
+   lägena medan man rullade förbi brytpunkten. Utfällningen sker därför helt i
+   logotypens negativa marginal (nedan), som inte påverkar layouten. */
 
 .site-logo {
   text-decoration: none;
@@ -34,6 +35,20 @@
   display: flex;
   align-items: center;
   gap: var(--space-3);
+}
+
+/* Brickans plats i raden, alltid lika bred som den UTFÄLLDA brickan. Brickan är
+   56px bred hopfälld och 123px utfälld (bredden följer bildens höjd), så utan
+   sloten knuffades allt till höger om logotypen 67px i sidled när man rullade
+   förbi brytpunkten — och vid 1440px slog headern utanför fönstret i det ena
+   läget men inte i det andra, så en horisontell rullningslist blinkade fram och
+   tillbaka. Byts logotypen mot en med annat höjd/bredd-förhållande ska talet
+   räknas om. */
+.site-logo-slot {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  width: 123px;
 }
 
 .site-logo-name {
@@ -74,13 +89,15 @@
   width: auto;
   display: block;
 }
+/* 144 - 80 = 64px, exakt den hopfällda höjden: brickan hänger ned över heron
+   utan att lägga en enda pixel till headern. */
 .site-header.header-expanded .site-logo-badge {
   height: 144px;
-  margin-bottom: -64px;
+  margin-bottom: -80px;
   padding: var(--space-3);
 }
 @media (prefers-reduced-motion: reduce) {
-  .header-inner, .site-logo-badge { transition: none; }
+  .site-logo-badge { transition: none; }
 }
 
 .logo-text {
@@ -401,7 +418,18 @@
   .mobile-nav.open .mobile-nav-list > li { animation: none; opacity: 1; transform: none; }
 }
 
-@media (max-width: 1024px) {
+/* Menyn är redigerbar och kan bli lång. Mellan mobilmenyns brytpunkt och
+   ~1500px får den inte plats med både ikoner och full luft — den sköt ut genom
+   fönsterkanten och gav en horisontell rullningslist. Här bantas den i stället:
+   ikonerna bort, tightare knappar, ingen luft mellan posterna. */
+@media (max-width: 1500px) {
+  .main-nav { gap: 0; }
+  .main-nav .nav-drawer-icon { display: none; }
+  .main-nav .nav-link { padding-left: var(--space-2); padding-right: var(--space-2); }
+}
+
+/* Under ~1200px räcker inte bantningen — då tar mobilmenyn över i stället. */
+@media (max-width: 1200px) {
   .main-nav { display: none; }
   .mobile-toggle { display: flex; }
   .mobile-nav { display: flex; }
@@ -412,9 +440,11 @@
 
 @media (max-width: 480px) {
   .header-inner { padding: var(--space-2) var(--space-4); }
+  /* Brickan är 49px hopfälld och 90px utfälld här — se .site-logo-slot ovan. */
+  .site-logo-slot { width: 90px; }
   .logo-name { font-size: 1.2rem; }
   .site-logo-badge { height: 56px; }
-  .site-header.header-expanded .site-logo-badge { height: 104px; margin-bottom: -44px; }
+  .site-header.header-expanded .site-logo-badge { height: 104px; margin-bottom: -48px; }
   .public-main > .container { padding-top: var(--space-7); }
 }
 
@@ -766,6 +796,13 @@
   color: var(--text-heading);
 }
 
+/* Kort förklaring under ett statusvärde, t.ex. vad datumet gäller. */
+.status-note {
+  font-size: 0.85rem;
+  line-height: 1.35;
+  color: var(--text-muted);
+}
+
 .status-value-count {
   font-family: var(--font-heading);
   font-size: 1.9rem;
@@ -786,6 +823,7 @@
 }
 .status-highlight .status-label { color: rgba(255, 255, 255, 0.7); }
 .status-highlight .status-value { color: #fff; }
+.status-highlight .status-note { color: rgba(255, 255, 255, 0.72); }
 .status-highlight .status-value-link { color: #fff; text-decoration: underline; }
 
 /* Floating vote widget (all sizes; folds to a bullhorn tab) */
@@ -2357,3 +2395,21 @@
   gap: var(--space-3);
   justify-content: center;
 }
+
+/* Punktväljare i kartans sidopanel: hoppa direkt till en enskild punkt. */
+.map-jump {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--border-light);
+}
+.map-jump-label {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+.map-jump-select { width: 100%; }

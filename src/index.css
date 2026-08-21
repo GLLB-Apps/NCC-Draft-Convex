@@ -83,6 +83,11 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* Reservera plats för rullningslisten. Utan detta blir sidan bredare i det
+   ögonblick mobilmenyn låser rullningen (Chrome tar bort listen), och allt
+   centrerat innehåll rycker till i sidled. */
+html { scrollbar-gutter: stable; }
+
 body { background: var(--bg); }
 
 h1, h2, h3, h4, h5, h6 {

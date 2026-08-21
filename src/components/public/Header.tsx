@@ -20,11 +20,20 @@ export default function Header({ settings }: { settings: SiteSettings | null }) 
   const campaign = getCampaign(settings)
 
   // When scrolled, the logo badge retracts to the header's current height.
+  // Hysteres: brickan fälls ihop först vid 24px och ut igen först vid 4px. Med
+  // en enda brytpunkt kunde tröga rullningar (styrplattor, Chromes utrullning)
+  // studsa över gränsen och få brickan att blinka fram och tillbaka.
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 8)
-    onScroll()
+    let raf = 0
+    const update = () => {
+      raf = 0
+      const y = window.scrollY
+      setScrolled(prev => (prev ? y > 4 : y >= 24))
+    }
+    const onScroll = () => { if (!raf) raf = requestAnimationFrame(update) }
+    update()
     window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
+    return () => { window.removeEventListener('scroll', onScroll); if (raf) cancelAnimationFrame(raf) }
   }, [])
 
   useEffect(() => {
@@ -81,8 +90,12 @@ export default function Header({ settings }: { settings: SiteSettings | null }) 
         <Link to="/" className="site-logo" aria-label={settings?.site_name ?? 'Rögleskogen'}>
           {settings?.logo_url ? (
             <>
-              <span className="site-logo-badge">
-                <img src={settings.logo_url} alt={settings.site_name} className="logo-img" />
+              {/* Sloten håller brickans plats i raden konstant — brickan själv
+                  växer utanför den när den fälls ut. Se .site-logo-slot i CSS:en. */}
+              <span className="site-logo-slot">
+                <span className="site-logo-badge">
+                  <img src={settings.logo_url} alt={settings.site_name} className="logo-img" />
+                </span>
               </span>
               <span className="site-logo-name">{settings?.site_name ?? 'Rögleskogen'}</span>
             </>
