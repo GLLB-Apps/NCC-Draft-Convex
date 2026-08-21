@@ -182,6 +182,35 @@ export default function AdminAdmins() {
     } finally { setBusy(null) }
   }
 
+  /**
+   * Raderar ett konto som ännu inte fått någon nivå — själva kontot, inte bara
+   * en rad. Servern kontrollerar en gång till att kontot saknar behörighet, så
+   * knappen kan inte användas för att radera en kollega.
+   */
+  async function deleteAccount(u: PendingUser) {
+    const namn = u.display_name || emails[u.id] || 'kontot'
+    if (!(await confirm({
+      message: `Radera ${namn} permanent? Kontot och dess presentation tas bort helt och personen kan inte logga in igen. Det går inte att ångra.`,
+      confirmText: 'Radera kontot',
+      danger: true,
+    }))) return
+    setBusy(u.id)
+    try {
+      const jwt = await createSessionJwt()
+      const res = await fetch('/api/delete-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${jwt}` },
+        body: JSON.stringify({ userId: u.id }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) { show('Kunde inte radera: ' + (data.error || res.status), 'error'); return }
+      show(`${namn} raderat`, 'success')
+      load()
+    } catch (e) {
+      show('Kunde inte radera: ' + (e instanceof Error ? e.message : String(e)), 'error')
+    } finally { setBusy(null) }
+  }
+
   async function removeAccess(p: Person) {
     if (p.user_id === currentUser?.id) { show('Du kan inte ta bort dig själv', 'error'); return }
     if (!(await confirm({ message: `Ta bort all åtkomst för ${p.display_name || 'användaren'}?`, confirmText: 'Ta bort åtkomst', danger: true }))) return
@@ -276,6 +305,13 @@ export default function AdminAdmins() {
                     <option value="" disabled>Tilldela nivå…</option>
                     {LEVELS.map(l => <option key={l.value} value={l.value}>{l.label}</option>)}
                   </select>
+                  <button
+                    className="btn btn-danger btn-sm"
+                    disabled={busy === u.id}
+                    onClick={() => deleteAccount(u)}
+                  >
+                    Radera konto
+                  </button>
                 </div>
               </div>
             ))}
@@ -360,6 +396,8 @@ export default function AdminAdmins() {
         <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
           Ny person: den skapar ett konto via <a href="/admin/login" className="section-link">/admin/login</a>, presenterar
           sig i formuläret och dyker sedan upp under "Väntar på nivå" – med presentationen synlig – där du väljer behörighet.
+          Skräp- och testkonton raderas därifrån. Ett konto som redan har en behörighet måste först fråntas den;
+          då hamnar det i väntelistan och går att radera.
         </p>
       </div>
     </div>
