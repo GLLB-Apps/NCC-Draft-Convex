@@ -3,7 +3,7 @@
 // (`supabase.from(...).select()/.eq()/.order()/.insert()/...` and `supabase.auth.*`)
 // so the rest of the codebase did not need a rewrite when we migrated
 // from Supabase to Appwrite.
-import { Client, Account, Databases, Query, ID } from 'appwrite'
+import { Client, Account, Databases, Query, ID, Permission, Role } from 'appwrite'
 
 const client = new Client()
   .setEndpoint(import.meta.env.VITE_APPWRITE_ENDPOINT)
@@ -23,6 +23,39 @@ const JSON_FIELDS: Record<string, string[]> = {
   custom_pages: ['blocks'],
   map_areas: ['points'],
   profiles: ['notifications_seen'],
+}
+
+// Innehåll som bara ska vara publikt läsbart i ett visst tillstånd. Läsrätten
+// sitter på DOKUMENTET, inte på kollektionen: kollektionen släpper bara in
+// admin, och varje publicerat dokument får `read("any")` för sig. Utan det
+// kunde vem som helst lista utkast direkt mot databasen — filtreringen på
+// status skedde ju i klienten, inte i behörigheterna.
+//
+// Kollektionerna här måste ha documentSecurity påslaget; det sätts av
+// scripts/appwrite-lock-drafts.mjs, som också fyller i rätten på befintliga rader.
+const PUBLIC_WHEN: Record<string, string[]> = {
+  posts: ['published'],
+  topics: ['published'],
+  documents: ['published'],
+  media_items: ['published'],
+  map_areas: ['published'],
+  map_locations: ['published'],
+  timeline_events: ['published'],
+  faq_items: ['published'],
+  custom_pages: ['published'],
+  testimonies: ['approved'],
+}
+
+/**
+ * Läsrätten ett dokument ska ha efter skrivningen, utifrån dess status.
+ * `undefined` betyder "rör inte befintliga rättigheter" — det gäller
+ * kollektioner utan tillståndsstyrning, och skrivningar som inte nämner status
+ * (att ändra en rubrik ska inte kunna publicera något av misstag).
+ */
+function permissionsFor(table: string, obj: Row): string[] | undefined {
+  const states = PUBLIC_WHEN[table]
+  if (!states || obj?.status === undefined) return undefined
+  return states.includes(obj.status) ? [Permission.read(Role.any())] : []
 }
 
 // App column -> Appwrite system attribute.
@@ -121,7 +154,14 @@ class QueryBuilder implements PromiseLike<Result> {
         let last: Row | null = null
         for (const it of items) {
           const documentId = it?.id ?? ID.unique()
-          const created = await databases.createDocument({ databaseId: DB, collectionId: this.table, documentId, data: toData(this.table, it) })
+          // Tomma rättigheter utelämnas helt: nya vittnesmål skapas av utloggade
+          // besökare, och en gäst får inte skicka med en rättighetslista.
+          const perms = permissionsFor(this.table, it)
+          const created = await databases.createDocument({
+            databaseId: DB, collectionId: this.table, documentId,
+            data: toData(this.table, it),
+            ...(perms && perms.length ? { permissions: perms } : {}),
+          })
           last = fromDoc(this.table, created)
         }
         return { data: last, error: null }
@@ -129,18 +169,32 @@ class QueryBuilder implements PromiseLike<Result> {
       if (this.op === 'upsert') {
         const documentId = this.payload?.id ?? ID.unique()
         const data = toData(this.table, this.payload)
+        const perms = permissionsFor(this.table, this.payload)
         try {
-          await databases.updateDocument({ databaseId: DB, collectionId: this.table, documentId, data })
+          await databases.updateDocument({
+            databaseId: DB, collectionId: this.table, documentId, data,
+            ...(perms ? { permissions: perms } : {}),
+          })
         } catch (e: any) {
-          if (e?.code === 404) await databases.createDocument({ databaseId: DB, collectionId: this.table, documentId, data })
-          else throw e
+          if (e?.code === 404) {
+            await databases.createDocument({
+              databaseId: DB, collectionId: this.table, documentId, data,
+              ...(perms && perms.length ? { permissions: perms } : {}),
+            })
+          } else throw e
         }
         return { data: null, error: null }
       }
       if (this.op === 'update') {
         const data = toData(this.table, this.payload)
+        // Här skickas även den TOMMA listan med: att avpublicera ska aktivt ta
+        // bort den publika läsrätten, inte bara låta den ligga kvar.
+        const perms = permissionsFor(this.table, this.payload)
         for (const id of await this.targetIds()) {
-          await databases.updateDocument({ databaseId: DB, collectionId: this.table, documentId: id, data })
+          await databases.updateDocument({
+            databaseId: DB, collectionId: this.table, documentId: id, data,
+            ...(perms ? { permissions: perms } : {}),
+          })
         }
         return { data: null, error: null }
       }
