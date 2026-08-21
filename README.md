@@ -236,7 +236,8 @@ Kollektioner i Appwrite:
 | `map_locations` | Enskilda kartpunkter |
 | `timeline_events` | Tidslinjen |
 | `faq_categories`, `faq_items` | Frågor och svar |
-| `testimonies` | Vittnesmål |
+| `testimonies` | Vittnesmål (det som visas publikt) |
+| `testimony_contacts` | Vittnesmålens e-post, riktiga namn och interna anteckningar — admin only |
 | `contact_messages` | Kontaktformuläret |
 | `contacts` | Kontaktpersoner |
 | `user_roles`, `profiles` | Roller och användarprofiler (inkl. presentationen från registreringen) |
@@ -266,10 +267,17 @@ hållas i synk med `PUBLIC_WHEN` i `scripts/appwrite-lock-drafts.mjs`.
 är personlig. `create("any")` är kvar där och på `testimonies`, så registrering
 och det publika vittnesmålsformuläret fungerar utan inloggning.
 
-Kvar att lösa: Appwrite har ingen behörighet per fält, så ett **godkänt**
-vittnesmål är läsbart i sin helhet — inklusive `email` och `internal_note`. Vill
-man skydda inskickarens adress behöver den flyttas till en egen, adminskyddad
-kollektion.
+Appwrite har ingen behörighet per fält, och ett godkänt vittnesmål är läsbart
+i sin helhet. Därför ligger inskickarens e-post, riktiga namn och redaktionens
+interna anteckning i **`testimony_contacts`** i stället — en kollektion som
+utloggade besökare får skapa i (formuläret skickas utan inloggning) men bara
+admin läsa. Det publika dokumentet bär namnet enbart när vittnesmålet *inte* är
+anonymt.
+
+Granskningsvyn slår ihop de två och visar det uppgivna namnet separat märkt när
+vittnesmålet publiceras anonymt, så redaktionen ser vem som skrivit utan att
+uppgiften ligger öppet. Äldre rader läses fortfarande ur de gamla fälten på
+`testimonies`, som reserv.
 
 ---
 
@@ -335,6 +343,7 @@ node scripts/appwrite-add-changelog.mjs        # kollektionen för ändringslogg
 node scripts/appwrite-add-custom-icons.mjs     # kollektionen för egna ikoner
 node scripts/appwrite-add-changelog-commit.mjs # commit_sha på ändringsloggen
 node scripts/appwrite-lock-drafts.mjs          # flyttar läsrätten till dokumentnivå
+node scripts/appwrite-split-testimony-contacts.mjs  # skiljer av vittnesmålens kontaktuppgifter
 ```
 
 Skripten är skrivna för att kunna köras om: befintliga kollektioner och fält
