@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { ImageIcon, MapPin, Megaphone } from 'lucide-react'
-import type { Testimony, TestimonyStatus } from '../../lib/types'
+import type { Testimony, TestimonyContact, TestimonyStatus } from '../../lib/types'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../lib/auth'
 import { useToast } from '../../lib/toast'
@@ -15,6 +15,10 @@ export default function AdminTestimonies() {
   const [filter, setFilter] = useState<string>('')
   const [selected, setSelected] = useState<Testimony | null>(null)
   const [note, setNote] = useState('')
+  // E-post, riktigt namn och intern anteckning ligger i en egen kollektion som
+  // bara admin får läsa — det publika vittnesmålsdokumentet är läsbart för alla
+  // och Appwrite kan inte skydda enskilda fält. Nyckeln är vittnesmålets id.
+  const [contacts, setContacts] = useState<Record<string, TestimonyContact>>({})
   const { user } = useAuth()
   const { show } = useToast()
   const { confirm } = useConfirm()
@@ -26,11 +30,25 @@ export default function AdminTestimonies() {
 
   function loadTestimonies() {
     setLoading(true)
-    supabase.from('testimonies').select('*').order('created_at', { ascending: false }).then(({ data }) => {
-      setTestimonies(data as Testimony[] ?? [])
+    Promise.all([
+      supabase.from('testimonies').select('*').order('created_at', { ascending: false }),
+      supabase.from('testimony_contacts').select('*').limit(500),
+    ]).then(([t, c]) => {
+      setTestimonies(t.data as Testimony[] ?? [])
+      const byTestimony: Record<string, TestimonyContact> = {}
+      for (const row of (c.data as TestimonyContact[] ?? [])) byTestimony[row.testimony_id] = row
+      setContacts(byTestimony)
       setLoading(false)
     })
   }
+
+  /** Kontaktraden för ett vittnesmål, om den hunnit skapas. */
+  const contactFor = (t: Testimony) => contacts[t.id]
+
+  /** Vad redaktionen ska se: nytt fält först, gamla raden som reserv. */
+  const emailFor = (t: Testimony) => contactFor(t)?.email ?? t.email ?? null
+  const realNameFor = (t: Testimony) => contactFor(t)?.author_name ?? t.author_name ?? null
+  const noteFor = (t: Testimony) => contactFor(t)?.internal_note ?? t.internal_note ?? ''
 
   async function updateStatus(t: Testimony, status: TestimonyStatus) {
     const payload: Record<string, unknown> = { status }
@@ -81,8 +99,18 @@ export default function AdminTestimonies() {
 
   async function saveNote() {
     if (!selected) return
-    const { error } = await supabase.from('testimonies').update({ internal_note: note }).eq('id', selected.id)
-    if (error) show('Kunde inte spara anteckning', 'error')
+    // Anteckningen hör hemma i den skyddade kollektionen. Finns ingen rad ännu
+    // — vittnesmålet kom in innan uppdelningen — skapas den här.
+    const existing = contactFor(selected)
+    const { error } = existing
+      ? await supabase.from('testimony_contacts').update({ internal_note: note }).eq('id', existing.id)
+      : await supabase.from('testimony_contacts').insert({
+          testimony_id: selected.id,
+          internal_note: note,
+          email: selected.email ?? null,
+          author_name: selected.author_name ?? null,
+        })
+    if (error) show('Kunde inte spara anteckning: ' + error.message, 'error')
     else { show('Anteckning sparad', 'success'); loadTestimonies() }
   }
 
@@ -113,10 +141,15 @@ export default function AdminTestimonies() {
           )}
           <p style={{ marginBottom: 'var(--space-3)' }}>{selected.story}</p>
           <div style={{ display: 'flex', gap: 'var(--space-4)', flexWrap: 'wrap', alignItems: 'center', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: 'var(--space-3)' }}>
-            <span>Av: {selected.is_anonymous ? 'Anonym' : selected.author_name ?? 'Anonym'}</span>
+            <span>
+              Av: {selected.is_anonymous ? 'Anonym' : realNameFor(selected) ?? 'Anonym'}
+              {selected.is_anonymous && realNameFor(selected) && (
+                <span className="testimony-private"> · uppgav {realNameFor(selected)}</span>
+              )}
+            </span>
             {selected.location && <span>Ort: {selected.location}</span>}
             {selected.area_usage && <span>Användning: {selected.area_usage}</span>}
-            <span>E-post: {selected.email}</span>
+            <span>E-post: {emailFor(selected) ?? <em>saknas</em>}</span>
             {selected.consent_marketing && (
               <span className="badge badge-success testimony-flag">
                 <Megaphone size={13} aria-hidden="true" /> Godkänd för marknadsföring
@@ -133,7 +166,8 @@ export default function AdminTestimonies() {
           )}
           <div className="form-group">
             <label className="form-label" htmlFor="note">Intern anteckning</label>
-            <textarea id="note" className="form-textarea" rows={2} value={note} onChange={e => setNote(e.target.value)} defaultValue={selected.internal_note ?? ''} />
+            <textarea id="note" className="form-textarea" rows={2} value={note} onChange={e => setNote(e.target.value)} />
+            <p className="form-hint">Syns bara här. Sparas skilt från det publika vittnesmålet.</p>
           </div>
           <div className="admin-form-actions">
             <button className="btn btn-primary btn-sm" onClick={saveNote}>Spara anteckning</button>
@@ -177,7 +211,7 @@ export default function AdminTestimonies() {
                 </div>
               </div>
               <div className="admin-table-actions">
-                <button className="btn btn-secondary btn-sm" onClick={() => { setSelected(t); setNote(t.internal_note ?? '') }}>Granska</button>
+                <button className="btn btn-secondary btn-sm" onClick={() => { setSelected(t); setNote(noteFor(t)) }}>Granska</button>
                 {t.status === 'rejected' && (
                   <button className="btn btn-danger btn-sm" onClick={() => removeRejected(t)}>Ta bort</button>
                 )}

@@ -184,8 +184,13 @@ export interface Testimony {
   id: string
   title: string | null
   story: string
+  /**
+   * Visningsnamnet. Tomt när vittnesmålet är anonymt — det riktiga namnet
+   * ligger i `testimony_contacts`, som bara admin kan läsa.
+   */
   author_name: string | null
   is_anonymous: boolean
+  /** @deprecated Ligger i `testimony_contacts`. Kvar för äldre rader. */
   email: string | null
   location: string | null
   area_usage: string | null
@@ -196,8 +201,28 @@ export interface Testimony {
   consent_publish: boolean
   consent_contact: boolean
   consent_marketing: boolean
+  /** @deprecated Ligger i `testimony_contacts`. Kvar för äldre rader. */
   internal_note: string | null
   published_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+/**
+ * Vittnesmålets känsliga sidor, avskilda från det publika dokumentet.
+ *
+ * Ett godkänt vittnesmål är läsbart för vem som helst, och Appwrite har ingen
+ * behörighet per fält — låg e-posten kvar i samma dokument låg den öppet. Den
+ * här kollektionen får skapas av utloggade besökare (formuläret) men läsas bara
+ * av admin.
+ */
+export interface TestimonyContact {
+  id: string
+  testimony_id: string
+  email: string | null
+  /** Riktigt namn, även när vittnesmålet publiceras anonymt. */
+  author_name: string | null
+  internal_note: string | null
   created_at: string
   updated_at: string
 }

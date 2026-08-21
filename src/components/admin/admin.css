@@ -2461,3 +2461,6 @@
 .changelog-import-sha:hover { color: var(--primary); }
 .changelog-import-body .form-input { width: 100%; margin: 0; }
 .changelog-import-original { margin: var(--space-2) 0 0; font-size: 0.78rem; color: var(--text-muted); font-style: italic; }
+
+/* Uppgifter som bara redaktionen ser (granskning av vittnesmål). */
+.testimony-private { color: var(--warning); font-style: italic; }

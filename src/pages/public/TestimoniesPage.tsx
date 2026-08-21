@@ -25,12 +25,15 @@ export default function TestimoniesPage() {
   }, [])
 
   async function handleSubmit(data: Record<string, unknown>) {
-    const { error } = await supabase.from('testimonies').insert({
+    // E-posten, den interna anteckningen och namnet på anonyma vittnesmål
+    // sparas i testimony_contacts, inte här. Ett godkänt vittnesmål är publikt
+    // läsbart i sin helhet, och Appwrite kan inte skydda enskilda fält.
+    const anonym = data.is_anonymous === true
+    const { data: created, error } = await supabase.from('testimonies').insert({
       title: data.title,
       story: data.story,
-      author_name: data.author_name,
+      author_name: anonym ? null : data.author_name,
       is_anonymous: data.is_anonymous,
-      email: data.email,
       location: data.location,
       area_usage: data.area_usage,
       featured_image: data.featured_image || null,
@@ -43,9 +46,23 @@ export default function TestimoniesPage() {
     })
     if (error) {
       show('Något gick fel. Försök igen senare.', 'error')
-    } else {
-      show(page.text('success'), 'success')
+      return
     }
+
+    // Kontaktuppgifterna i sin egen, adminskyddade kollektion. Misslyckas den
+    // här skrivningen är vittnesmålet ändå inne — berättelsen är det viktiga,
+    // och redaktionen kan höra av sig via en annan väg. Besökaren ska inte få
+    // ett felmeddelande om något som redan gått igenom.
+    const id = (created as { id?: string } | null)?.id
+    if (id) {
+      await supabase.from('testimony_contacts').insert({
+        testimony_id: id,
+        email: data.email || null,
+        author_name: data.author_name || null,
+      })
+    }
+
+    show(page.text('success'), 'success')
   }
 
   return (
