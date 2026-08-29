@@ -38,17 +38,17 @@
 }
 
 /* Brickans plats i raden, alltid lika bred som den UTFÄLLDA brickan. Brickan är
-   56px bred hopfälld och 123px utfälld (bredden följer bildens höjd), så utan
-   sloten knuffades allt till höger om logotypen 67px i sidled när man rullade
-   förbi brytpunkten — och vid 1440px slog headern utanför fönstret i det ena
-   läget men inte i det andra, så en horisontell rullningslist blinkade fram och
+   56px bred hopfälld och 111px utfälld (bredden följer bildens höjd), så utan
+   sloten knuffades allt till höger om logotypen i sidled när man rullade förbi
+   brytpunkten — och vid 1440px slog headern utanför fönstret i det ena läget
+   men inte i det andra, så en horisontell rullningslist blinkade fram och
    tillbaka. Byts logotypen mot en med annat höjd/bredd-förhållande ska talet
    räknas om. */
 .site-logo-slot {
   display: flex;
   align-items: center;
   flex-shrink: 0;
-  width: 123px;
+  width: 111px;
 }
 
 .site-logo-name {
@@ -89,11 +89,11 @@
   width: auto;
   display: block;
 }
-/* 144 - 80 = 64px, exakt den hopfällda höjden: brickan hänger ned över heron
+/* 128 - 64 = 64px, exakt den hopfällda höjden: brickan hänger ned över heron
    utan att lägga en enda pixel till headern. */
 .site-header.header-expanded .site-logo-badge {
-  height: 144px;
-  margin-bottom: -80px;
+  height: 128px;
+  margin-bottom: -64px;
   padding: var(--space-3);
 }
 @media (prefers-reduced-motion: reduce) {
@@ -440,11 +440,11 @@
 
 @media (max-width: 480px) {
   .header-inner { padding: var(--space-2) var(--space-4); }
-  /* Brickan är 49px hopfälld och 90px utfälld här — se .site-logo-slot ovan. */
-  .site-logo-slot { width: 90px; }
+  /* Brickan är 49px hopfälld och 81px utfälld här — se .site-logo-slot ovan. */
+  .site-logo-slot { width: 81px; }
   .logo-name { font-size: 1.2rem; }
   .site-logo-badge { height: 56px; }
-  .site-header.header-expanded .site-logo-badge { height: 104px; margin-bottom: -48px; }
+  .site-header.header-expanded .site-logo-badge { height: 92px; margin-bottom: -36px; }
   .public-main > .container { padding-top: var(--space-7); }
 }
 
