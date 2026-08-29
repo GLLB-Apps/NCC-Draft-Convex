@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import type { ContentBlock } from '../../lib/types'
 import LucideIcon from '../../lib/lucide'
-import { headingLevel, internalPath, normalizeUrl } from '../../lib/utils'
+import { headingLevel, internalPath, normalizeUrl, splitParagraphs } from '../../lib/utils'
 
 // Renders a single content block. Shared across pages that show free-form
 // block content (background, press, …).
@@ -105,7 +105,7 @@ export function ContentBlocks({ blocks }: { blocks: ContentBlock[] }) {
 // mjuk radbrytning och rinner ihop som förr, så inklistrade radbrutna citat inte
 // blir hackiga.
 export function BlockQuote({ block }: { block: ContentBlock }) {
-  const paragraphs = (block.text ?? '').split(/\n[^\S\n]*\n/).filter(p => p.trim())
+  const paragraphs = splitParagraphs(block.text)
   return (
     <blockquote className="block-quote">
       {paragraphs.length > 1

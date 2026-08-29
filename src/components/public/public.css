@@ -711,6 +711,8 @@
   color: rgba(255,255,255,0.9);
   margin-bottom: var(--space-6);
 }
+.hero-intro p { margin: 0; }
+.hero-intro p + p { margin-top: var(--space-3); }
 
 .hero-actions {
   display: flex;

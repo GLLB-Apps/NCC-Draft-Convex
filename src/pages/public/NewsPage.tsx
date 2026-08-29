@@ -3,7 +3,7 @@ import PageHeader from '../../components/public/PageHeader'
 import { Link, useSearchParams } from 'react-router-dom'
 import type { Post } from '../../lib/types'
 import { supabase } from '../../lib/supabase'
-import { formatDateShort, truncate } from '../../lib/utils'
+import { firstContentImage, formatDateShort, truncate } from '../../lib/utils'
 import {
   DEFAULT_NEWS_CATEGORY, NEWS_CATEGORIES, centerWeighted, newsCategoryBadge, newsCategoryLabel, postTags, tagCloud,
 } from '../../lib/newsCategories'
@@ -130,26 +130,29 @@ export default function NewsPage() {
         </div>
       ) : (
         <div className="grid grid-2" style={{ marginBottom: 'var(--space-9)' }}>
-          {shown.map(post => (
-            <Link key={post.id} to={`/nyheter/${post.slug}`} className="card card-clickable news-card">
-              {post.featured_image && (
-                <img src={post.featured_image} alt="" className="news-card-image" />
-              )}
-              <div className="news-card-meta">
-                <span className={newsCategoryBadge(categoryOf(post))}>{newsCategoryLabel(categoryOf(post))}</span>
-                <span className="news-card-date">{formatDateShort(post.published_at)}</span>
-                {post.is_pinned && <span className="badge badge-warning">Fäst</span>}
-              </div>
-              <h3>{post.title}</h3>
-              {post.source && <p className="news-card-source">Publicerat i {post.source}</p>}
-              {post.excerpt && <p>{truncate(post.excerpt, 150)}</p>}
-              {postTags(post).length > 0 && (
-                <div className="news-card-tags">
-                  {postTags(post).map(t => <span key={t} className="tag-chip">{t}</span>)}
+          {shown.map(post => {
+            const image = post.featured_image ?? firstContentImage(post.content)
+            return (
+              <Link key={post.id} to={`/nyheter/${post.slug}`} className="card card-clickable news-card">
+                {image && (
+                  <img src={image} alt="" className="news-card-image" />
+                )}
+                <div className="news-card-meta">
+                  <span className={newsCategoryBadge(categoryOf(post))}>{newsCategoryLabel(categoryOf(post))}</span>
+                  <span className="news-card-date">{formatDateShort(post.published_at)}</span>
+                  {post.is_pinned && <span className="badge badge-warning">Fäst</span>}
                 </div>
-              )}
-            </Link>
-          ))}
+                <h3>{post.title}</h3>
+                {post.source && <p className="news-card-source">Publicerat i {post.source}</p>}
+                {post.excerpt && <p>{truncate(post.excerpt, 150)}</p>}
+                {postTags(post).length > 0 && (
+                  <div className="news-card-tags">
+                    {postTags(post).map(t => <span key={t} className="tag-chip">{t}</span>)}
+                  </div>
+                )}
+              </Link>
+            )
+          })}
         </div>
       )}
     </div>

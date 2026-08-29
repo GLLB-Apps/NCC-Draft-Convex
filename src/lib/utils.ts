@@ -1,4 +1,4 @@
-import type { ImportantDate, LatLngTuple, SiteSettings } from './types'
+import type { ContentBlock, ImportantDate, LatLngTuple, SiteSettings } from './types'
 
 export function slugify(text: string): string {
   return text
@@ -234,6 +234,23 @@ export function internalPath(url: string | null | undefined): string | null {
 /** true när länken leder bort från sajten och alltså ska öppnas i nytt fönster. */
 export function isExternalUrl(url: string | null | undefined): boolean {
   return normalizeUrl(url) !== '' && internalPath(url) === null
+}
+
+/**
+ * Delar text i stycken vid tomma rader, som markdown (och som Skift+Enter
+ * skriver in i TapEditor). En ensam radbrytning är mjuk och rinner ihop till
+ * ett mellanslag när texten renderas.
+ */
+export function splitParagraphs(text: string | null | undefined): string[] {
+  return (text ?? '').split(/\n[^\S\n]*\n/).filter(p => p.trim())
+}
+
+/**
+ * Första bilden i ett innehåll, för kort som saknar egen huvudbild (t.ex.
+ * nyhetskort på startsidan och i nyhetslistan).
+ */
+export function firstContentImage(blocks: ContentBlock[] | null | undefined): string | null {
+  return blocks?.find(b => b.type === 'image' && b.image_url)?.image_url ?? null
 }
 
 export function truncate(text: string, maxLen: number): string {

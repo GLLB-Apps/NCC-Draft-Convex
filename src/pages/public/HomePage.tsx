@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useOutletContext } from 'react-router-dom'
 import type { SiteSettings, Topic, Post } from '../../lib/types'
 import { supabase } from '../../lib/supabase'
-import { formatDate, formatDateShort, nextImportantDate, truncate } from '../../lib/utils'
+import { firstContentImage, formatDate, formatDateShort, nextImportantDate, splitParagraphs, truncate } from '../../lib/utils'
 import LucideIcon from '../../lib/lucide'
 import CountUp from '../../components/public/CountUp'
 import VoteWidget from '../../components/public/VoteWidget'
@@ -71,7 +71,12 @@ export default function HomePage() {
         )}
         <div className="hero-content">
           <h1>{settings?.hero_title ?? 'Ett nytt stenbrott planeras i Rögleskogen'}</h1>
-          <p className="hero-intro">{settings?.hero_intro}</p>
+          {(() => {
+            const paragraphs = splitParagraphs(settings?.hero_intro)
+            return paragraphs.length > 1
+              ? <div className="hero-intro">{paragraphs.map((p, i) => <p key={i}>{p}</p>)}</div>
+              : <p className="hero-intro">{settings?.hero_intro}</p>
+          })()}
           <div className="hero-actions">
             {(settings?.hero_buttons?.length ? settings.hero_buttons : null)
               ? settings!.hero_buttons.map((b, i) => {
@@ -198,16 +203,19 @@ export default function HomePage() {
               <h2>{page.text('news_heading')}</h2>
             </div>
             <div className="grid grid-3">
-              {posts.map(post => (
-                <Link key={post.id} to={`/nyheter/${post.slug}`} className="card card-clickable news-card">
-                  {post.featured_image && (
-                    <img src={post.featured_image} alt="" className="news-card-image" />
-                  )}
-                  <span className="news-card-date">{formatDateShort(post.published_at)}</span>
-                  <h3>{post.title}</h3>
-                  {post.excerpt && <p>{truncate(post.excerpt, 120)}</p>}
-                </Link>
-              ))}
+              {posts.map(post => {
+                const image = post.featured_image ?? firstContentImage(post.content)
+                return (
+                  <Link key={post.id} to={`/nyheter/${post.slug}`} className="card card-clickable news-card">
+                    {image && (
+                      <img src={image} alt="" className="news-card-image" />
+                    )}
+                    <span className="news-card-date">{formatDateShort(post.published_at)}</span>
+                    <h3>{post.title}</h3>
+                    {post.excerpt && <p>{truncate(post.excerpt, 120)}</p>}
+                  </Link>
+                )
+              })}
             </div>
             <Link to="/nyheter" className="section-link">Fler nyheter →</Link>
           </div>

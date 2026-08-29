@@ -95,7 +95,8 @@ export default function AdminHero() {
         </div>
         <div className="form-group">
           <label className="form-label" htmlFor="hero_intro">Ingress</label>
-          <textarea id="hero_intro" className="form-textarea" rows={3} value={settings.hero_intro} onChange={e => update('hero_intro', e.target.value)} />
+          <textarea id="hero_intro" className="form-textarea" rows={5} value={settings.hero_intro} onChange={e => update('hero_intro', e.target.value)} />
+          <p className="form-hint">Tom rad ger ett nytt stycke.</p>
         </div>
         <div className="form-group">
           <label className="form-label" htmlFor="hero_image">Bakgrundsbild (URL)</label>
