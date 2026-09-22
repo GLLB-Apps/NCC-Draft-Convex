@@ -58,17 +58,19 @@ export default function Footer({ settings }: { settings: SiteSettings | null }) 
         <div className="footer-logo-mark" aria-hidden="true" dangerouslySetInnerHTML={{ __html: logoOutline }} />
       )}
       {/* Call to action band */}
-      <div className="footer-cta">
-        <div className="container footer-cta-inner">
-          <div>
-            <h3>{campaign.headline}</h3>
-            <p>{campaign.blurb}</p>
+      {campaign && (
+        <div className="footer-cta">
+          <div className="container footer-cta-inner">
+            <div>
+              <h3>{campaign.headline}</h3>
+              <p>{campaign.blurb}</p>
+            </div>
+            <CampaignLink campaign={campaign} className="btn btn-primary">
+              {campaign.ctaLabelLong}
+            </CampaignLink>
           </div>
-          <CampaignLink campaign={campaign} className="btn btn-primary">
-            {campaign.ctaLabelLong}
-          </CampaignLink>
         </div>
-      </div>
+      )}
 
       <div className="container footer-inner">
         <div className="footer-col footer-col-brand">
@@ -90,7 +92,7 @@ export default function Footer({ settings }: { settings: SiteSettings | null }) 
           <div className="footer-col">
             <h4 className="footer-heading">{text('links_heading')}</h4>
             <ul className="footer-links">
-              {showCtaLink && (
+              {showCtaLink && campaign && (
                 <li><CampaignLink campaign={campaign} /></li>
               )}
               {links.map((l, i) => (

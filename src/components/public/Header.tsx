@@ -162,7 +162,7 @@ export default function Header({ settings }: { settings: SiteSettings | null }) 
               <span className="header-logout-label">Logga ut</span>
             </button>
           )}
-          <CampaignLink campaign={campaign} className="btn btn-primary btn-sm" />
+          {campaign && <CampaignLink campaign={campaign} className="btn btn-primary btn-sm" />}
           <button
             className={mobileOpen ? 'mobile-toggle open' : 'mobile-toggle'}
             onClick={() => setMobileOpen(!mobileOpen)}
@@ -230,21 +230,23 @@ export default function Header({ settings }: { settings: SiteSettings | null }) 
             )
           })}
         </ul>
-        <div className="mobile-nav-widget">
-          {campaign.showSignatures ? (
-            <>
-              <span className="vote-widget-label">Underskrifter</span>
-              <span className="vote-widget-count"><CountUp value={settings?.signature_count ?? 0} /></span>
-              <p className="vote-widget-text">Var med och gör skillnad – skriv under du också.</p>
-            </>
-          ) : (
-            <>
-              <span className="vote-widget-label">{campaign.headline}</span>
-              <p className="vote-widget-text">{campaign.blurb}</p>
-            </>
-          )}
-          <CampaignLink campaign={campaign} className="vote-widget-btn" tabIndex={mobileOpen ? 0 : -1} />
-        </div>
+        {campaign && (
+          <div className="mobile-nav-widget">
+            {campaign.showSignatures ? (
+              <>
+                <span className="vote-widget-label">Underskrifter</span>
+                <span className="vote-widget-count"><CountUp value={settings?.signature_count ?? 0} /></span>
+                <p className="vote-widget-text">Var med och gör skillnad – skriv under du också.</p>
+              </>
+            ) : (
+              <>
+                <span className="vote-widget-label">{campaign.headline}</span>
+                <p className="vote-widget-text">{campaign.blurb}</p>
+              </>
+            )}
+            <CampaignLink campaign={campaign} className="vote-widget-btn" tabIndex={mobileOpen ? 0 : -1} />
+          </div>
+        )}
       </nav>
     </>
   )

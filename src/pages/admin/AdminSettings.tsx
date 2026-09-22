@@ -272,6 +272,8 @@ export default function AdminSettings() {
           <strong> Donera</strong> döljer namninsamlingsdelarna och visar ett donationsflöde i stället.
           <strong> Mejla samrådet</strong> öppnar besökarens eget mejlprogram med NCC:s samrådsadress ifylld,
           efter en ruta som förklarar vad som händer.
+          <strong> Ingenting</strong> tar bort uppmaningen helt — ingen knapp, ingen flytande widget,
+          inget CTA-band i sidfoten.
           Går att växla fram och tillbaka.
         </p>
         <div className="form-group">
@@ -285,6 +287,7 @@ export default function AdminSettings() {
             <option value="petition">Namninsamling (underskrifter)</option>
             <option value="donate">Donera</option>
             <option value="consult">Mejla samrådet (kontaktsidan)</option>
+            <option value="none">Ingenting (ingen knapp)</option>
           </select>
         </div>
         {settings.campaign_mode === 'consult' ? (

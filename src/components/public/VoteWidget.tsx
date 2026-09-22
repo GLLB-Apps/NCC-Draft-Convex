@@ -38,6 +38,7 @@ export default function VoteWidget({ settings }: { settings: SiteSettings | null
   )
   const count = settings?.signature_count ?? 0
   const c = getCampaign(settings)
+  if (!c) return null
   const asideLabel = c.shortLabel
 
   return (

@@ -4,12 +4,15 @@
 //   'donate'   → donationsflöde: "Donera", namninsamlingsgrejerna döljs
 //   'consult'  → samråd: "Mejla samrådet", öppnar besökarens eget mejlprogram
 //                med NCC:s samrådsadress ifylld (efter en förklaringsruta)
+//   'none'     → ingen uppmaning alls: ingen knapp, ingen widget, inget CTA-band
 //
 // All publik CTA-yta (hero, sidfot, header, flytande widget) läser detta objekt
 // i stället för att peka direkt på petition_url, så växlingen sker på ett ställe.
+// getCampaign() returnerar null för 'none' — varje anropsställe döljer sin
+// CTA-yta helt när det händer, i stället för att rendera en tom/trasig knapp.
 import type { SiteSettings } from './types'
 
-export type CampaignMode = 'petition' | 'donate' | 'consult'
+export type CampaignMode = 'petition' | 'donate' | 'consult' | 'none'
 
 export interface Campaign {
   mode: CampaignMode
@@ -87,7 +90,8 @@ const CONSULT = {
 /** Interna mål (t.ex. /kontakt) navigeras i appen; allt annat öppnas som länk. */
 const isInternal = (url: string) => url.startsWith('/')
 
-export function getCampaign(s: SiteSettings | null): Campaign {
+export function getCampaign(s: SiteSettings | null): Campaign | null {
+  if (s?.campaign_mode === 'none') return null
   // Saknat läge tolkas som petition, så en oprovisionerad databas beter sig som förr.
   if (s?.campaign_mode === 'donate') {
     const ctaLabel = s.donate_button?.trim() || DONATE.label

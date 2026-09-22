@@ -130,8 +130,10 @@ export default function AdminFooter() {
         </p>
 
         <label className="hero-btn-check" style={{ marginBottom: 'var(--space-4)' }}>
-          <input type="checkbox" checked={showCta} onChange={e => setShowCta(e.target.checked)} />
-          Visa kampanjlänken överst (”{campaign.ctaLabel}” → {campaign.ctaUrl})
+          <input type="checkbox" checked={showCta} disabled={!campaign} onChange={e => setShowCta(e.target.checked)} />
+          {campaign
+            ? <>Visa kampanjlänken överst (”{campaign.ctaLabel}” → {campaign.ctaUrl})</>
+            : <>Visa kampanjlänken överst (kampanjläget är satt till "Ingenting" i inställningar — ingen länk att visa)</>}
         </label>
 
         {links.length === 0 && (

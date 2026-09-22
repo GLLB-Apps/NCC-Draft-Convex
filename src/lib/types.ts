@@ -38,7 +38,7 @@ export interface SiteSettings {
    * 'petition' visar namninsamling/underskrifter, 'donate' ersätter med ett
    * donationsflöde, 'consult' leder vidare till kontaktsidan för samrådet.
    */
-  campaign_mode: 'petition' | 'donate' | 'consult'
+  campaign_mode: 'petition' | 'donate' | 'consult' | 'none'
   donate_url: string | null
   donate_title: string | null
   donate_text: string | null

@@ -109,7 +109,8 @@ export default function AdminHero() {
         <h3 style={{ marginBottom: 'var(--space-2)' }}>Knappar</h3>
         <p className="form-hint" style={{ marginBottom: 'var(--space-4)' }}>
           Knapparna visas under rubriken. En knapp kan sättas till <strong>Kampanj-CTA</strong> – då följer text och länk
-          automatiskt kampanjläget (namninsamling, donation eller samråd; just nu: ”{campaign.ctaLabel}”).
+          automatiskt kampanjläget (namninsamling, donation eller samråd; just nu:{' '}
+          {campaign ? `"${campaign.ctaLabel}"` : 'kampanjläget är satt till "Ingenting" — en Kampanj-CTA-knapp visas då inte alls'}).
         </p>
 
         {buttons.length === 0 && (
@@ -125,7 +126,11 @@ export default function AdminHero() {
               </div>
               <div className="hero-btn-fields">
                 {b.cta ? (
-                  <div className="hero-btn-cta-note">Kampanj-CTA – text & länk styrs av kampanjläget (”{campaign.ctaLabel}” → {campaign.ctaUrl})</div>
+                  <div className="hero-btn-cta-note">
+                    {campaign
+                      ? <>Kampanj-CTA – text &amp; länk styrs av kampanjläget ("{campaign.ctaLabel}" → {campaign.ctaUrl})</>
+                      : <>Kampanj-CTA – kampanjläget är satt till "Ingenting", så den här knappen visas inte alls just nu</>}
+                  </div>
                 ) : (
                   <>
                     <input className="form-input" type="text" value={b.label} onChange={e => setButton(i, { label: e.target.value })} placeholder="Knapptext" />
