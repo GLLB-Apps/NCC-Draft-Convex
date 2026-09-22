@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { useToast } from '../../lib/toast'
 import { useConfirm } from '../../lib/confirm'
 import { statusLabel, statusBadgeClass } from '../../lib/utils'
+import UserAvatar from '../../components/UserAvatar'
 
 export default function AdminFaq() {
   const [categories, setCategories] = useState<FaqCategory[]>([])
@@ -73,6 +74,31 @@ export default function AdminFaq() {
 
   if (loading) return <div className="loading"><div className="spinner"></div></div>
 
+  // Obesvarade — främst insända via frågeformuläret på FAQ-sidan, men även
+  // ett utkast som skapats i admin utan svar ännu — hamnar i en egen grupp
+  // överst, så de inte försvinner bland de redan besvarade.
+  const unanswered = items.filter(i => !i.answer.trim())
+  const answered = items.filter(i => i.answer.trim())
+
+  function renderRow(item: FaqItem) {
+    return (
+      <div key={item.id} className="admin-list-item">
+        <UserAvatar seed={item.question} size={36} style={{ flexShrink: 0 }} />
+        <div className="admin-list-item-info">
+          <div className="admin-list-item-title">{item.question}</div>
+          <div className="admin-list-item-meta">
+            <span className={statusBadgeClass(item.status)}>{statusLabel(item.status)}</span>
+            <span>{categories.find(c => c.id === item.category_id)?.name ?? 'Ingen kategori'}</span>
+          </div>
+        </div>
+        <div className="admin-table-actions">
+          <button className="btn btn-secondary btn-sm" onClick={() => setEditing(item)}>{item.answer.trim() ? 'Redigera' : 'Svara'}</button>
+          <button className="btn btn-danger btn-sm" onClick={() => removeItem(item)}>Ta bort</button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="fade-in">
       <div className="admin-page-header">
@@ -96,6 +122,10 @@ export default function AdminFaq() {
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 'var(--space-3)' }}>
             <h3>{editing.id ? 'Redigera fråga' : 'Ny fråga'}</h3>
             <button className="btn btn-ghost btn-sm" onClick={() => setEditing(null)}>Stäng</button>
+          </div>
+          <div className="admin-login-avatar-preview">
+            <UserAvatar seed={editing.question} size={72} gaze title="Frågans figur" />
+            <p className="form-hint" style={{ margin: 0 }}>Figuren skapas av frågetexten och ändras medan du skriver — samma logik som vittnesmålet.</p>
           </div>
           <div className="form-group">
             <label className="form-label" htmlFor="question">Fråga</label>
@@ -129,23 +159,29 @@ export default function AdminFaq() {
       {items.length === 0 ? (
         <div className="empty-state"><p>Inga frågor finns ännu.</p></div>
       ) : (
-        <div className="admin-list">
-          {items.map(item => (
-            <div key={item.id} className="admin-list-item">
-              <div className="admin-list-item-info">
-                <div className="admin-list-item-title">{item.question}</div>
-                <div className="admin-list-item-meta">
-                  <span className={statusBadgeClass(item.status)}>{statusLabel(item.status)}</span>
-                  <span>{categories.find(c => c.id === item.category_id)?.name ?? 'Ingen kategori'}</span>
-                </div>
-              </div>
-              <div className="admin-table-actions">
-                <button className="btn btn-secondary btn-sm" onClick={() => setEditing(item)}>Redigera</button>
-                <button className="btn btn-danger btn-sm" onClick={() => removeItem(item)}>Ta bort</button>
+        <>
+          {unanswered.length > 0 && (
+            <div style={{ marginBottom: 'var(--space-6)' }}>
+              <h2 style={{ fontSize: '1.1rem', marginBottom: 'var(--space-3)', color: 'var(--warning)' }}>
+                Obesvarade frågor ({unanswered.length})
+              </h2>
+              <div className="admin-list">
+                {unanswered.map(renderRow)}
               </div>
             </div>
-          ))}
-        </div>
+          )}
+
+          {answered.length > 0 && (
+            <div>
+              {unanswered.length > 0 && (
+                <h2 style={{ fontSize: '1.1rem', marginBottom: 'var(--space-3)' }}>Besvarade frågor ({answered.length})</h2>
+              )}
+              <div className="admin-list">
+                {answered.map(renderRow)}
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   )

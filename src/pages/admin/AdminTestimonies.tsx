@@ -8,6 +8,7 @@ import { useConfirm } from '../../lib/confirm'
 import { useMarkSourceRead } from '../../lib/notifications'
 import { formatDateShort, statusLabel, statusBadgeClass } from '../../lib/utils'
 import MapPicker from '../../components/public/MapPicker'
+import UserAvatar from '../../components/UserAvatar'
 
 export default function AdminTestimonies() {
   const [testimonies, setTestimonies] = useState<Testimony[]>([])
@@ -132,8 +133,11 @@ export default function AdminTestimonies() {
 
       {selected && (
         <div className="card" style={{ marginBottom: 'var(--space-5)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 'var(--space-3)' }}>
-            <h3>{selected.title || 'Utan titel'}</h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-3)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+              <UserAvatar seed={selected.id} size={36} gaze style={{ flexShrink: 0 }} />
+              <h3 style={{ margin: 0 }}>{selected.title || 'Utan titel'}</h3>
+            </div>
             <button className="btn btn-ghost btn-sm" onClick={() => setSelected(null)}>Stäng</button>
           </div>
           {selected.featured_image && (
@@ -187,6 +191,7 @@ export default function AdminTestimonies() {
         <div className="admin-list">
           {filtered.map(t => (
             <div key={t.id} className="admin-list-item">
+              <UserAvatar seed={t.id} size={36} style={{ flexShrink: 0 }} />
               <div className="admin-list-item-info">
                 <div className="admin-list-item-title">{t.title || 'Utan titel'}</div>
                 <div className="admin-list-item-meta">

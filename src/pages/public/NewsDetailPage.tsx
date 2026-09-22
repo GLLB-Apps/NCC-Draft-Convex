@@ -6,6 +6,7 @@ import { formatDate } from '../../lib/utils'
 import { newsCategoryBadge, newsCategoryLabel, postTags } from '../../lib/newsCategories'
 import { RenderBlock } from '../../components/public/blocks'
 import { useRegisterEditLink } from '../../lib/editLink'
+import UserAvatar from '../../components/UserAvatar'
 
 export default function NewsDetailPage() {
   const { slug } = useParams<{ slug: string }>()
@@ -47,7 +48,12 @@ export default function NewsDetailPage() {
         <div style={{ display: 'flex', gap: 'var(--space-3)', marginTop: 'var(--space-3)', alignItems: 'center', flexWrap: 'wrap' }}>
           <span className={newsCategoryBadge(post.category)}>{newsCategoryLabel(post.category)}</span>
           {post.published_at && <span className="text-muted" style={{ fontSize: '0.85rem' }}>{formatDate(post.published_at)}</span>}
-          {post.author && <span className="text-muted" style={{ fontSize: '0.85rem' }}>Av {post.author}</span>}
+          {post.author && (
+            <span className="text-muted" style={{ fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+              {post.created_by && <UserAvatar seed={post.created_by} size={22} title="Skribent" />}
+              Av {post.author}
+            </span>
+          )}
           {post.source && <span className="text-muted" style={{ fontSize: '0.85rem' }}>Publicerat i {post.source}</span>}
         </div>
       </div>

@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { useToast } from '../../lib/toast'
 import { useOutletContext, useSearchParams } from 'react-router-dom'
 import { usePage } from '../../lib/usePage'
+import UserAvatar from '../../components/UserAvatar'
 
 export default function ContactPage() {
   const { settings } = useOutletContext<{ settings: SiteSettings | null }>()
@@ -99,10 +100,13 @@ export default function ContactPage() {
             ) : (
               contacts.map(c => (
                 <div key={c.id} className="contact-person">
-                  <h4>{c.name}</h4>
-                  {c.role && <p>{c.role}</p>}
-                  {c.email && <p><a href={`mailto:${c.email}`}>{c.email}</a></p>}
-                  {c.phone && <p>{c.phone}</p>}
+                  <UserAvatar seed={c.id} size={44} gaze className="contact-person-avatar" />
+                  <div>
+                    <h4>{c.name}</h4>
+                    {c.role && <p>{c.role}</p>}
+                    {c.email && <p><a href={`mailto:${c.email}`}>{c.email}</a></p>}
+                    {c.phone && <p>{c.phone}</p>}
+                  </div>
                 </div>
               ))
             )}
