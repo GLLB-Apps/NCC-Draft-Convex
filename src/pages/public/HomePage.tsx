@@ -7,6 +7,7 @@ import LucideIcon from '../../lib/lucide'
 import CountUp from '../../components/public/CountUp'
 import VoteWidget from '../../components/public/VoteWidget'
 import SponsorTicker from '../../components/public/SponsorTicker'
+import RogleTeaser from '../../components/public/RogleTeaser'
 import { usePage } from '../../lib/usePage'
 import { getCampaign } from '../../lib/campaign'
 import CampaignLink from '../../components/public/CampaignLink'
@@ -81,7 +82,7 @@ export default function HomePage() {
             {(settings?.hero_buttons?.length ? settings.hero_buttons : null)
               ? settings!.hero_buttons.map((b, i) => {
                   const cls = `btn btn-${b.style === 'primary' ? 'primary' : 'secondary'}`
-                  if (b.cta) return <CampaignLink key={i} campaign={campaign} className={cls} />
+                  if (b.cta) return campaign ? <CampaignLink key={i} campaign={campaign} className={cls} /> : null
                   if (!b.label) return null
                   return b.url.startsWith('/')
                     ? <Link key={i} to={b.url} className={cls}>{b.label}</Link>
@@ -90,7 +91,7 @@ export default function HomePage() {
               : (
                 <>
                   <Link to="/amnen" className="btn btn-primary">Läs om planerna</Link>
-                  <CampaignLink campaign={campaign} className="btn btn-secondary" />
+                  {campaign && <CampaignLink campaign={campaign} className="btn btn-secondary" />}
                   <Link to="/karta" className="btn btn-secondary">Se området på karta</Link>
                 </>
               )}
@@ -119,7 +120,7 @@ export default function HomePage() {
               <span className="status-label">Senast uppdaterad</span>
               <span className="status-value">{formatDate(new Date().toISOString())}</span>
             </div>
-            {campaign.showSignatures ? (
+            {campaign?.showSignatures ? (
               <>
                 <div className="status-item">
                   <span className="status-label">Underskrifter</span>
@@ -132,14 +133,14 @@ export default function HomePage() {
                   </a>
                 </div>
               </>
-            ) : (
+            ) : campaign ? (
               <div className="status-item">
                 <span className="status-label">{campaign.headline}</span>
                 <CampaignLink campaign={campaign} className="status-value status-value-link">
                   {campaign.ctaLabel} →
                 </CampaignLink>
               </div>
-            )}
+            ) : null}
           </div>
         </div>
       </section>
@@ -231,11 +232,12 @@ export default function HomePage() {
           <div className="cta-section">
             <h2>{page.text('cta_heading')}</h2>
             <p className="text-muted">{page.text('cta_text')}</p>
-            <div className="cta-actions">
-              <CampaignLink campaign={campaign} className="btn btn-primary" />
-              <Link to="/vittnesmal" className="btn btn-secondary">Lämna ett vittnesmål</Link>
-              <Link to="/kontakt" className="btn btn-secondary">Kontakta initiativet</Link>
-            </div>
+            <RogleTeaser />
+            {campaign && (
+              <div className="cta-actions">
+                <CampaignLink campaign={campaign} className="btn btn-primary" />
+              </div>
+            )}
           </div>
         </div>
       </section>

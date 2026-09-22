@@ -1108,6 +1108,18 @@
   padding-top: var(--space-2);
 }
 
+/* Redaktionens facepile bredvid rubriken */
+.news-editors {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.news-editors-label {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
 /* Filter + taggmoln ovanför nyhetslistan */
 .news-filters {
   display: flex;
@@ -1208,7 +1220,7 @@
 }
 
 /* Testimony card */
-.testimony-card {
+a.testimony-card {
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
@@ -1216,6 +1228,14 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+  text-decoration: none;
+  color: inherit;
+  transition: box-shadow var(--transition), transform var(--transition);
+}
+a.testimony-card:hover,
+a.testimony-card:focus-visible {
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-2px);
 }
 
 .testimony-quote {
@@ -1226,10 +1246,132 @@
   font-style: italic;
 }
 
+.testimony-card-author {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
 .testimony-author {
   font-size: 0.85rem;
   color: var(--text-muted);
+  margin: 0;
 }
+
+/* Facepile — en klunga överlappande figurer bredvid en rubrik (jfr
+   blobatar.dev:s group-chat-komponent). Används för vittnesmålen och
+   Redaktionen. */
+.avatar-facepile {
+  display: flex;
+  align-items: center;
+}
+.avatar-facepile-avatar {
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px var(--bg);
+  flex-shrink: 0;
+}
+.avatar-facepile-extra {
+  border-radius: 50%;
+  background: var(--bg-alt);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  box-shadow: 0 0 0 3px var(--bg);
+  flex-shrink: 0;
+}
+
+.testimony-form-avatar-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-5);
+  text-align: center;
+}
+.testimony-form-avatar-preview svg { transition: none; } /* blobatarens egna morph sköter övergången */
+
+/* Formulärets steg */
+.testimony-stepper {
+  display: flex;
+  align-items: center;
+  margin-bottom: var(--space-6);
+}
+.testimony-stepper-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.testimony-stepper-item:not(:last-child) { flex: 1; }
+.testimony-stepper-item:not(:last-child)::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+  margin: 0 var(--space-2);
+}
+.testimony-stepper-dot {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--bg-card);
+  flex-shrink: 0;
+}
+.testimony-stepper-item.is-active .testimony-stepper-dot { border-color: var(--primary); color: var(--primary); }
+.testimony-stepper-item.is-done .testimony-stepper-dot { background: var(--primary); border-color: var(--primary); color: #fff; }
+.testimony-stepper-label { font-size: 0.82rem; color: var(--text-muted); white-space: nowrap; }
+.testimony-stepper-item.is-active .testimony-stepper-label { color: var(--text); font-weight: 500; }
+@media (max-width: 600px) {
+  .testimony-stepper-label { display: none; }
+}
+.testimony-stepper-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+}
+
+.page-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+.page-title-row h1 { margin-bottom: 0; }
+
+/* Vittnesmålets egen sida */
+.testimony-detail-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-top: var(--space-3);
+}
+.testimony-detail-head h1 { margin-bottom: var(--space-2); }
+.testimony-detail-meta { color: var(--text-muted); font-size: 0.9rem; }
+.testimony-detail-image {
+  width: 100%;
+  max-height: 420px;
+  object-fit: cover;
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--space-6);
+}
+.testimony-detail-story {
+  font-size: 1.05rem;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  margin-bottom: var(--space-6);
+}
+.testimony-detail-map-wrap { margin-top: var(--space-6); margin-bottom: var(--space-7); }
+.testimony-detail-map-wrap h2 { margin-bottom: var(--space-3); }
 
 /* Timeline */
 .timeline {
@@ -1506,6 +1648,37 @@
 
 .cta-section h2 { margin-bottom: var(--space-3); }
 
+.rogle-teaser {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  margin-top: var(--space-6);
+  text-align: left;
+}
+.rogle-teaser-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.rogle-teaser-actions {
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin-top: var(--space-1);
+}
+@media (max-width: 600px) {
+  .rogle-teaser { flex-direction: column; text-align: center; }
+  .rogle-teaser-body { align-items: center; }
+  .rogle-teaser-actions { justify-content: center; }
+}
+
 .cta-actions {
   display: flex;
   gap: var(--space-3);
@@ -1767,12 +1940,23 @@
   line-height: 1.6;
 }
 
+/* Ett flöde i stället för en enda rak lista — korten fyller kolumner i den
+   ordning de kommer, inte i strikta rader, så sidan känns mindre uppradad. */
+.faq-category-items {
+  column-count: 2;
+  column-gap: var(--space-5);
+}
+@media (max-width: 640px) {
+  .faq-category-items { column-count: 1; }
+}
+
 .faq-item {
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   margin-bottom: var(--space-3);
   background: var(--bg-card);
   overflow: hidden;
+  break-inside: avoid;
   transition: border-color var(--transition), box-shadow var(--transition);
 }
 .faq-item:hover { border-color: var(--primary); }
@@ -1858,10 +2042,14 @@
 }
 
 .contact-person {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
   padding: var(--space-4) 0;
   border-bottom: 1px solid var(--border-light);
 }
 .contact-person:last-child { border-bottom: none; }
+.contact-person-avatar { flex-shrink: 0; margin-top: 2px; }
 
 .contact-person h4 { margin-bottom: var(--space-1); }
 .contact-person p { font-size: 0.9rem; color: var(--text-muted); }

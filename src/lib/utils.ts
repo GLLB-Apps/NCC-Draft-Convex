@@ -17,6 +17,25 @@ export function usernameFromEmail(email: string): string {
   return email.split('@')[0] || email
 }
 
+export interface ContentStats {
+  words: number
+  paragraphs: number
+  blocks: number
+  /** Läshastighet ~200 ord/minut, avrundat uppåt — aldrig 0 så länge något är skrivet. */
+  readingMinutes: number
+}
+
+/** Ord/stycken/lästid över hela innehållet, för redigerarens sidofält. */
+export function contentStats(blocks: ContentBlock[]): ContentStats {
+  let words = 0
+  for (const b of blocks) {
+    const texts = [b.text, b.title, ...(b.items ?? [])].filter((t): t is string => !!t?.trim())
+    for (const t of texts) words += (t.trim().match(/\S+/g) ?? []).length
+  }
+  const paragraphs = blocks.filter(b => b.type === 'paragraph' && b.text?.trim()).length
+  return { words, paragraphs, blocks: blocks.length, readingMinutes: words > 0 ? Math.max(1, Math.round(words / 200)) : 0 }
+}
+
 export function formatDate(date: string | null | undefined, opts?: Intl.DateTimeFormatOptions): string {
   if (!date) return ''
   return new Date(date).toLocaleDateString('sv-SE', opts ?? { year: 'numeric', month: 'long', day: 'numeric' })

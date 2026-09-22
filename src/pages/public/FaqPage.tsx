@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ChevronDown, HelpCircle, MessagesSquare } from 'lucide-react'
+import { ChevronDown, MessagesSquare } from 'lucide-react'
 import PageHeader from '../../components/public/PageHeader'
 import type { FaqCategory, FaqItem } from '../../lib/types'
 import { supabase } from '../../lib/supabase'
 import { usePage } from '../../lib/usePage'
+import { useToast } from '../../lib/toast'
+import UserAvatar from '../../components/UserAvatar'
+import FaqQuestionForm from '../../components/public/FaqQuestionForm'
 
 export default function FaqPage() {
   const page = usePage('fragor-och-svar')
@@ -12,6 +15,8 @@ export default function FaqPage() {
   const [items, setItems] = useState<FaqItem[]>([])
   const [loading, setLoading] = useState(true)
   const [openItems, setOpenItems] = useState<Set<string>>(new Set())
+  const [tab, setTab] = useState<'browse' | 'ask'>('browse')
+  const { show } = useToast()
 
   useEffect(() => {
     Promise.all([
@@ -23,6 +28,20 @@ export default function FaqPage() {
       setLoading(false)
     })
   }, [])
+
+  async function handleAsk(data: { question: string; category_id: string | null; website: string }) {
+    if (data.website) return // honeypot
+    const { error } = await supabase.from('faq_items').insert({
+      question: data.question,
+      answer: '',
+      category_id: data.category_id,
+      sort_order: 0,
+      status: 'draft',
+    })
+    if (error) { show('Något gick fel. Försök igen senare.', 'error'); return }
+    show('Tack! Din fråga skickas till redaktionen och publiceras med svar.', 'success')
+    setTab('browse')
+  }
 
   function toggle(id: string) {
     setOpenItems(prev => {
@@ -38,7 +57,7 @@ export default function FaqPage() {
     return (
       <div key={item.id} className={open ? 'faq-item open' : 'faq-item'}>
         <button className="faq-question" onClick={() => toggle(item.id)} aria-expanded={open}>
-          <HelpCircle className="faq-q-icon" size={20} aria-hidden="true" />
+          <UserAvatar seed={item.question} size={28} animate="always" className="faq-q-icon" title="Vem frågar?" />
           <span className="faq-q-text">{item.question}</span>
           <ChevronDown className="faq-chevron" size={20} aria-hidden="true" />
         </button>
@@ -61,7 +80,20 @@ export default function FaqPage() {
         <PageHeader slug="fragor-och-svar" />
       </div>
 
-      {categories.length === 0 && items.length === 0 ? (
+      <div className="tabs" role="tablist">
+        <button role="tab" aria-selected={tab === 'browse'} className={tab === 'browse' ? 'tab active' : 'tab'} onClick={() => setTab('browse')}>
+          Frågor och svar
+        </button>
+        <button role="tab" aria-selected={tab === 'ask'} className={tab === 'ask' ? 'tab active' : 'tab'} onClick={() => setTab('ask')}>
+          Ställ en fråga
+        </button>
+      </div>
+
+      {tab === 'ask' ? (
+        <section className="fade-in" style={{ marginBottom: 'var(--space-9)' }}>
+          <FaqQuestionForm categories={categories} onSubmit={handleAsk} />
+        </section>
+      ) : categories.length === 0 && items.length === 0 ? (
         <div className="empty-state">
           <p>Inga frågor har publicerats ännu.</p>
         </div>
@@ -76,7 +108,7 @@ export default function FaqPage() {
                   <h3>{cat.name}</h3>
                   <span className="faq-count">{catItems.length}</span>
                 </div>
-                {catItems.map(renderItem)}
+                <div className="faq-category-items">{catItems.map(renderItem)}</div>
               </div>
             )
           })}
@@ -87,7 +119,7 @@ export default function FaqPage() {
                 <h3>{page.text('uncategorized_heading')}</h3>
                 <span className="faq-count">{uncategorized.length}</span>
               </div>
-              {uncategorized.map(renderItem)}
+              <div className="faq-category-items">{uncategorized.map(renderItem)}</div>
             </div>
           )}
 
@@ -95,9 +127,12 @@ export default function FaqPage() {
             <MessagesSquare className="faq-cta-icon" size={32} aria-hidden="true" />
             <div className="faq-cta-text">
               <h3>Hittade du inte svaret?</h3>
-              <p>Hör av dig så återkommer vi så snart vi kan.</p>
+              <p>Ställ frågan här så publicerar vi den med svar, eller hör av dig direkt.</p>
             </div>
-            <Link to="/kontakt" className="btn btn-primary">Kontakta oss</Link>
+            <div style={{ display: 'flex', gap: 'var(--space-3)', flexWrap: 'wrap' }}>
+              <button type="button" className="btn btn-primary" onClick={() => setTab('ask')}>Ställ en fråga</button>
+              <Link to="/kontakt" className="btn btn-secondary">Kontakta oss</Link>
+            </div>
           </div>
         </div>
       )}

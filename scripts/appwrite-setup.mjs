@@ -158,7 +158,11 @@ const schema = [
   },
   {
     id: 'faq_items', name: 'FAQ Items',
-    perms: CONTENT,
+    // Publik skrivrätt (till skillnad från övrigt CONTENT-innehåll): besökare
+    // ska kunna ställa en fråga utan konto, precis som med vittnesmål. Sparas
+    // med status 'draft' och är alltså inte i sig publikt läsbar i praktiken
+    // — FaqPage frågar bara efter status 'published'.
+    perms: [rd(ANY), cr(ANY), up(ADMIN), dl(ADMIN)],
     attrs: [
       txt('question'), txt('answer'), s('category_id', 64), i('sort_order', 0),
       en('status', STATUS3, false, 'draft'), s('published_at'),

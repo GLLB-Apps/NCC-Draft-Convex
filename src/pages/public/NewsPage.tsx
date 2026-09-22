@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import PageHeader from '../../components/public/PageHeader'
+import AvatarFacepile from '../../components/AvatarFacepile'
 import { Link, useSearchParams } from 'react-router-dom'
 import type { Post } from '../../lib/types'
 import { supabase } from '../../lib/supabase'
@@ -54,6 +55,13 @@ export default function NewsPage() {
     () => (tag ? inCategory.filter(p => postTags(p).some(t => t.toLowerCase() === tag.toLowerCase())) : inCategory),
     [inCategory, tag],
   )
+  // Redaktionens blobbar: kontona (garanterat riktiga admin-roller — bara de
+  // kan skapa inlägg) som faktiskt skrivit något publicerat. Förankat till
+  // konto-id:t, inte namnet, precis som vittnesmålens facepile.
+  const editorSeeds = useMemo(
+    () => Array.from(new Set(posts.map(p => p.created_by).filter((id): id is string => !!id))),
+    [posts],
+  )
 
   // Byte av kategori nollställer taggen – annars kan kombinationen bli tom.
   const pickCategory = (key: string) => setFilter({ kategori: category === key ? '' : key, tagg: '' })
@@ -67,7 +75,15 @@ export default function NewsPage() {
   return (
     <div className="container fade-in">
       <div className="page-header">
-        <PageHeader slug="nyheter" />
+        <PageHeader
+          slug="nyheter"
+          titleExtra={editorSeeds.length > 0 && (
+            <div className="news-editors" title="Redaktionen">
+              <AvatarFacepile seeds={editorSeeds} size={36} />
+              <span className="news-editors-label">Redaktionen</span>
+            </div>
+          )}
+        />
       </div>
 
       {posts.length > 0 && (

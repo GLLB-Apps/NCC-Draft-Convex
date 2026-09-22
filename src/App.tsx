@@ -20,6 +20,7 @@ const TopicDetailPage = lazy(() => import('./pages/public/TopicDetailPage'))
 const NewsPage = lazy(() => import('./pages/public/NewsPage'))
 const NewsDetailPage = lazy(() => import('./pages/public/NewsDetailPage'))
 const TestimoniesPage = lazy(() => import('./pages/public/TestimoniesPage'))
+const TestimonyDetailPage = lazy(() => import('./pages/public/TestimonyDetailPage'))
 const MapPage = lazy(() => import('./pages/public/MapPage'))
 const TimelinePage = lazy(() => import('./pages/public/TimelinePage'))
 const DocumentsPage = lazy(() => import('./pages/public/DocumentsPage'))
@@ -97,10 +98,10 @@ export default function App() {
   return (
     <BrowserRouter>
       <IntroLoader />
+      <BlobAvatarsProvider>
       <AuthProvider>
         <ToastProvider>
           <ConfirmProvider>
-          <BlobAvatarsProvider>
           <Suspense fallback={<PageSpinner />}>
             <Routes>
               {/* Public routes */}
@@ -112,6 +113,7 @@ export default function App() {
                 <Route path="/nyheter" element={<NewsPage />} />
                 <Route path="/nyheter/:slug" element={<NewsDetailPage />} />
                 <Route path="/vittnesmal" element={<TestimoniesPage />} />
+                <Route path="/vittnesmal/:id" element={<TestimonyDetailPage />} />
                 <Route path="/karta" element={<MapPage />} />
                 <Route path="/tidslinje" element={<TimelinePage />} />
                 <Route path="/dokument" element={<DocumentsPage />} />
@@ -180,10 +182,10 @@ export default function App() {
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
-          </BlobAvatarsProvider>
           </ConfirmProvider>
         </ToastProvider>
       </AuthProvider>
+      </BlobAvatarsProvider>
     </BrowserRouter>
   )
 }

@@ -1,8 +1,26 @@
 import { useEffect, useRef } from 'react'
 import L from 'leaflet'
+import { blobatar } from 'blobatar'
 import 'leaflet/dist/leaflet.css'
 import type { Testimony, MapLocation, LatLngTuple } from '../../lib/types'
 import { MAP_FIT_PADDING } from '../../lib/utils'
+import { useBlobAvatarsEnabled } from '../../lib/blobSettings'
+import { hueForSeed, NATURE_SHAPES } from '../../lib/blobPalette'
+
+/**
+ * Markören som en cirkulär blob — samma figur som syns i listan, kortet och
+ * den egna sidan (förankad till id, inte namnet). `blobatar()` är bibliotekets
+ * strängbaserade API, byggt för just det här: ren SVG-markup utan React, för
+ * Leaflets egna DOM-baserade ikoner. Avstängt i inställningarna faller den
+ * tillbaka på samma enfärgade prick som de redaktionella referenspunkterna.
+ */
+function testimonyMarkerHtml(seed: string, size: number, enabled: boolean): string {
+  if (!enabled) {
+    return `<div style="width:${size}px;height:${size}px;border-radius:50%;background:#2d5a3d;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)"></div>`
+  }
+  const svg = blobatar(seed, { background: 'circle', size, hue: hueForSeed(seed), traits: { shape: NATURE_SHAPES } })
+  return `<div style="width:${size}px;height:${size}px;border-radius:50%;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);overflow:hidden;">${svg}</div>`
+}
 
 interface Props {
   testimonies: Testimony[]
@@ -19,14 +37,17 @@ function escapeHtml(s: string) {
   return s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c] as string))
 }
 
-function popupHtml(t: Testimony) {
+function popupHtml(t: Testimony, blobsEnabled: boolean) {
   const author = escapeHtml(t.is_anonymous ? 'Anonym' : (t.author_name || 'Anonym'))
   const img = t.featured_image ? `<img src="${t.featured_image}" alt="" style="width:100%;height:120px;object-fit:cover;border-radius:6px;margin-bottom:6px"/>` : ''
   const title = t.title ? `<strong>${escapeHtml(t.title)}</strong><br/>` : ''
   const storyText = t.story.length > 160 ? t.story.slice(0, 160) + '…' : t.story
   const story = `<span style="font-size:0.85rem">${escapeHtml(storyText)}</span><br/>`
   const meta = escapeHtml(t.location ? `${author}, ${t.location}` : author)
-  return `${img}${title}${story}<span style="font-size:0.8rem;color:#666">${meta}</span>`
+  const avatar = testimonyMarkerHtml(t.id, 22, blobsEnabled)
+  return `${img}${title}${story}` +
+    `<span style="display:flex;align-items:center;gap:6px;font-size:0.8rem;color:#666">${avatar}${meta}</span><br/>` +
+    `<a href="/vittnesmal/${t.id}" style="font-size:0.8rem">Läs hela vittnesmålet →</a>`
 }
 
 // Map that shows testimony markers (with popups: image + story). Clicking a
@@ -37,6 +58,7 @@ export default function TestimonyMap({ testimonies, points = [], selectedId, onS
   const markersRef = useRef<Record<string, L.Marker>>({})
   const onSelectRef = useRef(onSelect)
   onSelectRef.current = onSelect
+  const blobsEnabled = useBlobAvatarsEnabled()
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return
@@ -60,17 +82,17 @@ export default function TestimonyMap({ testimonies, points = [], selectedId, onS
     testimonies.forEach(t => {
       if (t.map_lat == null || t.map_lng == null) return
       const icon = L.divIcon({
-        html: '<div style="width:16px;height:16px;border-radius:50% 50% 50% 0;background:#2d5a3d;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);transform:rotate(-45deg)"></div>',
-        className: '', iconSize: [16, 16], iconAnchor: [8, 16],
+        html: testimonyMarkerHtml(t.id, 34, blobsEnabled),
+        className: '', iconSize: [34, 34], iconAnchor: [17, 17], popupAnchor: [0, -20],
       })
       const marker = L.marker([t.map_lat, t.map_lng], { icon }).addTo(map)
-      marker.bindPopup(popupHtml(t), { maxWidth: 240 })
+      marker.bindPopup(popupHtml(t, blobsEnabled), { maxWidth: 240 })
       marker.on('click', () => onSelectRef.current(t.id))
       markersRef.current[t.id] = marker
     })
 
-    // Redaktionella vittnesmålspunkter: rund markör, till skillnad från
-    // vittnesmålens droppform, så att de går att skilja åt på kartan.
+    // Redaktionella referenspunkter: en enfärgad prick utan figur, till
+    // skillnad från vittnesmålens blobbar, så att de går att skilja åt.
     points.forEach(p => {
       const icon = L.divIcon({
         html: '<div style="width:16px;height:16px;border-radius:50%;background:#2d5a3d;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)"></div>',
@@ -85,7 +107,7 @@ export default function TestimonyMap({ testimonies, points = [], selectedId, onS
       marker.on('click', () => onSelectRef.current(p.id))
       markersRef.current[p.id] = marker
     })
-  }, [testimonies, points])
+  }, [testimonies, points, blobsEnabled])
 
   useEffect(() => {
     const map = mapRef.current
