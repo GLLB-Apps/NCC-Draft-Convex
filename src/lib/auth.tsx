@@ -10,6 +10,8 @@ interface AuthContextValue {
   session: Session | null
   user: User | null
   role: UserRole | null
+  /** Visningsnamnet från registreringen (profiles.display_name), eller null om inget satt. */
+  displayName: string | null
   isAdmin: boolean
   /** Har intranätsåtkomst — egen medlemsrad eller admin (admins är ett superset). */
   isMember: boolean
@@ -26,6 +28,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [user, setUser] = useState<User | null>(null)
   const [role, setRole] = useState<UserRole | null>(null)
+  const [displayName, setDisplayName] = useState<string | null>(null)
   const [hasMemberRow, setHasMemberRow] = useState(false)
   const [memberReadOnly, setMemberReadOnly] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -37,6 +40,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .eq('user_id', userId)
       .maybeSingle()
     setRole((data?.role as UserRole) ?? null)
+  }
+
+  async function fetchDisplayName(userId: string) {
+    const { data } = await supabase
+      .from('profiles')
+      .select('display_name')
+      .eq('id', userId)
+      .maybeSingle()
+    setDisplayName((data as { display_name?: string | null } | null)?.display_name ?? null)
   }
 
   // Intranätsåtkomst. Kollektionen är label-skyddad, så en användare utan
@@ -57,7 +69,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(session?.user ?? null)
       if (session?.user) {
         ;(async () => {
-          await Promise.all([fetchRole(session.user.id), fetchMember(session.user.id)])
+          await Promise.all([fetchRole(session.user.id), fetchMember(session.user.id), fetchDisplayName(session.user.id)])
           setLoading(false)
         })()
       } else {
@@ -75,13 +87,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // AdminGuard hann visa "Åtkomst nekad". Guarderna visar spinner så länge.
         setLoading(true)
         ;(async () => {
-          await Promise.all([fetchRole(session.user.id), fetchMember(session.user.id)])
+          await Promise.all([fetchRole(session.user.id), fetchMember(session.user.id), fetchDisplayName(session.user.id)])
           setLoading(false)
         })()
       } else {
         setRole(null)
         setHasMemberRow(false)
         setMemberReadOnly(false)
+        setDisplayName(null)
       }
     })
 
@@ -104,7 +117,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const canWriteIntranet = isAdmin || (hasMemberRow && !memberReadOnly)
 
   return (
-    <AuthContext.Provider value={{ session, user, role, isAdmin, isMember, canWriteIntranet, loading, signIn, signOut }}>
+    <AuthContext.Provider value={{ session, user, role, displayName, isAdmin, isMember, canWriteIntranet, loading, signIn, signOut }}>
       {children}
     </AuthContext.Provider>
   )

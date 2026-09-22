@@ -11,7 +11,9 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.120.0",
+    "@blobatar/react": "^2.7.0",
     "appwrite": "^26.2.0",
+    "blobatar": "^2.7.0",
     "heic2any": "^0.0.4",
     "leaflet": "^1.9.4",
     "lucide-react": "^1.25.0",

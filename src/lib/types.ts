@@ -91,6 +91,12 @@ export interface SiteSettings {
   hero_image: string | null
   hero_buttons: HeroButton[]
   background_blocks: ContentBlock[]
+  /**
+   * Styr Rögleblobbarna (de interaktiva avatarerna): 'off' = inga alls,
+   * 'admin' = bara i adminpanelen/intranätet, 'everywhere' = även publikt.
+   * Osatt (äldre rader) tolkas som 'everywhere' — se blobSettings.tsx.
+   */
+  blob_avatars: 'off' | 'admin' | 'everywhere' | null
 }
 
 /**

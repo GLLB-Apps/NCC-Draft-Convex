@@ -73,6 +73,7 @@ const schema = [
       txt('social_links'), txt('footer_text'), txt('privacy_text'), txt('cookie_text'),
       txt('status_message'), s('status_phase'), s('next_important_date'), i('signature_count', 0),
       s('hero_title'), txt('hero_intro'), url('hero_image'), txt('background_blocks'),
+      en('blob_avatars', ['off', 'admin', 'everywhere'], false, 'everywhere'),
     ],
     indexes: [],
   },

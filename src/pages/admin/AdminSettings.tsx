@@ -6,6 +6,12 @@ import { useToast } from '../../lib/toast'
 import { MAIL_DIALOG_DEFAULTS } from '../../lib/campaign'
 import { formatDate, todayIso, upcomingDates } from '../../lib/utils'
 
+const BLOB_MODES: { value: NonNullable<SiteSettings['blob_avatars']>; label: string; desc: string }[] = [
+  { value: 'off', label: 'Av', desc: 'Inga Rögleblobbar någonstans — vanliga platshållarikoner i stället.' },
+  { value: 'admin', label: 'Bara adminpanelen', desc: 'Syns i adminpanelen och intranätet, men inte på den publika sajten.' },
+  { value: 'everywhere', label: 'Överallt', desc: 'Syns även publikt: vittnesmål, startsidan, kontaktsidan, kartan.' },
+]
+
 export default function AdminSettings() {
   const [settings, setSettings] = useState<SiteSettings | null>(null)
   const [loading, setLoading] = useState(true)
@@ -71,6 +77,7 @@ export default function AdminSettings() {
       cookie_text: settings.cookie_text,
       status_message: settings.status_message,
       status_phase: settings.status_phase,
+      blob_avatars: settings.blob_avatars ?? 'everywhere',
       important_dates: sortedDates,
       // Speglar det närmast kommande datumet, så att äldre läsare av fältet
       // fortsätter visa rätt sak.
@@ -134,6 +141,32 @@ export default function AdminSettings() {
             <label className="form-label" htmlFor="favicon_url">Favicon (URL)</label>
             <input id="favicon_url" className="form-input" type="url" value={settings.favicon_url ?? ''} onChange={e => update('favicon_url', e.target.value || null)} />
           </div>
+        </div>
+      </div>
+
+      <div className="admin-form-card" style={{ marginTop: 'var(--space-5)' }}>
+        <h3 style={{ marginBottom: 'var(--space-3)' }}>Rögleblobbar</h3>
+        <p className="text-muted" style={{ fontSize: '0.85rem', marginBottom: 'var(--space-4)' }}>
+          Styr var de interaktiva avatar-figurerna syns — vittnesmål, kontosidor, startsidans teaser m.m.
+        </p>
+        <div className="form-group">
+          <div className="segmented-switch" role="radiogroup" aria-label="Rögleblobbar">
+            {BLOB_MODES.map(m => (
+              <button
+                key={m.value}
+                type="button"
+                role="radio"
+                aria-checked={(settings.blob_avatars ?? 'everywhere') === m.value}
+                className={`segmented-switch-option${(settings.blob_avatars ?? 'everywhere') === m.value ? ' is-active' : ''}`}
+                onClick={() => update('blob_avatars', m.value)}
+              >
+                {m.label}
+              </button>
+            ))}
+          </div>
+          <p className="text-muted" style={{ fontSize: '0.8rem', marginTop: 'var(--space-2)' }}>
+            {BLOB_MODES.find(m => m.value === (settings.blob_avatars ?? 'everywhere'))?.desc}
+          </p>
         </div>
       </div>
 
