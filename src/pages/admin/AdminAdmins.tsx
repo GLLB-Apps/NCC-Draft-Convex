@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
+import UserAvatar from '../../components/UserAvatar'
+import PasswordField from '../../components/PasswordField'
 import { supabase, createSessionJwt } from '../../lib/supabase'
 import { useAuth } from '../../lib/auth'
 import { useToast } from '../../lib/toast'
@@ -47,6 +49,7 @@ export default function AdminAdmins() {
   const [pwdFor, setPwdFor] = useState<string | null>(null)
   const [pwdValue, setPwdValue] = useState('')
   const [pwdBusy, setPwdBusy] = useState(false)
+  const [sendingPwd, setSendingPwd] = useState<string | null>(null)
   // Presentationer fälls ut en i taget i listan över aktiva – i väntelistan
   // står de alltid framme, för där är de underlaget för beslutet.
   const [introFor, setIntroFor] = useState<string | null>(null)
@@ -56,6 +59,13 @@ export default function AdminAdmins() {
   const [emails, setEmails] = useState<Record<string, string | null>>({})
 
   useEffect(() => { load(); loadEmails() }, [])
+
+  useEffect(() => {
+    if (!pwdFor) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { setPwdFor(null); setPwdValue('') } }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [pwdFor])
 
   async function loadEmails() {
     try {
@@ -247,6 +257,26 @@ export default function AdminAdmins() {
     } finally { setPwdBusy(false) }
   }
 
+  /** Sätter det inskrivna lösenordet och mejlar samma lösenord till personen. */
+  async function emailUserPassword(userId: string) {
+    if (pwdValue.length < 8) { show('Lösenordet måste vara minst 8 tecken', 'error'); return }
+    setSendingPwd(userId)
+    try {
+      const jwt = await createSessionJwt()
+      const res = await fetch('/api/send-user-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${jwt}` },
+        body: JSON.stringify({ userId, password: pwdValue }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) { show('Kunde inte skicka: ' + (data.error || res.status), 'error'); return }
+      show('Lösenordet uppdaterat och skickat via mejl', 'success')
+      setPwdFor(null); setPwdValue('')
+    } catch (e) {
+      show('Kunde inte skicka: ' + (e instanceof Error ? e.message : String(e)), 'error')
+    } finally { setSendingPwd(null) }
+  }
+
   const adminCount = useMemo(() => people.filter(p => isAdminLevel(p.level)).length, [people])
   const memberCount = people.length - adminCount
 
@@ -284,6 +314,7 @@ export default function AdminAdmins() {
           <div className="admin-list">
             {pending.map(u => (
               <div key={u.id} className="admin-list-item" style={{ flexWrap: 'wrap' }}>
+                <UserAvatar seed={emails[u.id] ?? u.id} size={36} style={{ flexShrink: 0 }} />
                 <div className="admin-list-item-info">
                   <div className="admin-list-item-title">{u.display_name ?? 'Namnlös användare'}</div>
                   <div className="admin-list-item-meta">
@@ -332,6 +363,7 @@ export default function AdminAdmins() {
             const lockSelf = isSelf && currentRole === 'superadmin'
             return (
               <div key={p.user_id} className="admin-list-item" style={{ flexWrap: 'wrap' }}>
+                <UserAvatar seed={emails[p.user_id] ?? p.user_id} size={36} style={{ flexShrink: 0 }} />
                 <div className="admin-list-item-info">
                   <div className="admin-list-item-title">
                     {p.display_name ?? 'Okänd användare'}
@@ -362,7 +394,7 @@ export default function AdminAdmins() {
                       {introFor === p.user_id ? 'Dölj presentation' : 'Presentation'}
                     </button>
                   )}
-                  <button className="btn btn-ghost btn-sm" onClick={() => { setPwdFor(pwdFor === p.user_id ? null : p.user_id); setPwdValue('') }}>
+                  <button className="btn btn-ghost btn-sm" onClick={() => { setPwdFor(p.user_id); setPwdValue('') }}>
                     Byt lösenord
                   </button>
                   {!isSelf && (
@@ -371,20 +403,6 @@ export default function AdminAdmins() {
                 </div>
                 {introFor === p.user_id && p.intro && (
                   <p className="admin-user-intro" style={{ flexBasis: '100%' }}>{p.intro}</p>
-                )}
-                {pwdFor === p.user_id && (
-                  <div className="admin-pwd-row">
-                    <input
-                      className="form-input" type="text" autoComplete="new-password"
-                      placeholder="Nytt lösenord (minst 8 tecken)"
-                      value={pwdValue} onChange={e => setPwdValue(e.target.value)}
-                      onKeyDown={e => { if (e.key === 'Enter') setUserPassword(p.user_id) }}
-                    />
-                    <button className="btn btn-primary btn-sm" onClick={() => setUserPassword(p.user_id)} disabled={pwdBusy}>
-                      {pwdBusy ? 'Sparar…' : 'Spara lösenord'}
-                    </button>
-                    <button className="btn btn-ghost btn-sm" onClick={() => { setPwdFor(null); setPwdValue('') }}>Avbryt</button>
-                  </div>
                 )}
               </div>
             )
@@ -400,6 +418,47 @@ export default function AdminAdmins() {
           då hamnar det i väntelistan och går att radera.
         </p>
       </div>
+
+      {pwdFor && (() => {
+        const p = people.find(x => x.user_id === pwdFor)
+        if (!p) return null
+        const isSelf = p.user_id === currentUser?.id
+        const close = () => { setPwdFor(null); setPwdValue('') }
+        return (
+          <div className="admin-modal-backdrop" onClick={close}>
+            <div className="admin-modal" role="dialog" aria-modal="true" aria-label="Byt lösenord" onClick={e => e.stopPropagation()}>
+              <div className="admin-modal-head">
+                <h3>Byt lösenord — {p.display_name || emails[p.user_id] || 'användaren'}</h3>
+                <button type="button" className="btn btn-ghost btn-sm" onClick={close}>Stäng</button>
+              </div>
+              <PasswordField
+                name={emails[p.user_id] ?? p.user_id}
+                label="Nytt lösenord (minst 8 tecken)"
+                value={pwdValue}
+                onValueChange={setPwdValue}
+                autoFocus
+                onKeyDown={e => { if (e.key === 'Enter') setUserPassword(p.user_id) }}
+              />
+              <div className="admin-modal-actions">
+                <button className="btn btn-ghost btn-sm" onClick={close}>Avbryt</button>
+                {!isSelf && (
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    disabled={pwdBusy || sendingPwd === p.user_id || pwdValue.length < 8}
+                    onClick={() => emailUserPassword(p.user_id)}
+                    title="Sätter det inskrivna lösenordet och mejlar samma lösenord till personen"
+                  >
+                    {sendingPwd === p.user_id ? 'Skickar…' : 'Mejla lösenordet'}
+                  </button>
+                )}
+                <button className="btn btn-primary btn-sm" onClick={() => setUserPassword(p.user_id)} disabled={pwdBusy || sendingPwd === p.user_id}>
+                  {pwdBusy ? 'Sparar…' : 'Spara lösenord'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }
