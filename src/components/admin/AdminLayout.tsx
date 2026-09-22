@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Sun, Moon } from 'lucide-react'
 import { useAuth } from '../../lib/auth'
 import type { UserRole } from '../../lib/types'
 import { roleLabel } from '../../lib/utils'
@@ -117,12 +118,37 @@ function AdminMenu({ role, pathname, onNavigate }: {
   )
 }
 
+const THEME_KEY = 'ncc-rs:admin-theme'
+
+/** Sparat val, annars systemets färgschema, annars ljust. */
+function initialTheme(): 'light' | 'dark' {
+  try {
+    const saved = window.localStorage.getItem(THEME_KEY)
+    if (saved === 'light' || saved === 'dark') return saved
+  } catch { /* privat läge, blockerad lagring m.m. */ }
+  try {
+    if (window.matchMedia('(prefers-color-scheme: dark)').matches) return 'dark'
+  } catch { /* okänd preferens */ }
+  return 'light'
+}
+
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  const { user, role, signOut } = useAuth()
+  const { user, role, displayName, signOut } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [query, setQuery] = useState('')
+  const [theme, setTheme] = useState<'light' | 'dark'>(initialTheme)
+
+  // Sätts på <html> (inte bara .admin-layout) så att toasts och dialogrutor
+  // också nås — ToastProvider/ConfirmProvider monteras i App.tsx ovanför hela
+  // routningen, utanför AdminLayouts eget DOM-träd. Tas bort vid unmount så
+  // publika sidan/intranätet aldrig ärver det.
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme
+    try { window.localStorage.setItem(THEME_KEY, theme) } catch { /* ignore */ }
+    return () => { delete document.documentElement.dataset.theme }
+  }, [theme])
 
   const destinations = useMemo(() => {
     const items: { label: string; path: string }[] = []
@@ -215,12 +241,22 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             ))}
           </nav>
           <div className="admin-user-menu">
-            <NotificationBell />
-            <span className="admin-user-name">
-              {user?.email}
-              {role && <span className="badge badge-muted" style={{ marginLeft: 'var(--space-2)' }}>{roleLabel(role)}</span>}
-            </span>
-            <button className="btn btn-ghost btn-sm" onClick={handleSignOut}>Logga ut</button>
+            <button
+              type="button"
+              className="admin-bell-button"
+              onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')}
+              aria-label={theme === 'dark' ? 'Byt till ljust läge' : 'Byt till mörkt läge'}
+              title={theme === 'dark' ? 'Byt till ljust läge' : 'Byt till mörkt läge'}
+            >
+              {theme === 'dark' ? <Sun size={18} aria-hidden="true" /> : <Moon size={18} aria-hidden="true" />}
+            </button>
+            <NotificationBell
+              avatarSeed={user?.email ?? ''}
+              email={user?.email ?? ''}
+              displayName={displayName}
+              roleLabel={role ? roleLabel(role) : ''}
+              onSignOut={handleSignOut}
+            />
           </div>
         </header>
         <div className="admin-content">

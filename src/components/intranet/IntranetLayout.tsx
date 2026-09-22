@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { LayoutGrid, FileText, StickyNote, ListChecks, Megaphone, LogOut, ExternalLink } from 'lucide-react'
+import { LayoutGrid, FileText, StickyNote, ListChecks, Megaphone, ExternalLink } from 'lucide-react'
 import { useAuth } from '../../lib/auth'
 import { IntranetNotificationsProvider, useIntranetNotifications, type IntranetSource } from '../../lib/intranetNotifications'
 import MobileAdminNotice from '../admin/MobileAdminNotice'
@@ -45,7 +45,7 @@ function IntranetNav({ pathname, onNavigate }: { pathname: string; onNavigate: (
 }
 
 export default function IntranetLayout({ children }: { children: React.ReactNode }) {
-  const { user, isAdmin, canWriteIntranet, signOut } = useAuth()
+  const { user, isAdmin, canWriteIntranet, displayName, signOut } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
@@ -84,14 +84,13 @@ export default function IntranetLayout({ children }: { children: React.ReactNode
             <button className="admin-sidebar-toggle" onClick={() => setOpen(!open)} aria-label="Visa/dölj meny">☰</button>
             <div className="intranet-topbar-title">Internt arbetsrum</div>
             <div className="admin-user-menu">
-              <IntranetBell />
-              <span className="admin-user-name">
-                {user?.email}
-                <span className="badge badge-muted" style={{ marginLeft: 'var(--space-2)' }}>{isAdmin ? 'Admin' : canWriteIntranet ? 'Medlem' : 'Läsbehörighet'}</span>
-              </span>
-              <button className="btn btn-ghost btn-sm" onClick={handleSignOut}>
-                <LogOut size={15} aria-hidden="true" /> Logga ut
-              </button>
+              <IntranetBell
+                avatarSeed={user?.email ?? ''}
+                email={user?.email ?? ''}
+                displayName={displayName}
+                roleLabel={isAdmin ? 'Admin' : canWriteIntranet ? 'Medlem' : 'Läsbehörighet'}
+                onSignOut={handleSignOut}
+              />
             </div>
           </header>
           <div className="admin-content">

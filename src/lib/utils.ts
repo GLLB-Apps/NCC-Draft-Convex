@@ -12,6 +12,11 @@ export function slugify(text: string): string {
     .replace(/^-+|-+$/g, '')
 }
 
+/** Användarnamnet ur en e-postadress, för en vänligare hälsning än hela adressen. */
+export function usernameFromEmail(email: string): string {
+  return email.split('@')[0] || email
+}
+
 export function formatDate(date: string | null | undefined, opts?: Intl.DateTimeFormatOptions): string {
   if (!date) return ''
   return new Date(date).toLocaleDateString('sv-SE', opts ?? { year: 'numeric', month: 'long', day: 'numeric' })

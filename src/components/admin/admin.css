@@ -1,3 +1,57 @@
+/* Mörkt läge — växlas via <html data-theme="dark"> (satt av AdminLayout.tsx,
+   se dess useEffect). Skriver om samma CSS-variabler som resten av admin.css
+   och index.css redan konsumerar överallt (var(--bg), var(--text), osv.), så
+   nästan hela adminpanelen får mörkt läge via CSS-arv utan att röra enskilda
+   komponentfiler. Samma varma, skogsgröna profil som ljust läge — bara mörk,
+   inte en generisk grå/blå mörk UI. Huvudfärgerna är ljusade för läsbarhet
+   mot den mörka bakgrunden (annars blir länkar/ikoner osynliga); -dark-
+   varianterna behåller samma "mörkare på hover"-riktning som i ljust läge, så
+   vita knapptexter (.btn-primary m.fl.) förblir läsbara.
+   Attributet sätts bara medan AdminLayout är monterad, så publika sidan och
+   intranätet påverkas aldrig. */
+:root[data-theme="dark"] {
+  --primary: #4f9268;
+  --primary-dark: #3a6d4d;
+  --primary-light: #8fd1a8;
+  --primary-bg: #17301f;
+  --primary-border: rgba(143, 209, 168, 0.3);
+
+  --secondary: #7fabc0;
+  --secondary-dark: #5e8598;
+  --secondary-light: #a8cad8;
+  --secondary-bg: #17262c;
+
+  --accent: #c2a071;
+  --accent-bg: #2c2317;
+  --accent-border: rgba(194, 160, 113, 0.3);
+
+  --success: #4f9268;
+  --success-bg: #17301f;
+  --warning: #d9ae49;
+  --warning-bg: #332a10;
+  --error: #d97c6c;
+  --error-bg: #34201c;
+
+  --text: #dcdcd6;
+  --text-heading: #f2f1ea;
+  --text-muted: #8b9690;
+  --text-light: #61695f;
+  --bg: #12181a;
+  --bg-card: #1a241d;
+  --bg-alt: #161f19;
+  --border: #2b362f;
+  --border-strong: #3c4a41;
+  --border-light: #212c25;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.5);
+  --shadow-focus: 0 0 0 3px rgba(79, 146, 104, 0.35);
+
+  /* Inbyggda formulärkontroller (kryssrutor, <select>, scrollbars) följer med. */
+  color-scheme: dark;
+}
+
 /* Interna dokument */
 .intdoc-cats { margin-bottom: var(--space-5); display: flex; flex-direction: column; gap: var(--space-3); }
 .intdoc-cat-add { display: flex; gap: var(--space-2); align-items: center; }
@@ -285,6 +339,16 @@
 .admin-mobile-notice-card p { color: var(--text-muted); line-height: 1.6; margin: 0 0 var(--space-5); }
 
 /* Handbook */
+.handbook-intro-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+.handbook-intro-row .handbook-intro { margin-bottom: 0; }
+@media (max-width: 560px) {
+  .handbook-intro-row { flex-direction: column; align-items: flex-start; }
+}
 .handbook-intro { max-width: 70ch; margin-bottom: var(--space-6); font-size: 0.95rem; line-height: 1.7; }
 .handbook-grid {
   display: grid;
@@ -322,17 +386,43 @@
 }
 
 /* Change-password inline row (Administratörer) */
-.admin-pwd-row {
-  flex-basis: 100%;
+.admin-modal-actions {
   display: flex;
   gap: var(--space-2);
-  align-items: center;
-  margin-top: var(--space-3);
-  padding-top: var(--space-3);
-  border-top: 1px solid var(--border-light);
+  justify-content: flex-end;
+  margin-top: var(--space-4);
+  flex-wrap: wrap;
 }
-.admin-pwd-row .form-input { flex: 1; }
-.admin-pwd-row .btn { flex-shrink: 0; }
+
+.blobatar-password-field {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  text-align: center;
+}
+.blobatar-password-field svg { transition: none; } /* blobatarens egna morph sköter övergången */
+.blobatar-password-field .form-group { text-align: left; }
+.blobatar-password-field-input-wrap { position: relative; }
+.blobatar-password-field-input-wrap .form-input { padding-right: 56px; }
+.blobatar-password-field-toggle {
+  position: absolute;
+  top: 50%;
+  right: var(--space-2);
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  padding: 0;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.blobatar-password-field-toggle:hover { color: var(--text); background: var(--bg-alt); }
 
 /* Sponsors admin */
 .sponsor-row-order { display: flex; flex-direction: column; gap: 2px; flex-shrink: 0; }
@@ -376,7 +466,11 @@
 
 .admin-sidebar {
   width: 260px;
-  background: var(--text-heading);
+  /* Fast mörk panel oavsett tema (inte var(--text-heading) — den blir nästan
+     vit i mörkt läge, och texten här är hårdkodat ljus). Sidomenyn har redan
+     sett ut som en permanent mörk panel, med eller utan mörkt läge på
+     innehållet, så den hålls medvetet oberoende av temat. */
+  background: #1a1a1a;
   color: #c0c0c0;
   display: flex;
   flex-direction: column;
@@ -704,6 +798,23 @@
   padding: var(--space-7) var(--space-6);
 }
 
+.admin-login-avatar-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-5);
+  text-align: center;
+}
+.admin-login-avatar-preview svg { transition: none; } /* blobatarens egna morph sköter övergången */
+
+.admin-login-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+}
+
 .admin-login-card {
   background: var(--bg-card);
   border: 1px solid var(--border);
@@ -751,6 +862,16 @@
   color: var(--text-muted);
   margin-top: var(--space-3);
 }
+
+.btn-link {
+  background: none;
+  border: none;
+  color: var(--primary);
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: var(--space-1) 0;
+}
+.btn-link:hover { text-decoration: underline; }
 
 @media (max-width: 860px) {
   .admin-login-split { grid-template-columns: 1fr; min-height: 100vh; }
@@ -852,6 +973,28 @@
   max-width: 800px;
 }
 
+/* 3-läges switch, t.ex. Rögleblobbarnas Av/Bara admin/Överallt. */
+.segmented-switch {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.segmented-switch-option {
+  padding: var(--space-2) var(--space-4);
+  font-size: 0.85rem;
+  font-weight: 500;
+  background: var(--bg-card);
+  color: var(--text-muted);
+  border: none;
+  border-right: 1px solid var(--border);
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition);
+}
+.segmented-switch-option:last-child { border-right: none; }
+.segmented-switch-option:hover { background: var(--bg-alt); }
+.segmented-switch-option.is-active { background: var(--primary); color: #fff; }
+
 /* WordPress-style editor layout: full-width content + settings sidebar */
 .editor-layout {
   display: grid;
@@ -931,6 +1074,28 @@
   margin-top: var(--space-3);
 }
 .editor-panel-actions .btn { width: 100%; }
+
+/* Innehållsstatistik längst ned i redigerarens sidofält */
+.content-stats-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+.content-stats-numbers { display: flex; gap: var(--space-4); }
+.content-stats-numbers > div { display: flex; flex-direction: column; align-items: center; }
+.content-stats-numbers strong {
+  font-size: 1.3rem;
+  font-family: var(--font-heading);
+  color: var(--text-heading);
+  line-height: 1.1;
+}
+.content-stats-numbers span {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
 
 .editor-image-preview {
   margin-top: var(--space-2);
@@ -1996,6 +2161,45 @@
   z-index: 60;
   overflow: hidden;
 }
+
+/* Konto-raden längst upp i panelen — avatar, e-post/roll, logga ut. Ersätter
+   det som tidigare stod löst i toppbaren (se AdminLayout.tsx/IntranetLayout.tsx). */
+.admin-bell-account {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-alt);
+}
+.admin-bell-account-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.admin-bell-account-info strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.88rem;
+}
+.admin-bell-account-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.admin-bell-account-email {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  font-size: 0.76rem;
+  color: var(--text-muted);
+}
+.admin-bell-account-meta .badge { flex-shrink: 0; }
 
 .admin-bell-header {
   display: flex;

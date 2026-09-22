@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Bell, Mail, MessageSquareQuote, FileEdit, Megaphone, StickyNote, ListChecks, FileText } from 'lucide-react'
+import { Mail, MessageSquareQuote, FileEdit, Megaphone, StickyNote, ListChecks, FileText, LogOut } from 'lucide-react'
 import { useNotifications, NOTIFICATION_SOURCES, timeAgo, type NotificationSource } from '../../lib/notifications'
+import { usernameFromEmail } from '../../lib/utils'
+import UserAvatar from '../UserAvatar'
 
-const SOURCE_ICONS: Record<NotificationSource, typeof Bell> = {
+const SOURCE_ICONS: Record<NotificationSource, typeof Mail> = {
   messages: Mail,
   testimonies: MessageSquareQuote,
   drafts: FileEdit,
@@ -13,7 +15,15 @@ const SOURCE_ICONS: Record<NotificationSource, typeof Bell> = {
   documents: FileText,
 }
 
-export default function NotificationBell() {
+export default function NotificationBell({ avatarSeed, email, displayName, roleLabel, onSignOut }: {
+  /** Vanligtvis den inloggades e-post — samma figur överallt personen syns. */
+  avatarSeed: string
+  email: string
+  /** Visningsnamnet från registreringen, om personen har ett. */
+  displayName?: string | null
+  roleLabel: string
+  onSignOut: () => void
+}) {
   const { items, newCount, newBySource, loading, error, clearableCount, markAllRead, clearRead } = useNotifications()
   const [open, setOpen] = useState(false)
   const wrapRef = useRef<HTMLDivElement>(null)
@@ -39,7 +49,7 @@ export default function NotificationBell() {
     navigate(path)
   }
 
-  const label = newCount > 0 ? `Notiser (${newCount} nya)` : 'Notiser'
+  const label = newCount > 0 ? `Konto och notiser (${newCount} nya)` : 'Konto och notiser'
 
   return (
     <div className="admin-bell" ref={wrapRef}>
@@ -51,12 +61,26 @@ export default function NotificationBell() {
         aria-expanded={open}
         aria-haspopup="true"
       >
-        <Bell size={18} aria-hidden="true" />
+        <UserAvatar seed={avatarSeed || email} size={28} gaze />
         {newCount > 0 && <span className="admin-bell-badge">{newCount > 99 ? '99+' : newCount}</span>}
       </button>
 
       {open && (
-        <div className="admin-bell-panel" role="dialog" aria-label="Notiser">
+        <div className="admin-bell-panel" role="dialog" aria-label="Konto och notiser">
+          <div className="admin-bell-account">
+            <UserAvatar seed={avatarSeed || email} size={40} />
+            <div className="admin-bell-account-info">
+              <strong>Hej {displayName || usernameFromEmail(email)}</strong>
+              <span className="admin-bell-account-meta">
+                <span className="admin-bell-account-email">{email}</span>
+                <span className="badge badge-muted">{roleLabel}</span>
+              </span>
+            </div>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={onSignOut}>
+              <LogOut size={15} aria-hidden="true" /> Logga ut
+            </button>
+          </div>
+
           <div className="admin-bell-header">
             <strong>Notiser</strong>
             <span className="admin-bell-actions">
