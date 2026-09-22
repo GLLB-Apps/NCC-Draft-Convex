@@ -1,9 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../lib/auth'
 import { useToast } from '../../lib/toast'
 import MobileAdminNotice from '../../components/admin/MobileAdminNotice'
+import UserAvatar from '../../components/UserAvatar'
+import { thinking, sleepy } from 'blobatar/expression'
+import { Eye, EyeOff } from 'lucide-react'
 
 // Presentationen är obligatorisk vid registrering: den som tilldelar behörighet
 // ska veta vem personen är innan de släpps in. Minimilängden hindrar "hej".
@@ -24,15 +27,25 @@ export default function AdminLogin() {
     return () => { cancelled = true }
   }, [])
 
-  const [mode, setMode] = useState<'login' | 'signup'>('login')
+  const [mode, setMode] = useState<'login' | 'signup' | 'forgot'>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [displayName, setDisplayName] = useState('')
   const [intro, setIntro] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [signupDone, setSignupDone] = useState(false)
+  const [forgotSent, setForgotSent] = useState(false)
+  const [loginShown, setLoginShown] = useState(false)
+  const [signupShown, setSignupShown] = useState(false)
+  const loginPasswordRef = useRef<HTMLInputElement>(null)
 
-  if (loading) return null
+  if (loading) {
+    return (
+      <div className="admin-login-page admin-login-loading">
+        <UserAvatar seed="rogleskogen" size={72} expression={thinking} title="Läser in…" />
+      </div>
+    )
+  }
   // Admins till adminpanelen, alla andra inloggade till intranätet (guarden där
   // visar ett vänligt meddelande om kontot ännu inte fått medlemsåtkomst).
   if (session) return <Navigate to={isAdmin ? '/admin' : '/internt'} replace />
@@ -76,6 +89,17 @@ export default function AdminLogin() {
     setSignupDone(true)
   }
 
+  async function handleForgot(e: React.FormEvent) {
+    e.preventDefault()
+    setSubmitting(true)
+    // Servern (Appwrite) svarar alltid likadant oavsett om kontot finns — så
+    // UI:t kan inte (och ska inte) skilja på fallen här heller.
+    const { error } = await supabase.auth.resetPasswordForEmail(email, `${window.location.origin}/admin/aterstall-losenord`)
+    setSubmitting(false)
+    if (error) { show(error.message, 'error'); return }
+    setForgotSent(true)
+  }
+
   return (
     <div className="admin-login-page">
       <MobileAdminNotice />
@@ -115,44 +139,122 @@ export default function AdminLogin() {
             </div>
           ) : (
             <div className="admin-login-card">
-              <h2 className="admin-login-title">{mode === 'login' ? 'Välkommen tillbaka' : 'Skapa konto'}</h2>
-              <p className="admin-login-subtitle">
-                {mode === 'login' ? 'Logga in för att hantera webbplatsen.' : 'Registrera dig – en administratör aktiverar ditt konto.'}
-              </p>
+              <h2 className="admin-login-title">
+                {mode === 'login' ? 'Välkommen tillbaka' : mode === 'signup' ? 'Skapa konto' : 'Glömt lösenordet'}
+              </h2>
+              {mode !== 'forgot' && (
+                <p className="admin-login-subtitle">
+                  {mode === 'login' ? 'Logga in för att hantera webbplatsen.' : 'Registrera dig – en administratör aktiverar ditt konto.'}
+                </p>
+              )}
 
-              <div className="admin-login-tabs">
-                <button
-                  type="button"
-                  className={mode === 'login' ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm'}
-                  onClick={() => setMode('login')}
-                >
-                  Logga in
-                </button>
-                <button
-                  type="button"
-                  className={mode === 'signup' ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm'}
-                  onClick={() => setMode('signup')}
-                >
-                  Skapa konto
-                </button>
-              </div>
+              {mode !== 'forgot' && (
+                <div className="admin-login-tabs">
+                  <button
+                    type="button"
+                    className={mode === 'login' ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm'}
+                    onClick={() => setMode('login')}
+                  >
+                    Logga in
+                  </button>
+                  <button
+                    type="button"
+                    className={mode === 'signup' ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm'}
+                    onClick={() => setMode('signup')}
+                  >
+                    Skapa konto
+                  </button>
+                </div>
+              )}
 
               {mode === 'login' ? (
                 <form onSubmit={handleLogin}>
+                  <div className="admin-login-avatar-preview">
+                    <UserAvatar
+                      seed={email}
+                      size={88}
+                      caretOf={loginPasswordRef}
+                      revealed={loginShown}
+                      expression={loginShown ? sleepy : submitting ? thinking : undefined}
+                      title={submitting ? 'Loggar in…' : loginShown ? 'Tittar bort — lösenordet syns i klartext' : 'Din Rögleblobb'}
+                    />
+                  </div>
                   <div className="form-group">
                     <label className="form-label" htmlFor="email">E-postadress</label>
                     <input id="email" className="form-input" type="email" autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} required />
                   </div>
                   <div className="form-group">
                     <label className="form-label" htmlFor="password">Lösenord</label>
-                    <input id="password" className="form-input" type="password" autoComplete="current-password" value={password} onChange={e => setPassword(e.target.value)} required />
+                    <div className="blobatar-password-field-input-wrap">
+                      <input
+                        ref={loginPasswordRef} id="password" className="form-input"
+                        type={loginShown ? 'text' : 'password'} autoComplete="current-password"
+                        value={password} onChange={e => setPassword(e.target.value)} required
+                      />
+                      <button
+                        type="button" tabIndex={-1}
+                        aria-pressed={loginShown} aria-label={loginShown ? 'Dölj lösenord' : 'Visa lösenord'}
+                        title={loginShown ? 'Dölj lösenord' : 'Visa lösenord'}
+                        onClick={() => { setLoginShown(s => !s); loginPasswordRef.current?.focus() }}
+                        className="blobatar-password-field-toggle"
+                      >
+                        {loginShown ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}
+                      </button>
+                    </div>
                   </div>
                   <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: 'var(--space-3)' }} disabled={submitting}>
                     {submitting ? 'Loggar in…' : 'Logga in'}
                   </button>
+                  <button
+                    type="button"
+                    className="btn-link"
+                    style={{ display: 'block', margin: 'var(--space-3) auto 0', textAlign: 'center' }}
+                    onClick={() => { setForgotSent(false); setMode('forgot') }}
+                  >
+                    Glömt lösenordet?
+                  </button>
                 </form>
+              ) : mode === 'forgot' ? (
+                forgotSent ? (
+                  <div style={{ textAlign: 'center' }}>
+                    <div className="admin-login-check" aria-hidden="true">✓</div>
+                    <p className="admin-login-subtitle">
+                      Om {email} har ett konto skickades en återställningslänk dit.
+                    </p>
+                    <button type="button" className="btn btn-primary" style={{ width: '100%' }} onClick={() => setMode('login')}>
+                      Till inloggningen
+                    </button>
+                  </div>
+                ) : (
+                  <form onSubmit={handleForgot}>
+                    <p className="admin-login-hint" style={{ marginTop: 0 }}>
+                      Ange kontots e-postadress så mejlar vi en länk för att sätta ett nytt lösenord.
+                    </p>
+                    <div className="form-group">
+                      <label className="form-label" htmlFor="email">E-postadress</label>
+                      <input id="email" className="form-input" type="email" autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} required />
+                    </div>
+                    <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: 'var(--space-3)' }} disabled={submitting}>
+                      {submitting ? 'Skickar…' : 'Skicka återställningslänk'}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-link"
+                      style={{ display: 'block', margin: 'var(--space-3) auto 0', textAlign: 'center' }}
+                      onClick={() => setMode('login')}
+                    >
+                      Tillbaka till inloggningen
+                    </button>
+                  </form>
+                )
               ) : (
                 <form onSubmit={handleSignup}>
+                  <div className="admin-login-avatar-preview">
+                    <UserAvatar seed={`${email}|${intro}`} size={88} gaze title="Din Rögleblobb — ändras när du skriver" />
+                    <p className="admin-login-hint" style={{ margin: 0 }}>
+                      Din Rögleblobb här ändras medan du skriver e-post och presentation.
+                    </p>
+                  </div>
                   <div className="form-group">
                     <label className="form-label" htmlFor="displayName">Ditt namn</label>
                     <input id="displayName" className="form-input" type="text" autoComplete="name" value={displayName} onChange={e => setDisplayName(e.target.value)} required />
@@ -163,7 +265,22 @@ export default function AdminLogin() {
                   </div>
                   <div className="form-group">
                     <label className="form-label" htmlFor="password">Lösenord (minst 8 tecken)</label>
-                    <input id="password" className="form-input" type="password" autoComplete="new-password" minLength={8} value={password} onChange={e => setPassword(e.target.value)} required />
+                    <div className="blobatar-password-field-input-wrap">
+                      <input
+                        id="password" className="form-input"
+                        type={signupShown ? 'text' : 'password'} autoComplete="new-password" minLength={8}
+                        value={password} onChange={e => setPassword(e.target.value)} required
+                      />
+                      <button
+                        type="button" tabIndex={-1}
+                        aria-pressed={signupShown} aria-label={signupShown ? 'Dölj lösenord' : 'Visa lösenord'}
+                        title={signupShown ? 'Dölj lösenord' : 'Visa lösenord'}
+                        onClick={() => setSignupShown(s => !s)}
+                        className="blobatar-password-field-toggle"
+                      >
+                        {signupShown ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}
+                      </button>
+                    </div>
                   </div>
                   <div className="form-group">
                     <label className="form-label" htmlFor="intro">Presentera dig</label>

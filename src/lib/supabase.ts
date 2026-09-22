@@ -273,6 +273,28 @@ const auth = {
       },
     }
   },
+  // "Glömt lösenord" — Appwrites inbyggda återställningsflöde. Mejlet skickas
+  // av Appwrite självt (dess egen SMTP eller den man satt upp i konsolen);
+  // ingen egen mejlserver behövs som i den PHP-baserade versionens
+  // server/api/password_reset.php. Länken pekar tillbaka till redirectUrl med
+  // ?userId=...&secret=... tillagt av Appwrite, vilket AdminResetPassword.tsx
+  // läser av och skickar vidare till updateRecovery.
+  async resetPasswordForEmail(email: string, redirectUrl: string) {
+    try {
+      await account.createRecovery({ email, url: redirectUrl })
+      return { error: null }
+    } catch (e) {
+      return { error: errOf(e) }
+    }
+  },
+  async updateRecovery({ userId, secret, password }: { userId: string; secret: string; password: string }) {
+    try {
+      await account.updateRecovery({ userId, secret, password })
+      return { error: null }
+    } catch (e) {
+      return { error: errOf(e) }
+    }
+  },
 }
 
 export const supabase = {
