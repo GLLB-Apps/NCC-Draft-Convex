@@ -14,6 +14,12 @@ export const patchRow = internalMutation({
   handler: async (ctx, { id, patch }) => await ctx.db.patch(id as any, patch),
 })
 
+/** Utvecklingshjälp: städa bort enskilda testrader (t.ex. efter en Playwright-körning) utan behörighetskrav. */
+export const deleteRow = internalMutation({
+  args: { table: v.string(), id: v.string() },
+  handler: async (ctx, { id }) => { await ctx.db.delete(id as any) },
+})
+
 /** Utvecklingshjälp för att kunna köra om migrateAppwrite:run rent efter en delvis misslyckad körning. */
 export const clearTable = internalMutation({
   args: { table: v.string() },

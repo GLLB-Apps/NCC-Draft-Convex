@@ -36,3 +36,9 @@ convex/_generated
 
 .vercel
 .env*
+
+# Playwright-körningsartefakter (e2e/*.spec.ts själva är versionerade)
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/

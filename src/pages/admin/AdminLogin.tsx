@@ -80,7 +80,12 @@ export default function AdminLogin() {
       // "lyckas" men appen förblir utloggad. Bara denna hook gör båda delarna.
       await signIn('password', { email, password, flow: 'signIn' })
     } catch (e) {
-      show(e instanceof Error ? e.message : 'Kunde inte logga in.', 'error')
+      // Convex Auths Password-provider läcker sitt interna felkodsnamn rakt
+      // ut (t.ex. "InvalidSecret", "InvalidAccountId") — fult och förvirrande
+      // för en vanlig användare som bara skrev fel lösenord.
+      const raw = e instanceof Error ? e.message : ''
+      const friendly = /InvalidSecret|InvalidAccountId/.test(raw) ? 'Fel e-postadress eller lösenord.' : (raw || 'Kunde inte logga in.')
+      show(friendly, 'error')
     } finally {
       setSubmitting(false)
     }

@@ -28,6 +28,7 @@
     "yet-another-react-lightbox": "^3.32.2"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@types/leaflet": "^1.9.21",
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.17",
