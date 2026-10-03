@@ -1,6 +1,6 @@
 import { v } from 'convex/values'
 import { query, mutation } from './_generated/server'
-import { listStatusGated, getById, adminInsert, adminPatch, adminRemove, type StatusGate } from './lib/collection'
+import { listStatusGated, getByIdStatusGated, adminInsert, adminPatch, adminRemove, type StatusGate } from './lib/collection'
 
 // Publikt läsbar bara när status='published', admin skriver — se MIGRATION_PLAN.md §2.
 const TABLE = 'topics' as const
@@ -13,7 +13,7 @@ export const list = query({
 
 export const get = query({
   args: { id: v.id(TABLE) },
-  handler: (ctx, { id }) => getById(ctx, TABLE, id),
+  handler: (ctx, { id }) => getByIdStatusGated(ctx, TABLE, id, GATE),
 })
 
 export const create = mutation({

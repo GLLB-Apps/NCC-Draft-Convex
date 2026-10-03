@@ -1,6 +1,6 @@
 import { v } from 'convex/values'
 import { query, mutation } from './_generated/server'
-import { listAdminOnly, getById, adminInsert, adminPatch, adminRemove } from './lib/collection'
+import { listAdminOnly, getByIdAdminOnly, adminInsert, adminPatch, adminRemove } from './lib/collection'
 
 // PII-delningen (e-post, riktigt namn, intern notering) — admin-läsning
 // enbart, aldrig publikt läsbar oavsett vittnesmålets status. Den publika
@@ -16,7 +16,7 @@ export const list = query({
 
 export const get = query({
   args: { id: v.id(TABLE) },
-  handler: (ctx, { id }) => getById(ctx, TABLE, id),
+  handler: (ctx, { id }) => getByIdAdminOnly(ctx, TABLE, id),
 })
 
 export const create = mutation({

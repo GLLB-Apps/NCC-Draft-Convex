@@ -1,6 +1,6 @@
 import { v } from 'convex/values'
 import { query, mutation } from './_generated/server'
-import { listStatusGated, getById, adminInsert, adminPatch, adminRemove, publicInsert, type StatusGate } from './lib/collection'
+import { listStatusGated, getByIdStatusGated, adminInsert, adminPatch, adminRemove, publicInsert, type StatusGate } from './lib/collection'
 
 // Publikt läsbar bara när status='approved'. Den publika inlämningen
 // (TestimoniesPage.tsx) går INTE via create() här — den anropar submit()
@@ -17,7 +17,7 @@ export const list = query({
 
 export const get = query({
   args: { id: v.id(TABLE) },
-  handler: (ctx, { id }) => getById(ctx, TABLE, id),
+  handler: (ctx, { id }) => getByIdStatusGated(ctx, TABLE, id, GATE),
 })
 
 /** Admin-enbart — den publika vägen är submit() nedan. */

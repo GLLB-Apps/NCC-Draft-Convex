@@ -113,10 +113,42 @@ export async function listMemberOnly<T extends TableNames>(ctx: QueryCtx, table:
   return applyFilters(rows as unknown as Record<string, unknown>[], opts) as unknown as Doc<T>[]
 }
 
-// `table` tas emot bara för att matcha anropsmönstret i varje tabells fil
-// (list/get/create/update/remove med samma signaturform) — ctx.db.get()
-// härleder tabellen ur id:ts brandade typ på egen hand.
+// VIKTIGT: get() måste respektera SAMMA behörighetsklass som tabellens list()
+// gör — annars kan en enskild post hämtas rakt förbi statusgrinden/
+// admin-spärren bara genom att känna till dess id. Upptäcktes i två steg:
+// dels som en ofarlig bugg (AdminNewsEdit.tsx fick tomt formulär eftersom
+// supabase.ts aldrig anropade get() alls, se den fixen i samma commit), dels
+// som den HÄR allvarligare insikten när felsökningen visade att getById()
+// inte hade NÅGON behörighetskontroll — en status-grindad tabells get()
+// släppte igenom ett opublicerat utkast till vem som helst som kände dess id
+// (t.ex. TestimonyDetailPage.tsx: publik sida, hämtar via .eq('id', id)).
+
+/** Publikt läsbar utan statusgrind (t.ex. siteSettings, pages, navigationItems). */
 export async function getById<T extends TableNames>(ctx: QueryCtx, _table: T, id: Id<T>): Promise<Doc<T> | null> {
+  return await ctx.db.get(id)
+}
+
+/** Status-grindad: icke-admin får null om posten inte har ett publikt status-värde. */
+export async function getByIdStatusGated<T extends TableNames>(
+  ctx: QueryCtx, _table: T, id: Id<T>, gate: StatusGate,
+): Promise<Doc<T> | null> {
+  const row = await ctx.db.get(id)
+  if (row === null) return null
+  const user = await currentUser(ctx)
+  if (isAdmin(user)) return row
+  const value = String((row as unknown as Record<string, unknown>)[gate.field])
+  return gate.publicValues.includes(value) ? row : null
+}
+
+/** Admin-läsning enbart (t.ex. contactMessages, testimonyContacts). */
+export async function getByIdAdminOnly<T extends TableNames>(ctx: QueryCtx, _table: T, id: Id<T>): Promise<Doc<T> | null> {
+  await requireAdmin(ctx)
+  return await ctx.db.get(id)
+}
+
+/** Intranät-läsning (medlem eller admin). */
+export async function getByIdMemberOnly<T extends TableNames>(ctx: QueryCtx, _table: T, id: Id<T>): Promise<Doc<T> | null> {
+  await requireMember(ctx)
   return await ctx.db.get(id)
 }
 

@@ -91,6 +91,22 @@ class QueryBuilder implements PromiseLike<Result> {
       if (!fns) throw new Error(`Okänd tabell: ${this.table}`)
 
       if (this.op === 'select') {
+        // .eq('id', x) måste gå via fns.get(), INTE fns.list({eq:{id:x}}) —
+        // "id" är ett VIRTUELLT fält som bara läggs på av fromDoc() HÄR på
+        // klienten (mappat från Convex's riktiga _id). Det ursprungliga
+        // dokumentet på servern har aldrig en "id"-nyckel, så ett
+        // eq-filter på "id" matchar där ALDRIG något — exakt samma
+        // specialfall update()/delete() redan löste via idEq(), men som
+        // select() saknade helt (upptäckt: AdminNewsEdit.tsx m.fl. — en
+        // redigeringssida som hämtar via .eq('id', id).maybeSingle() fick
+        // tyst tillbaka en tom lista, dvs ett helt blankt formulär).
+        const directId = this.idEq()
+        if (directId) {
+          const row = await convexClient.query(fns.get, { id: directId })
+          const rows = row ? [fromDoc(row)] : []
+          return { data: this._single ? (rows[0] ?? null) : rows, error: null }
+        }
+
         // ALLA .order()-anrop skickas med, inte bara det första — en andra
         // sorteringsnyckel (t.ex. "nyast först" INOM fästa/ej fästa-gruppen)
         // föll tidigare bort helt tyst här.

@@ -1,6 +1,6 @@
 import { v } from 'convex/values'
 import { query, mutation } from './_generated/server'
-import { listMemberOnly, getById, intranetInsert, intranetPatch, intranetRemove } from './lib/collection'
+import { listMemberOnly, getByIdMemberOnly, intranetInsert, intranetPatch, intranetRemove } from './lib/collection'
 
 // Intranätsinnehåll: läsning kräver medlemskap (admin eller intranet_member),
 // skrivning kräver intranät-skrivbehörighet (admin, eller medlem utan
@@ -14,7 +14,7 @@ export const list = query({
 
 export const get = query({
   args: { id: v.id(TABLE) },
-  handler: (ctx, { id }) => getById(ctx, TABLE, id),
+  handler: (ctx, { id }) => getByIdMemberOnly(ctx, TABLE, id),
 })
 
 export const create = mutation({

@@ -1,6 +1,6 @@
 import { v } from 'convex/values'
 import { query, mutation } from './_generated/server'
-import { listAdminOnly, getById, adminPatch, adminRemove } from './lib/collection'
+import { listAdminOnly, getByIdAdminOnly, adminPatch, adminRemove } from './lib/collection'
 
 // Admin-läsning enbart. Den publika skapelsen sker via contact.ts: submit()
 // (en action, inte denna mutation — kontaktformuläret behöver mejlutskick
@@ -16,7 +16,7 @@ export const list = query({
 
 export const get = query({
   args: { id: v.id(TABLE) },
-  handler: (ctx, { id }) => getById(ctx, TABLE, id),
+  handler: (ctx, { id }) => getByIdAdminOnly(ctx, TABLE, id),
 })
 
 export const update = mutation({
