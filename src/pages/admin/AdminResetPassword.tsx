@@ -1,17 +1,15 @@
 import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { supabase } from '../../lib/supabase'
+import { convexClient } from '../../lib/convexClient'
+import { api } from '../../../convex/_generated/api'
 import { useToast } from '../../lib/toast'
 
-// Sista steget i "glömt lösenord"-flödet — nås via länken Appwrite mejlar när
-// AdminLogin.tsx (forgot-läget) anropar account.createRecovery. Appwrite
-// lägger själv till ?userId=...&secret=... på redirect-URL:en, så de här
-// parametrarna kommer inte från en inloggad session — sidan kräver medvetet
-// ingen inloggning.
+// Sista steget i "glömt lösenord"-flödet — nås via länken som mejlas från
+// convex/passwordReset.ts: request(). Token-parametern kommer från serverns
+// mejl, inte från en inloggad session — sidan kräver medvetet ingen inloggning.
 export default function AdminResetPassword() {
   const [params] = useSearchParams()
-  const userId = params.get('userId') ?? ''
-  const secret = params.get('secret') ?? ''
+  const token = params.get('token') ?? ''
   const { show } = useToast()
 
   const [password, setPassword] = useState('')
@@ -19,7 +17,7 @@ export default function AdminResetPassword() {
   const [submitting, setSubmitting] = useState(false)
   const [done, setDone] = useState(false)
 
-  if (userId === '' || secret === '') {
+  if (token === '') {
     return (
       <div className="admin-login-page">
         <div className="admin-login-split">
@@ -45,10 +43,15 @@ export default function AdminResetPassword() {
     if (password !== confirm) { show('Lösenorden matchar inte', 'error'); return }
 
     setSubmitting(true)
-    const { error } = await supabase.auth.updateRecovery({ userId, secret, password })
-    setSubmitting(false)
-    if (error) { show(error.message, 'error'); return }
-    setDone(true)
+    try {
+      const ok = await convexClient.action(api.passwordReset.reset, { token, password })
+      if (!ok) { show('Länken är ogiltig eller har gått ut.', 'error'); return }
+      setDone(true)
+    } catch (e) {
+      show(e instanceof Error ? e.message : 'Något gick fel.', 'error')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -69,7 +72,7 @@ export default function AdminResetPassword() {
           ) : (
             <div className="admin-login-card">
               <h2 className="admin-login-title">Sätt nytt lösenord</h2>
-              <p className="admin-login-subtitle">Länken gäller en begränsad tid och kan bara användas en gång.</p>
+              <p className="admin-login-subtitle">Länken gäller i 30 minuter och kan bara användas en gång.</p>
               <form onSubmit={handleSubmit}>
                 <div className="form-group">
                   <label className="form-label" htmlFor="password">Nytt lösenord (minst 8 tecken)</label>

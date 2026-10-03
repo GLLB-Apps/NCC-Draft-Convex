@@ -4,6 +4,8 @@ import { ChevronDown, MessagesSquare } from 'lucide-react'
 import PageHeader from '../../components/public/PageHeader'
 import type { FaqCategory, FaqItem } from '../../lib/types'
 import { supabase } from '../../lib/supabase'
+import { convexClient } from '../../lib/convexClient'
+import { api } from '../../../convex/_generated/api'
 import { usePage } from '../../lib/usePage'
 import { useToast } from '../../lib/toast'
 import UserAvatar from '../../components/UserAvatar'
@@ -31,14 +33,14 @@ export default function FaqPage() {
 
   async function handleAsk(data: { question: string; category_id: string | null; website: string }) {
     if (data.website) return // honeypot
-    const { error } = await supabase.from('faq_items').insert({
-      question: data.question,
-      answer: '',
-      category_id: data.category_id,
-      sort_order: 0,
-      status: 'draft',
-    })
-    if (error) { show('Något gick fel. Försök igen senare.', 'error'); return }
+    try {
+      await convexClient.mutation(api.faqItems.submitQuestion, {
+        question: data.question, category_id: data.category_id ?? undefined,
+      })
+    } catch {
+      show('Något gick fel. Försök igen senare.', 'error')
+      return
+    }
     show('Tack! Din fråga skickas till redaktionen och publiceras med svar.', 'success')
     setTab('browse')
   }

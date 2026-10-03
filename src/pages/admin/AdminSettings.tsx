@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { ImportantDate, SiteSettings } from '../../lib/types'
 import { supabase } from '../../lib/supabase'
+import { convexClient } from '../../lib/convexClient'
+import { api } from '../../../convex/_generated/api'
 import { useToast } from '../../lib/toast'
 import { MAIL_DIALOG_DEFAULTS } from '../../lib/campaign'
 import { formatDate, todayIso, upcomingDates } from '../../lib/utils'
@@ -149,16 +151,11 @@ export default function AdminSettings() {
 
   async function syncSignatures() {
     try {
-      const r = await fetch('/api/sync-signatures')
-      const j = await r.json()
-      if (r.ok && typeof j.count === 'number') {
-        update('signature_count', j.count)
-        show(`Hämtade ${j.count} underskrifter från Skrivunder`, 'success')
-      } else {
-        show('Kunde inte hämta: ' + (j.error ?? r.status), 'error')
-      }
-    } catch {
-      show('Kunde inte hämta (fungerar bara i den publicerade versionen)', 'error')
+      const { count } = await convexClient.action(api.signatures.sync, {})
+      update('signature_count', count)
+      show(`Hämtade ${count} underskrifter från Skrivunder`, 'success')
+    } catch (e) {
+      show('Kunde inte hämta: ' + (e instanceof Error ? e.message : String(e)), 'error')
     }
   }
 
@@ -505,7 +502,7 @@ export default function AdminSettings() {
               <input id="contact_from" className="form-input" type="text" placeholder="Kontaktformulär <onboarding@resend.dev>" value={settings.contact_from ?? ''} onChange={e => update('contact_from', e.target.value || null)} />
               <p className="text-muted" style={{ fontSize: '0.8rem', marginTop: 'var(--space-2)' }}>
                 Kräver en verifierad domän i Resend. Lämnas tom används testadressen <code>onboarding@resend.dev</code>
-                (kan bara mejla till Resend-kontots egen adress). API-nyckeln <code>RESEND_API_KEY</code> sätts som miljövariabel i Vercel.
+                (kan bara mejla till Resend-kontots egen adress). API-nyckeln <code>RESEND_API_KEY</code> sätts med <code>npx convex env set</code> (serversidan, inte i Vite-bygget).
               </p>
             </div>
           </>

@@ -1,17 +1,23 @@
 import { useEffect, useMemo, useState } from 'react'
 import UserAvatar from '../../components/UserAvatar'
 import PasswordField from '../../components/PasswordField'
-import { supabase, createSessionJwt } from '../../lib/supabase'
+import { convexClient } from '../../lib/convexClient'
+import { api } from '../../../convex/_generated/api'
+import type { Id } from '../../../convex/_generated/dataModel'
 import { useAuth } from '../../lib/auth'
 import { useToast } from '../../lib/toast'
 import { useConfirm } from '../../lib/confirm'
 import { formatDateShort } from '../../lib/utils'
 import type { UserRole } from '../../lib/types'
 
-// En behörighetsnivå per person. De tre första är admin-roller (user_roles);
-// "intranet" är intranätsåtkomst via Appwrite-labeln "member" och ger INGEN
-// åtkomst till adminpanelen. Nivåerna hålls isär mekaniskt men visas som en
-// gemensam lista här.
+// En behörighetsnivå per person. De tre första är admin-roller; "intranet"
+// och "viewer" är ren intranätsåtkomst (intranet_member/intranet_read_only)
+// och ger INGEN åtkomst till adminpanelen.
+//
+// Till skillnad från Appwrite-/PHP-versionen ligger role/intranet_member/
+// intranet_read_only/display_name/intro/email redan på SAMMA users-dokument
+// (se convex/schema.ts) — inget att slå ihop från tre tabeller eller ett
+// separat e-postanrop, se convex/users.ts: listAll.
 type Level = UserRole | 'intranet' | 'viewer'
 
 const LEVELS: { value: Level; label: string; desc: string }[] = [
@@ -24,19 +30,16 @@ const LEVELS: { value: Level; label: string; desc: string }[] = [
 const levelLabel = (l: Level) => LEVELS.find(x => x.value === l)?.label ?? l
 const isAdminLevel = (l: Level): l is UserRole => l !== 'intranet' && l !== 'viewer'
 const isIntranetLevel = (l: Level) => l === 'intranet' || l === 'viewer'
-// Vilken Appwrite-åtkomstlabel varje nivå motsvarar (den faktiska gränsen).
-const accessLabelFor = (l: Level): 'admin' | 'member' | 'viewer' =>
-  isAdminLevel(l) ? 'admin' : l === 'viewer' ? 'viewer' : 'member'
 
 interface Person {
-  user_id: string
+  user_id: Id<'users'>
+  email: string
   level: Level
   display_name: string | null
-  /** Presentationen personen skrev när kontot skapades. */
   intro: string | null
   created_at: string
 }
-interface PendingUser { id: string; display_name: string | null; intro: string | null; created_at: string }
+interface PendingUser { id: Id<'users'>; email: string; display_name: string | null; intro: string | null; created_at: string }
 
 export default function AdminAdmins() {
   const { user: currentUser, role: currentRole } = useAuth()
@@ -50,20 +53,9 @@ export default function AdminAdmins() {
   const [pwdValue, setPwdValue] = useState('')
   const [pwdBusy, setPwdBusy] = useState(false)
   const [sendingPwd, setSendingPwd] = useState<string | null>(null)
-  // Presentationer fälls ut en i taget i listan över aktiva – i väntelistan
-  // står de alltid framme, för där är de underlaget för beslutet.
   const [introFor, setIntroFor] = useState<string | null>(null)
-  // Adresserna ligger i Appwrites konton, inte i någon kollektion, och hämtas
-  // via /api/list-users. Funktionen finns bara i den publicerade versionen —
-  // lokalt visas namnet utan adress i stället för ett felmeddelande.
-  const [emails, setEmails] = useState<Record<string, string | null>>({})
-  // Adresserna kommer via ett separat, långsammare anrop (JWT + serverfunktion)
-  // än resten av listan. Utan den här flaggan hinner blobbarna visas med
-  // id som frö och sedan byta figur när adressen dyker upp — kladdigt. Se
-  // renderingen nedan: en tom platshållare tills adressen faktiskt finns.
-  const [emailsLoaded, setEmailsLoaded] = useState(false)
 
-  useEffect(() => { load(); loadEmails() }, [])
+  useEffect(() => { load() }, [])
 
   useEffect(() => {
     if (!pwdFor) return
@@ -72,141 +64,61 @@ export default function AdminAdmins() {
     return () => window.removeEventListener('keydown', onKey)
   }, [pwdFor])
 
-  async function loadEmails() {
-    try {
-      const jwt = await createSessionJwt()
-      const res = await fetch('/api/list-users', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${jwt}` },
-      })
-      if (res.ok) {
-        const data = await res.json()
-        if (data?.emails) setEmails(data.emails)
-      }
-    } catch {
-      // Körs lokalt utan serverfunktioner – listan fungerar ändå.
-    } finally {
-      setEmailsLoaded(true)
-    }
-  }
-
   async function load() {
     setLoading(true)
-    const [rolesRes, profilesRes, membersRes] = await Promise.all([
-      supabase.from('user_roles').select('user_id, role, created_at').order('created_at'),
-      supabase.from('profiles').select('id, display_name, intro, created_at').order('created_at'),
-      supabase.from('intranet_members').select('user_id, display_name, read_only, created_at').order('created_at'),
-    ])
-    const roleRows = (rolesRes.data ?? []) as Array<Record<string, unknown>>
-    const profileRows = (profilesRes.data ?? []) as Array<Record<string, unknown>>
-    const memberRows = (membersRes.data ?? []) as Array<Record<string, unknown>>
+    const all = await convexClient.query(api.users.listAll, {})
 
-    const nameById = new Map(profileRows.map(p => [p.id as string, (p.display_name as string | null) ?? null]))
-    const introById = new Map(profileRows.map(p => [p.id as string, (p.intro as string | null) ?? null]))
-    const adminIds = new Set(roleRows.map(r => r.user_id as string))
-
-    const list: Person[] = roleRows.map(r => ({
-      user_id: r.user_id as string,
-      level: r.role as Level,
-      display_name: nameById.get(r.user_id as string) ?? null,
-      intro: introById.get(r.user_id as string) ?? null,
-      created_at: r.created_at as string,
+    const activeRows = all.filter(u => u.role !== null || u.intranet_member)
+    const list: Person[] = activeRows.map(u => ({
+      user_id: u.id, email: u.email,
+      level: (u.role ?? (u.intranet_read_only ? 'viewer' : 'intranet')) as Level,
+      display_name: u.display_name, intro: u.intro, created_at: u.created_at,
     }))
-    // Medlemmar som inte också är admins (admins har redan intranätsåtkomst).
-    for (const m of memberRows) {
-      if (adminIds.has(m.user_id as string)) continue
-      list.push({
-        user_id: m.user_id as string,
-        level: m.read_only ? 'viewer' : 'intranet',
-        display_name: nameById.get(m.user_id as string) ?? (m.display_name as string | null) ?? null,
-        intro: introById.get(m.user_id as string) ?? null,
-        created_at: m.created_at as string,
-      })
-    }
-    const accessIds = new Set(list.map(p => p.user_id))
 
     setPeople(list)
-    setPending(profileRows.filter(p => !accessIds.has(p.id as string))
-      .map(p => ({ id: p.id as string, display_name: p.display_name as string | null, intro: p.intro as string | null, created_at: p.created_at as string })))
+    setPending(all.filter(u => u.role === null && !u.intranet_member)
+      .map(u => ({ id: u.id, email: u.email, display_name: u.display_name, intro: u.intro, created_at: u.created_at })))
     setLoading(false)
-  }
-
-  /**
-   * Sätter användarens åtkomstlabel server-side efter nivå. Detta är den
-   * faktiska säkerhetsgränsen: 'admin' ger skrivrätt + intranät, 'member' bara
-   * intranät, 'none' varken eller. Returnerar true vid framgång.
-   */
-  async function setAccess(userId: string, access: 'admin' | 'member' | 'viewer' | 'none'): Promise<boolean> {
-    const jwt = await createSessionJwt()
-    const res = await fetch('/api/set-access', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${jwt}` },
-      body: JSON.stringify({ userId, access }),
-    })
-    const data = await res.json().catch(() => ({}))
-    if (!res.ok) { show('Kunde inte ändra åtkomst: ' + (data.error || res.status), 'error'); return false }
-    return true
   }
 
   /** Ger en person utan åtkomst en startnivå. */
   async function assignLevel(u: PendingUser, level: Level) {
     setBusy(u.id)
     try {
-      if (isIntranetLevel(level)) {
-        if (!(await setAccess(u.id, accessLabelFor(level)))) return
-        const { error } = await supabase.from('intranet_members').insert({ user_id: u.id, display_name: u.display_name, read_only: level === 'viewer', added_by: currentUser?.email ?? null })
-        if (error) { show('Åtkomst gavs, men raden kunde inte sparas: ' + error.message, 'error'); return }
-      } else {
-        const { error } = await supabase.from('user_roles').insert({ user_id: u.id, role: level })
-        if (error) { show('Kunde inte tilldela: ' + error.message, 'error'); return }
-        // Labeln "admin" är det som faktiskt ger skrivrätt — rollraden ensam räcker inte.
-        if (!(await setAccess(u.id, 'admin'))) { show('Roll tilldelad men admin-behörighet kunde inte sättas', 'error'); return }
-      }
+      await convexClient.mutation(api.users.setAccess, {
+        userId: u.id,
+        role: isAdminLevel(level) ? level : null,
+        intranet_member: isIntranetLevel(level),
+        intranet_read_only: level === 'viewer',
+      })
       show(`${u.display_name || 'Användaren'}: ${levelLabel(level)}`, 'success')
       load()
+    } catch (e) {
+      show('Kunde inte tilldela: ' + (e instanceof Error ? e.message : String(e)), 'error')
     } finally { setBusy(null) }
   }
 
-  /**
-   * Byter nivå på en person med befintlig åtkomst. Den nya åtkomstlabeln sätts
-   * FÖRST, så att ingen står helt utan under bytet, sedan städas rad-tillstånden
-   * (user_roles för admin-nivåer, intranet_members för intranät-nivåer).
-   */
+  /** Byter nivå på en person med befintlig åtkomst. */
   async function changeLevel(p: Person, next: Level) {
     if (next === p.level) return
     setBusy(p.user_id)
     try {
-      if (!(await setAccess(p.user_id, accessLabelFor(next)))) return
-
-      // Rollrad (user_roles) – bara admin-nivåer har en.
-      if (isAdminLevel(next)) {
-        if (isAdminLevel(p.level)) await supabase.from('user_roles').update({ role: next }).eq('user_id', p.user_id)
-        else await supabase.from('user_roles').insert({ user_id: p.user_id, role: next })
-      } else if (isAdminLevel(p.level)) {
-        await supabase.from('user_roles').delete().eq('user_id', p.user_id)
-      }
-
-      // Medlemsrad (intranet_members) – intranät-nivåerna har en; read_only skiljer dem.
-      if (isIntranetLevel(next)) {
-        const read_only = next === 'viewer'
-        if (isIntranetLevel(p.level)) await supabase.from('intranet_members').update({ read_only }).eq('user_id', p.user_id)
-        else await supabase.from('intranet_members').insert({ user_id: p.user_id, display_name: p.display_name, read_only, added_by: currentUser?.email ?? null })
-      } else if (isIntranetLevel(p.level)) {
-        await supabase.from('intranet_members').delete().eq('user_id', p.user_id)
-      }
-
+      await convexClient.mutation(api.users.setAccess, {
+        userId: p.user_id,
+        role: isAdminLevel(next) ? next : null,
+        intranet_member: isIntranetLevel(next),
+        intranet_read_only: next === 'viewer',
+      })
       show(`${p.display_name || 'Användaren'}: ${levelLabel(next)}`, 'success')
       load()
+    } catch (e) {
+      show('Kunde inte ändra: ' + (e instanceof Error ? e.message : String(e)), 'error')
     } finally { setBusy(null) }
   }
 
-  /**
-   * Raderar ett konto som ännu inte fått någon nivå — själva kontot, inte bara
-   * en rad. Servern kontrollerar en gång till att kontot saknar behörighet, så
-   * knappen kan inte användas för att radera en kollega.
-   */
+  /** Raderar ett konto som ännu inte fått någon nivå. */
   async function deleteAccount(u: PendingUser) {
-    const namn = u.display_name || emails[u.id] || 'kontot'
+    const namn = u.display_name || u.email || 'kontot'
     if (!(await confirm({
       message: `Radera ${namn} permanent? Kontot och dess presentation tas bort helt och personen kan inte logga in igen. Det går inte att ångra.`,
       confirmText: 'Radera kontot',
@@ -214,14 +126,7 @@ export default function AdminAdmins() {
     }))) return
     setBusy(u.id)
     try {
-      const jwt = await createSessionJwt()
-      const res = await fetch('/api/delete-user', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${jwt}` },
-        body: JSON.stringify({ userId: u.id }),
-      })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) { show('Kunde inte radera: ' + (data.error || res.status), 'error'); return }
+      await convexClient.mutation(api.users.deleteUser, { userId: u.id })
       show(`${namn} raderat`, 'success')
       load()
     } catch (e) {
@@ -234,30 +139,19 @@ export default function AdminAdmins() {
     if (!(await confirm({ message: `Ta bort all åtkomst för ${p.display_name || 'användaren'}?`, confirmText: 'Ta bort åtkomst', danger: true }))) return
     setBusy(p.user_id)
     try {
-      if (!(await setAccess(p.user_id, 'none'))) return
-      if (isIntranetLevel(p.level)) {
-        await supabase.from('intranet_members').delete().eq('user_id', p.user_id)
-      } else {
-        const { error } = await supabase.from('user_roles').delete().eq('user_id', p.user_id)
-        if (error) { show('Kunde inte ta bort: ' + error.message, 'error'); return }
-      }
+      await convexClient.mutation(api.users.setAccess, { userId: p.user_id, role: null, intranet_member: false, intranet_read_only: false })
       show('Åtkomst borttagen', 'success')
       load()
+    } catch (e) {
+      show('Kunde inte ta bort: ' + (e instanceof Error ? e.message : String(e)), 'error')
     } finally { setBusy(null) }
   }
 
-  async function setUserPassword(userId: string) {
+  async function setUserPassword(userId: Id<'users'>) {
     if (pwdValue.length < 8) { show('Lösenordet måste vara minst 8 tecken', 'error'); return }
     setPwdBusy(true)
     try {
-      const jwt = await createSessionJwt()
-      const res = await fetch('/api/set-user-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${jwt}` },
-        body: JSON.stringify({ userId, password: pwdValue }),
-      })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) { show('Kunde inte ändra lösenord: ' + (data.error || res.status), 'error'); return }
+      await convexClient.action(api.users.setPassword, { userId, password: pwdValue })
       show('Lösenordet uppdaterat', 'success')
       setPwdFor(null); setPwdValue('')
     } catch (e) {
@@ -266,18 +160,11 @@ export default function AdminAdmins() {
   }
 
   /** Sätter det inskrivna lösenordet och mejlar samma lösenord till personen. */
-  async function emailUserPassword(userId: string) {
+  async function emailUserPassword(userId: Id<'users'>) {
     if (pwdValue.length < 8) { show('Lösenordet måste vara minst 8 tecken', 'error'); return }
     setSendingPwd(userId)
     try {
-      const jwt = await createSessionJwt()
-      const res = await fetch('/api/send-user-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${jwt}` },
-        body: JSON.stringify({ userId, password: pwdValue }),
-      })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) { show('Kunde inte skicka: ' + (data.error || res.status), 'error'); return }
+      await convexClient.action(api.users.sendPassword, { userId, password: pwdValue })
       show('Lösenordet uppdaterat och skickat via mejl', 'success')
       setPwdFor(null); setPwdValue('')
     } catch (e) {
@@ -322,14 +209,12 @@ export default function AdminAdmins() {
           <div className="admin-list">
             {pending.map(u => (
               <div key={u.id} className="admin-list-item" style={{ flexWrap: 'wrap' }}>
-                {emailsLoaded
-                  ? <UserAvatar seed={emails[u.id] ?? u.id} size={36} style={{ flexShrink: 0 }} />
-                  : <span className="avatar-skeleton" style={{ width: 36, height: 36 }} aria-hidden="true" />}
+                <UserAvatar seed={u.email ?? u.id} size={36} style={{ flexShrink: 0 }} />
                 <div className="admin-list-item-info">
                   <div className="admin-list-item-title">{u.display_name ?? 'Namnlös användare'}</div>
                   <div className="admin-list-item-meta">
                     <span className="badge badge-warning">Ingen åtkomst</span>
-                    {emails[u.id] && <span className="admin-user-email">{emails[u.id]}</span>}
+                    {u.email && <span className="admin-user-email">{u.email}</span>}
                     <span>{formatDateShort(u.created_at)}</span>
                   </div>
                   {u.intro
@@ -373,9 +258,7 @@ export default function AdminAdmins() {
             const lockSelf = isSelf && currentRole === 'superadmin'
             return (
               <div key={p.user_id} className="admin-list-item" style={{ flexWrap: 'wrap' }}>
-                {emailsLoaded
-                  ? <UserAvatar seed={emails[p.user_id] ?? p.user_id} size={36} style={{ flexShrink: 0 }} />
-                  : <span className="avatar-skeleton" style={{ width: 36, height: 36 }} aria-hidden="true" />}
+                <UserAvatar seed={p.email ?? p.user_id} size={36} style={{ flexShrink: 0 }} />
                 <div className="admin-list-item-info">
                   <div className="admin-list-item-title">
                     {p.display_name ?? 'Okänd användare'}
@@ -383,7 +266,7 @@ export default function AdminAdmins() {
                   </div>
                   <div className="admin-list-item-meta">
                     <span className={isAdminLevel(p.level) ? 'badge badge-muted' : 'badge badge-success'}>{levelLabel(p.level)}</span>
-                    {emails[p.user_id] && <span className="admin-user-email">{emails[p.user_id]}</span>}
+                    {p.email && <span className="admin-user-email">{p.email}</span>}
                     <span>{formatDateShort(p.created_at)}</span>
                   </div>
                 </div>
@@ -440,11 +323,11 @@ export default function AdminAdmins() {
           <div className="admin-modal-backdrop" onClick={close}>
             <div className="admin-modal" role="dialog" aria-modal="true" aria-label="Byt lösenord" onClick={e => e.stopPropagation()}>
               <div className="admin-modal-head">
-                <h3>Byt lösenord — {p.display_name || emails[p.user_id] || 'användaren'}</h3>
+                <h3>Byt lösenord — {p.display_name || p.email || 'användaren'}</h3>
                 <button type="button" className="btn btn-ghost btn-sm" onClick={close}>Stäng</button>
               </div>
               <PasswordField
-                name={emails[p.user_id] ?? p.user_id}
+                name={p.email ?? p.user_id}
                 label="Nytt lösenord (minst 8 tecken)"
                 value={pwdValue}
                 onValueChange={setPwdValue}

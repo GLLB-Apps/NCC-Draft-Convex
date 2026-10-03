@@ -1,21 +1,12 @@
-// Thin helper around Appwrite Storage for admin file uploads.
-// Uploads go to the public "media" bucket; the returned URL is a public
-// view link that the site can render directly.
-import { Client, Storage, ID } from 'appwrite'
-
-const client = new Client()
-  .setEndpoint(import.meta.env.VITE_APPWRITE_ENDPOINT)
-  .setProject(import.meta.env.VITE_APPWRITE_PROJECT_ID)
-
-const storage = new Storage(client)
-const BUCKET = import.meta.env.VITE_APPWRITE_BUCKET_ID
+// Filuppladdning mot Convex Storage. Ersätter Appwrite Storage.
+import { convexClient } from './convexClient'
+import { api } from '../../convex/_generated/api'
 
 const HEIC_EXT = /\.(heic|heif)$/i
 /**
  * iPhone sparar foton som HEIC. Ingen webbläsare utom Safari kan visa formatet,
  * så en HEIC-uppladdning blir en trasig bild på sajten – filen måste göras om
- * till JPEG innan den laddas upp. (Appwrites egen bildkonvertering är avstängd
- * på nuvarande plan, så det måste ske här.)
+ * till JPEG innan den laddas upp.
  */
 export const isHeic = (file: File) => /image\/hei[cf]/i.test(file.type) || HEIC_EXT.test(file.name)
 
@@ -34,8 +25,15 @@ async function toJpeg(file: File): Promise<File> {
 
 export async function uploadFile(file: File): Promise<string> {
   const upload = isHeic(file) ? await toJpeg(file) : file
-  const created = await storage.createFile({ bucketId: BUCKET, fileId: ID.unique(), file: upload })
-  return String(storage.getFileView({ bucketId: BUCKET, fileId: created.$id }))
+
+  const uploadUrl = await convexClient.mutation(api.uploads.generateUploadUrl, {})
+  const res = await fetch(uploadUrl, { method: 'POST', headers: { 'Content-Type': upload.type }, body: upload })
+  if (!res.ok) throw new Error('Uppladdningen misslyckades.')
+  const { storageId } = await res.json()
+
+  // finalize() validerar MIME/storlek mot den lagrade metadatan och
+  // returnerar en färdig URL — se convex/uploads.ts.
+  return await convexClient.mutation(api.uploads.finalize, { storageId })
 }
 
 // HEIC-filer saknar ofta MIME-typ i webbläsaren, därför även filändelsen.

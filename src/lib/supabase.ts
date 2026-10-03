@@ -1,93 +1,33 @@
-// Appwrite-backed compatibility layer.
-// Exposes the same surface the app used from `@supabase/supabase-js`
-// (`supabase.from(...).select()/.eq()/.order()/.insert()/...` and `supabase.auth.*`)
-// so the rest of the codebase did not need a rewrite when we migrated
-// from Supabase to Appwrite.
-import { Client, Account, Databases, Query, ID, Permission, Role } from 'appwrite'
-
-const client = new Client()
-  .setEndpoint(import.meta.env.VITE_APPWRITE_ENDPOINT)
-  .setProject(import.meta.env.VITE_APPWRITE_PROJECT_ID)
-
-const account = new Account(client)
-const databases = new Databases(client)
-const DB = import.meta.env.VITE_APPWRITE_DATABASE_ID
-
-// Fields stored as JSON strings in Appwrite but consumed as objects/arrays in the app.
-const JSON_FIELDS: Record<string, string[]> = {
-  topics: ['content'],
-  posts: ['content', 'tags'],
-  site_settings: ['social_links', 'background_blocks', 'hero_buttons', 'important_dates'],
-  audit_log: ['details'],
-  pages: ['texts', 'blocks'],
-  custom_pages: ['blocks'],
-  map_areas: ['points'],
-  profiles: ['notifications_seen'],
-}
-
-// Innehåll som bara ska vara publikt läsbart i ett visst tillstånd. Läsrätten
-// sitter på DOKUMENTET, inte på kollektionen: kollektionen släpper bara in
-// admin, och varje publicerat dokument får `read("any")` för sig. Utan det
-// kunde vem som helst lista utkast direkt mot databasen — filtreringen på
-// status skedde ju i klienten, inte i behörigheterna.
-//
-// Kollektionerna här måste ha documentSecurity påslaget; det sätts av
-// scripts/appwrite-lock-drafts.mjs, som också fyller i rätten på befintliga rader.
-const PUBLIC_WHEN: Record<string, string[]> = {
-  posts: ['published'],
-  topics: ['published'],
-  documents: ['published'],
-  media_items: ['published'],
-  map_areas: ['published'],
-  map_locations: ['published'],
-  timeline_events: ['published'],
-  faq_items: ['published'],
-  custom_pages: ['published'],
-  testimonies: ['approved'],
-}
-
-/**
- * Läsrätten ett dokument ska ha efter skrivningen, utifrån dess status.
- * `undefined` betyder "rör inte befintliga rättigheter" — det gäller
- * kollektioner utan tillståndsstyrning, och skrivningar som inte nämner status
- * (att ändra en rubrik ska inte kunna publicera något av misstag).
- */
-function permissionsFor(table: string, obj: Row): string[] | undefined {
-  const states = PUBLIC_WHEN[table]
-  if (!states || obj?.status === undefined) return undefined
-  return states.includes(obj.status) ? [Permission.read(Role.any())] : []
-}
-
-// App column -> Appwrite system attribute.
-const SYS: Record<string, string> = { id: '$id', created_at: '$createdAt', updated_at: '$updatedAt' }
-const col = (c: string) => SYS[c] ?? c
+// Convex-backed compatibility layer.
+// Exposes the same surface the app used from `@supabase/supabase-js` (and
+// later Appwrite: `supabase.from(...).select()/.eq()/.order()/.insert()/...`
+// and `supabase.auth.*`) so ~30 admin/public pages did not need a rewrite
+// for this migration either — se MIGRATION_PLAN.md §4. `run()` talks to
+// Convex via den IMPERATIVA klienten (query()/mutation()/action()), inte
+// React-hooken useQuery, eftersom alla befintliga anropsplatser gör
+// `await supabase.from(...)` utanför komponent-render.
+import { convexClient } from './convexClient'
+import { TABLE_API } from './convexCompat'
+import { api } from '../../convex/_generated/api'
 
 type Row = Record<string, any>
 
-function fromDoc(table: string, doc: Row): Row {
-  const out: Row = { ...doc, id: doc.$id, created_at: doc.$createdAt, updated_at: doc.$updatedAt }
-  for (const field of JSON_FIELDS[table] ?? []) {
-    if (typeof out[field] === 'string') {
-      try { out[field] = JSON.parse(out[field]) } catch { /* leave as-is */ }
-    }
-  }
-  return out
+function fromDoc(doc: Row): Row {
+  const { _id, _creationTime, ...rest } = doc
+  return { ...rest, id: _id }
 }
 
-function toData(table: string, obj: Row): Row {
+function toData(obj: Row): Row {
   const out: Row = {}
   for (const [k, v] of Object.entries(obj)) {
-    if (k === 'id' || k === 'created_at' || k === 'updated_at' || k.startsWith('$')) continue
+    if (k === 'id' || k === '_id' || k === '_creationTime') continue
     if (v === undefined) continue
     out[k] = v
   }
-  for (const field of JSON_FIELDS[table] ?? []) {
-    if (out[field] !== undefined && typeof out[field] !== 'string') out[field] = JSON.stringify(out[field])
-  }
   return out
 }
 
-const errOf = (e: any) => ({ message: e?.message ?? String(e), code: e?.code })
+const errOf = (e: any) => ({ message: e?.message ?? String(e), code: e?.data?.code })
 
 interface Result<T = any> { data: T; error: { message: string } | null }
 
@@ -125,89 +65,110 @@ class QueryBuilder implements PromiseLike<Result> {
   upsert(data: any) { this.op = 'upsert'; this.payload = data; return this }
   delete() { this.op = 'delete'; return this }
 
-  private buildQueries() {
-    const q = this.eqs.map(([c, v]) => Query.equal(col(c), [v] as any))
-    for (const [c, dir] of this.orders) q.push(dir === 'desc' ? Query.orderDesc(col(c)) : Query.orderAsc(col(c)))
-    q.push(Query.limit(this._limit))
-    return q
+  private eqObj(): Record<string, any> {
+    return Object.fromEntries(this.eqs)
   }
 
-  private async targetIds(): Promise<string[]> {
-    const idEq = this.eqs.find(([c]) => c === 'id')
-    if (idEq) return [idEq[1]]
-    const q = this.eqs.map(([c, v]) => Query.equal(col(c), [v] as any))
-    q.push(Query.limit(500))
-    const res = await databases.listDocuments({ databaseId: DB, collectionId: this.table, queries: q })
-    return res.documents.map(d => d.$id)
+  /** `.eq('id', v)` pekar direkt på ett Convex-dokument utan en föregående listning. */
+  private idEq(): string | null {
+    const found = this.eqs.find(([c]) => c === 'id')
+    return found ? (found[1] as string) : null
+  }
+
+  /** Alla rader som matchar nuvarande eq-filter (via list), för update/delete utan ett direkt id. */
+  private async targetRows(fns: Row): Promise<Row[]> {
+    const rows = await convexClient.query(fns.list, { eq: this.eqObj() })
+    return rows.map(fromDoc)
   }
 
   private async run(): Promise<Result> {
     try {
+      // "profiles" slogs ihop till fält på users-dokumentet (se users.ts) —
+      // specialfall, finns inte i TABLE_API.
+      if (this.table === 'profiles') return await this.runProfiles()
+
+      const fns = TABLE_API[this.table]
+      if (!fns) throw new Error(`Okänd tabell: ${this.table}`)
+
       if (this.op === 'select') {
-        const res = await databases.listDocuments({ databaseId: DB, collectionId: this.table, queries: this.buildQueries() })
-        let rows = res.documents.map(d => fromDoc(this.table, d))
+        const order = this.orders[0] ? { field: this.orders[0][0], ascending: this.orders[0][1] === 'asc' } : undefined
+        let rows: Row[] = await convexClient.query(fns.list, { eq: this.eqObj(), order, limit: this._limit })
+        rows = rows.map(fromDoc)
         for (const f of this.post) rows = f(rows)
         return { data: this._single ? (rows[0] ?? null) : rows, error: null }
       }
+
       if (this.op === 'insert') {
         const items = Array.isArray(this.payload) ? this.payload : [this.payload]
         let last: Row | null = null
         for (const it of items) {
-          const documentId = it?.id ?? ID.unique()
-          // Tomma rättigheter utelämnas helt: nya vittnesmål skapas av utloggade
-          // besökare, och en gäst får inte skicka med en rättighetslista.
-          const perms = permissionsFor(this.table, it)
-          const created = await databases.createDocument({
-            databaseId: DB, collectionId: this.table, documentId,
-            data: toData(this.table, it),
-            ...(perms && perms.length ? { permissions: perms } : {}),
-          })
-          last = fromDoc(this.table, created)
+          const id = await convexClient.mutation(fns.create, { data: toData(it) })
+          last = fromDoc(await convexClient.query(fns.get, { id }))
         }
         return { data: last, error: null }
       }
+
       if (this.op === 'upsert') {
-        const documentId = this.payload?.id ?? ID.unique()
-        const data = toData(this.table, this.payload)
-        const perms = permissionsFor(this.table, this.payload)
-        try {
-          await databases.updateDocument({
-            databaseId: DB, collectionId: this.table, documentId, data,
-            ...(perms ? { permissions: perms } : {}),
-          })
-        } catch (e: any) {
-          if (e?.code === 404) {
-            await databases.createDocument({
-              databaseId: DB, collectionId: this.table, documentId, data,
-              ...(perms && perms.length ? { permissions: perms } : {}),
-            })
-          } else throw e
+        // "pages" nyckeln är slug, inte ett i förväg känt id — se pages.ts: upsert().
+        if (this.table === 'pages') {
+          // Shimmen dispatchar dynamiskt mot en statiskt typad Convex-funktion
+          // med avsikt (se convexCompat.ts) — castad här vid gränsen, inte
+          // typad rakt igenom.
+          await convexClient.mutation(api.pages.upsert, toData(this.payload) as any)
+          return { data: null, error: null }
+        }
+        const id = this.idEq() ?? this.payload?.id
+        if (id) {
+          await convexClient.mutation(fns.update, { id, patch: toData(this.payload) })
+        } else {
+          await convexClient.mutation(fns.create, { data: toData(this.payload) })
         }
         return { data: null, error: null }
       }
+
       if (this.op === 'update') {
-        const data = toData(this.table, this.payload)
-        // Här skickas även den TOMMA listan med: att avpublicera ska aktivt ta
-        // bort den publika läsrätten, inte bara låta den ligga kvar.
-        const perms = permissionsFor(this.table, this.payload)
-        for (const id of await this.targetIds()) {
-          await databases.updateDocument({
-            databaseId: DB, collectionId: this.table, documentId: id, data,
-            ...(perms ? { permissions: perms } : {}),
-          })
-        }
+        const data = toData(this.payload)
+        const directId = this.idEq()
+        const ids = directId ? [directId] : (await this.targetRows(fns)).map(r => r.id)
+        for (const id of ids) await convexClient.mutation(fns.update, { id, patch: data })
         return { data: null, error: null }
       }
+
       if (this.op === 'delete') {
-        for (const id of await this.targetIds()) {
-          await databases.deleteDocument({ databaseId: DB, collectionId: this.table, documentId: id })
-        }
+        const directId = this.idEq()
+        const ids = directId ? [directId] : (await this.targetRows(fns)).map(r => r.id)
+        for (const id of ids) await convexClient.mutation(fns.remove, { id })
         return { data: null, error: null }
       }
+
       return { data: null, error: null }
     } catch (e) {
       return { data: this._single ? null : (this.op === 'select' ? [] : null), error: errOf(e) }
     }
+  }
+
+  /** profiles-virtuella tabellen → fält på users-dokumentet, se convex/users.ts. */
+  private async runProfiles(): Promise<Result> {
+    if (this.op === 'select') {
+      const id = this.idEq()
+      if (!id) return { data: this._single ? null : [], error: null }
+      const row = await convexClient.query(api.users.getProfile, { id } as any)
+      return { data: this._single ? row : (row ? [row] : []), error: null }
+    }
+    if (this.op === 'insert') {
+      // Direkt efter signUp — kontot har ingen roll/intranet_member än.
+      const ok = await convexClient.mutation(api.users.setPendingProfile, {
+        id: this.payload.id, display_name: this.payload.display_name, intro: this.payload.intro,
+      })
+      return { data: null, error: ok ? null : { message: 'Kunde inte spara presentationen.' } }
+    }
+    if (this.op === 'upsert') {
+      // Den inloggades egen rad (notifikationer m.m.) — se notifications.tsx/intranetNotifications.tsx.
+      const { id: _id, ...patch } = this.payload
+      await convexClient.mutation(api.users.updateProfile, patch)
+      return { data: null, error: null }
+    }
+    return { data: null, error: null }
   }
 
   then<TResult1 = Result, TResult2 = never>(
@@ -218,93 +179,13 @@ class QueryBuilder implements PromiseLike<Result> {
   }
 }
 
-// ---- auth ------------------------------------------------------------------
-type Session = { user: { id: string; email: string } } | null
-type AuthListener = (event: string, session: Session) => void
-const listeners: AuthListener[] = []
-function emit(event: string, session: Session) { for (const l of listeners) l(event, session) }
-
-async function currentSession(): Promise<Session> {
-  try {
-    const u = await account.get()
-    return { user: { id: u.$id, email: u.email } }
-  } catch {
-    return null
-  }
-}
-
-const auth = {
-  async signInWithPassword({ email, password }: { email: string; password: string }) {
-    try {
-      await account.createEmailPasswordSession({ email, password })
-      const session = await currentSession()
-      emit('SIGNED_IN', session)
-      return { data: { user: session?.user ?? null, session }, error: null }
-    } catch (e) {
-      return { data: { user: null, session: null }, error: errOf(e) }
-    }
-  },
-  async signUp({ email, password }: { email: string; password: string }) {
-    try {
-      const u = await account.create({ userId: ID.unique(), email, password })
-      return { data: { user: { id: u.$id, email: u.email } }, error: null }
-    } catch (e) {
-      return { data: { user: null }, error: errOf(e) }
-    }
-  },
-  async signOut() {
-    try { await account.deleteSession({ sessionId: 'current' }) } catch { /* ignore */ }
-    emit('SIGNED_OUT', null)
-    return { error: null }
-  },
-  async getSession() {
-    return { data: { session: await currentSession() }, error: null }
-  },
-  onAuthStateChange(cb: AuthListener) {
-    listeners.push(cb)
-    return {
-      data: {
-        subscription: {
-          unsubscribe() {
-            const i = listeners.indexOf(cb)
-            if (i >= 0) listeners.splice(i, 1)
-          },
-        },
-      },
-    }
-  },
-  // "Glömt lösenord" — Appwrites inbyggda återställningsflöde. Mejlet skickas
-  // av Appwrite självt (dess egen SMTP eller den man satt upp i konsolen);
-  // ingen egen mejlserver behövs som i den PHP-baserade versionens
-  // server/api/password_reset.php. Länken pekar tillbaka till redirectUrl med
-  // ?userId=...&secret=... tillagt av Appwrite, vilket AdminResetPassword.tsx
-  // läser av och skickar vidare till updateRecovery.
-  async resetPasswordForEmail(email: string, redirectUrl: string) {
-    try {
-      await account.createRecovery({ email, url: redirectUrl })
-      return { error: null }
-    } catch (e) {
-      return { error: errOf(e) }
-    }
-  },
-  async updateRecovery({ userId, secret, password }: { userId: string; secret: string; password: string }) {
-    try {
-      await account.updateRecovery({ userId, secret, password })
-      return { error: null }
-    } catch (e) {
-      return { error: errOf(e) }
-    }
-  },
-}
-
+// Inget supabase.auth längre — AdminLogin.tsx/AdminResetPassword.tsx anropar
+// Convex Auth direkt (useAuthActions()-hooken för signIn/signUp, convexClient
+// imperativt för de åtgärder som inte etablerar en session). Se
+// MIGRATION_PLAN.md §4: en tidigare version försökte låta den imperativa
+// Convex-klienten anropa api.auth.signIn direkt här, vilket skapade en
+// session SERVER-side men aldrig kopplade in den i klientens eget
+// auth-tillstånd — inloggningen "lyckades" tyst men appen förblev utloggad.
 export const supabase = {
   from: (table: string) => new QueryBuilder(table),
-  auth,
-}
-
-// Mint a short-lived JWT for the current session, so serverless functions can
-// verify the caller's identity/permissions (e.g. changing another user's password).
-export async function createSessionJwt(): Promise<string> {
-  const { jwt } = await account.createJWT()
-  return jwt
 }

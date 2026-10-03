@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import type { Contact, SiteSettings } from '../../lib/types'
 import { supabase } from '../../lib/supabase'
+import { convexClient } from '../../lib/convexClient'
+import { api } from '../../../convex/_generated/api'
 import { useToast } from '../../lib/toast'
 import { useOutletContext, useSearchParams } from 'react-router-dom'
 import { usePage } from '../../lib/usePage'
@@ -52,31 +54,18 @@ export default function ContactPage() {
     }
   }
 
-  // Sparar direkt i systemet — reserv för miljöer utan serverfunktionen (t.ex.
-  // lokal vite-dev). I produktion sköter /api/contact leveransen enligt inställning.
-  async function fallbackInsert() {
-    const { error } = await supabase.from('contact_messages').insert({
-      name: form.name, email: form.email, subject: form.subject, message: form.message, status: 'unread',
-    })
-    done(!error)
-  }
-
   async function handleSubmit(ev: React.FormEvent) {
     ev.preventDefault()
     if (form.website) return
     if (!validate()) return
     setSubmitting(true)
     try {
-      const res = await fetch('/api/contact', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: form.name, email: form.email, subject: form.subject, message: form.message, website: form.website }),
+      await convexClient.action(api.contact.submit, {
+        name: form.name, email: form.email, subject: form.subject, message: form.message, website: form.website,
       })
-      if (res.ok) done(true)
-      else if (res.status === 404) await fallbackInsert() // funktionen finns inte i denna miljö
-      else { const data = await res.json().catch(() => ({})); show(data.error || 'Något gick fel. Försök igen senare.', 'error') }
-    } catch {
-      await fallbackInsert() // nätverksfel / ingen funktion
+      done(true)
+    } catch (e) {
+      show(e instanceof Error ? e.message : 'Något gick fel. Försök igen senare.', 'error')
     } finally {
       setSubmitting(false)
     }

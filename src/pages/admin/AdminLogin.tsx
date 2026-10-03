@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { Navigate } from 'react-router-dom'
-import { supabase } from '../../lib/supabase'
+import { useAuthActions } from '@convex-dev/auth/react'
+import { convexClient } from '../../lib/convexClient'
+import { api } from '../../../convex/_generated/api'
 import { useAuth } from '../../lib/auth'
 import { useToast } from '../../lib/toast'
 import { usernameFromEmail } from '../../lib/utils'
@@ -17,6 +19,7 @@ const INTRO_MAX = 1000
 
 export default function AdminLogin() {
   const { session, user, isAdmin, loading, displayName: accountName } = useAuth()
+  const { signIn } = useAuthActions()
   const { show } = useToast()
 
   // Sparar undan kontot man loggar in med, så att rubriken kan hälsa med
@@ -70,9 +73,17 @@ export default function AdminLogin() {
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
     setSubmitting(true)
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    setSubmitting(false)
-    if (error) show(error.message, 'error')
+    try {
+      // useAuthActions().signIn() — INTE den imperativa Convex-klienten direkt
+      // (se MIGRATION_PLAN.md): den senare skapar en session server-side men
+      // kopplar aldrig in den i klientens egna auth-tillstånd, så inloggningen
+      // "lyckas" men appen förblir utloggad. Bara denna hook gör båda delarna.
+      await signIn('password', { email, password, flow: 'signIn' })
+    } catch (e) {
+      show(e instanceof Error ? e.message : 'Kunde inte logga in.', 'error')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   async function handleSignup(e: React.FormEvent) {
@@ -82,25 +93,27 @@ export default function AdminLogin() {
       show(`Skriv några rader om dig själv – minst ${INTRO_MIN} tecken`, 'error'); return
     }
     setSubmitting(true)
-    const { data, error } = await supabase.auth.signUp({ email, password })
-    if (error) {
-      setSubmitting(false)
-      show(error.message, 'error')
-      return
-    }
-    // insert, inte upsert: kontot har ännu ingen session efter registreringen,
-    // och profiles tillåter bara gäster att *skapa* sin egen rad.
-    if (data.user) {
-      const { error: profileError } = await supabase.from('profiles').insert({
-        id: data.user.id,
-        display_name: displayName.trim(),
-        intro: intro.trim(),
-      })
-      if (profileError) {
-        setSubmitting(false)
-        show('Kontot skapades, men presentationen kunde inte sparas: ' + profileError.message, 'error')
-        return
+    try {
+      await signIn('password', { email, password, flow: 'signUp' })
+      // OBS: till skillnad från Appwrite loggar Convex Auth sannolikt in
+      // kontot direkt efter registrering (se MIGRATION_PLAN.md §3) — påverkar
+      // inte behörigheten (role/intranet_member är fortfarande osatta), bara
+      // att en session redan finns när vi hämtar det nya kontots id nedan.
+      const me = await convexClient.query(api.users.me, {})
+      if (me) {
+        const ok = await convexClient.mutation(api.users.setPendingProfile, {
+          id: me.id, display_name: displayName.trim(), intro: intro.trim(),
+        })
+        if (!ok) {
+          show('Kontot skapades, men presentationen kunde inte sparas.', 'error')
+          setSubmitting(false)
+          return
+        }
       }
+    } catch (e) {
+      setSubmitting(false)
+      show(e instanceof Error ? e.message : 'Kunde inte skapa konto.', 'error')
+      return
     }
     setSubmitting(false)
     setSignupDone(true)
@@ -109,11 +122,16 @@ export default function AdminLogin() {
   async function handleForgot(e: React.FormEvent) {
     e.preventDefault()
     setSubmitting(true)
-    // Servern (Appwrite) svarar alltid likadant oavsett om kontot finns — så
-    // UI:t kan inte (och ska inte) skilja på fallen här heller.
-    const { error } = await supabase.auth.resetPasswordForEmail(email, `${window.location.origin}/admin/aterstall-losenord`)
+    try {
+      // Servern svarar alltid likadant oavsett om kontot finns — så UI:t kan
+      // inte (och ska inte) skilja på fallen här heller.
+      await convexClient.action(api.passwordReset.request, { email, siteUrl: window.location.origin })
+    } catch (e) {
+      show(e instanceof Error ? e.message : 'Något gick fel.', 'error')
+      setSubmitting(false)
+      return
+    }
     setSubmitting(false)
-    if (error) { show(error.message, 'error'); return }
     setForgotSent(true)
   }
 

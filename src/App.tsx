@@ -1,5 +1,7 @@
 import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Link } from 'react-router-dom'
+import { ConvexAuthProvider } from '@convex-dev/auth/react'
+import { convexClient } from './lib/convexClient'
 import { AuthProvider } from './lib/auth'
 import { ToastProvider } from './lib/toast'
 import { ConfirmProvider } from './lib/confirm'
@@ -102,6 +104,7 @@ export default function App() {
       <ThemeProvider>
       <IntroLoader />
       <BlobAvatarsProvider>
+      <ConvexAuthProvider client={convexClient}>
       <AuthProvider>
         <ToastProvider>
           <ConfirmProvider>
@@ -192,6 +195,7 @@ export default function App() {
           </ConfirmProvider>
         </ToastProvider>
       </AuthProvider>
+      </ConvexAuthProvider>
       </BlobAvatarsProvider>
       </ThemeProvider>
     </BrowserRouter>

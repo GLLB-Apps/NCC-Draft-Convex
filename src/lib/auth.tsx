@@ -1,21 +1,25 @@
-import React, { createContext, useContext, useEffect, useState } from 'react'
-import { supabase } from './supabase'
+import React, { createContext, useContext } from 'react'
+import { useConvexAuth, useQuery } from 'convex/react'
+import { useAuthActions } from '@convex-dev/auth/react'
+import { api } from '../../convex/_generated/api'
+import type { UserRole } from './types'
 
+// Byggd direkt mot Convex Auths egna, riktigt reaktiva hooks (useConvexAuth/
+// useAuthActions) istället för shimmens pub/sub-emitter — Convex Auths
+// sessionstillstånd är redan en enda källa till sanning som uppdateras
+// automatiskt, så den manuella emit()-mekanismen i den gamla supabase.ts
+// behövs inte längre. useAuth()-kontraktet nedan är dock BYTE-FÖR-BYTE
+// identiskt med originalet — se MIGRATION_PLAN.md §4.
 export type User = { id: string; email: string }
 export type Session = { user: User }
-
-import type { UserRole } from './types'
 
 interface AuthContextValue {
   session: Session | null
   user: User | null
   role: UserRole | null
-  /** Visningsnamnet från registreringen (profiles.display_name), eller null om inget satt. */
   displayName: string | null
   isAdmin: boolean
-  /** Har intranätsåtkomst — egen medlemsrad eller admin (admins är ett superset). */
   isMember: boolean
-  /** Får skapa/ändra i intranätet. Falskt för läsbehörighet ("viewer"). */
   canWriteIntranet: boolean
   loading: boolean
   signIn: (email: string, password: string) => Promise<{ error: string | null }>
@@ -25,96 +29,35 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [session, setSession] = useState<Session | null>(null)
-  const [user, setUser] = useState<User | null>(null)
-  const [role, setRole] = useState<UserRole | null>(null)
-  const [displayName, setDisplayName] = useState<string | null>(null)
-  const [hasMemberRow, setHasMemberRow] = useState(false)
-  const [memberReadOnly, setMemberReadOnly] = useState(false)
-  const [loading, setLoading] = useState(true)
+  const { isAuthenticated, isLoading: authLoading } = useConvexAuth()
+  const { signIn: convexSignIn, signOut: convexSignOut } = useAuthActions()
+  const me = useQuery(api.users.me, isAuthenticated ? {} : 'skip')
 
-  async function fetchRole(userId: string) {
-    const { data } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', userId)
-      .maybeSingle()
-    setRole((data?.role as UserRole) ?? null)
-  }
+  // Samma spinner-logik som originalet: sessionen ska inte synas förrän
+  // rollen/medlemskapet hunnit laddas, annars dömer guarderna på role===null
+  // ett ögonblick för tidigt.
+  const loading = authLoading || (isAuthenticated && me === undefined)
 
-  async function fetchDisplayName(userId: string) {
-    const { data } = await supabase
-      .from('profiles')
-      .select('display_name')
-      .eq('id', userId)
-      .maybeSingle()
-    setDisplayName((data as { display_name?: string | null } | null)?.display_name ?? null)
-  }
-
-  // Intranätsåtkomst. Kollektionen är label-skyddad, så en användare utan
-  // member-labeln får tom träff — då är de inte medlem.
-  async function fetchMember(userId: string) {
-    const { data } = await supabase
-      .from('intranet_members')
-      .select('user_id, read_only')
-      .eq('user_id', userId)
-      .maybeSingle()
-    setHasMemberRow(!!data)
-    setMemberReadOnly(!!(data as { read_only?: boolean } | null)?.read_only)
-  }
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      setUser(session?.user ?? null)
-      if (session?.user) {
-        ;(async () => {
-          await Promise.all([fetchRole(session.user.id), fetchMember(session.user.id), fetchDisplayName(session.user.id)])
-          setLoading(false)
-        })()
-      } else {
-        setLoading(false)
-      }
-    })
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session)
-      setUser(session?.user ?? null)
-      if (session?.user) {
-        // `loading` sätts om medan rollen hämtas. Utan det syns sessionen ett
-        // ögonblick innan rollen gjort det, och allt som läser `isAdmin` dömer
-        // på `role === null`: inloggningen skickade admins till intranätet, och
-        // AdminGuard hann visa "Åtkomst nekad". Guarderna visar spinner så länge.
-        setLoading(true)
-        ;(async () => {
-          await Promise.all([fetchRole(session.user.id), fetchMember(session.user.id), fetchDisplayName(session.user.id)])
-          setLoading(false)
-        })()
-      } else {
-        setRole(null)
-        setHasMemberRow(false)
-        setMemberReadOnly(false)
-        setDisplayName(null)
-      }
-    })
-
-    return () => subscription.unsubscribe()
-  }, [])
+  const user: User | null = me ? { id: me.id, email: me.email } : null
+  const session: Session | null = user ? { user } : null
+  const role = (me?.role ?? null) as UserRole | null
+  const displayName = me?.displayName ?? null
+  const isAdmin = me?.isAdmin ?? false
+  const isMember = me?.isMember ?? false
+  const canWriteIntranet = me?.canWriteIntranet ?? false
 
   async function signIn(email: string, password: string) {
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) return { error: error.message }
-    return { error: null }
+    try {
+      await convexSignIn('password', { email, password, flow: 'signIn' })
+      return { error: null }
+    } catch (e) {
+      return { error: e instanceof Error ? e.message : 'Kunde inte logga in.' }
+    }
   }
 
   async function signOut() {
-    await supabase.auth.signOut()
+    await convexSignOut()
   }
-
-  const isAdmin = role !== null
-  const isMember = isAdmin || hasMemberRow
-  // Admins och fulla medlemmar skriver; läsbehörighet ("viewer") gör det inte.
-  const canWriteIntranet = isAdmin || (hasMemberRow && !memberReadOnly)
 
   return (
     <AuthContext.Provider value={{ session, user, role, displayName, isAdmin, isMember, canWriteIntranet, loading, signIn, signOut }}>

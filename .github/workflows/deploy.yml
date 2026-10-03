@@ -1,0 +1,47 @@
+name: Driftsätt till webbhotell
+
+# Samma mönster som NCC-Draft-PHP (se dess DEPLOY.md), men enklare: ingen
+# server/-mapp att ladda upp, och inget data/database/uploads att akta sig
+# för att skriva över — hela backenden är Convex, inte något som bor på
+# webbhotellet. Körs bara manuellt tills secrets är på plats (se nedan).
+on:
+  # push:
+  #   branches: [main]
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Hämta koden
+        uses: actions/checkout@v4
+
+      - name: Sätt upp Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Installera beroenden
+        run: npm ci
+
+      - name: Bygg React-appen
+        env:
+          VITE_CONVEX_URL: ${{ secrets.VITE_CONVEX_URL }}
+        run: npm run build
+
+      - name: Lägg med .htaccess i det som laddas upp
+        run: cp .htaccess dist/.htaccess
+
+      - name: Ladda upp via FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.4.0
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          server-dir: ${{ secrets.FTP_SERVER_DIR }}
+          local-dir: dist/
+          protocol: ${{ vars.FTP_PROTOCOL || 'ftps' }}
+        # OBS: lägg ALDRIG till "dangerous-clean-slate: true" utan att först
+        # dubbelkolla server-dir — den raderar ALLT i målmappen som inte
+        # laddas upp i samma körning.

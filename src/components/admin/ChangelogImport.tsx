@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { ExternalLink } from 'lucide-react'
 import { fetchCommits, GITHUB_REPO, type GitHubCommit } from '../../lib/github'
-import { supabase, createSessionJwt } from '../../lib/supabase'
+import { supabase } from '../../lib/supabase'
+import { convexClient } from '../../lib/convexClient'
+import { api } from '../../../convex/_generated/api'
 import { useAuth } from '../../lib/auth'
 import { useToast } from '../../lib/toast'
 import { formatDateShort } from '../../lib/utils'
@@ -72,21 +74,10 @@ export default function ChangelogImport({ existingShas, onClose, onImported }: {
   /** null = översättningen gick inte att nå; då står originalrubrikerna kvar. */
   async function translate(subjects: string[]): Promise<string[] | null> {
     try {
-      const jwt = await createSessionJwt()
-      const res = await fetch('/api/translate-commits', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${jwt}` },
-        body: JSON.stringify({ subjects }),
-      })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) {
-        show('Kunde inte översätta: ' + (data.error || res.status) + '. Rubrikerna visas på engelska.', 'error')
-        return null
-      }
-      return Array.isArray(data.titles) && data.titles.length === subjects.length ? data.titles : null
-    } catch {
-      // Funktionen under /api kör bara i den publicerade versionen.
-      show('Översättningen nås inte här (fungerar i den publicerade versionen). Rubrikerna visas på engelska.', 'error')
+      const { titles } = await convexClient.action(api.changelog.translateTitles, { subjects })
+      return Array.isArray(titles) && titles.length === subjects.length ? titles : null
+    } catch (e) {
+      show('Kunde inte översätta: ' + (e instanceof Error ? e.message : String(e)) + '. Rubrikerna visas på engelska.', 'error')
       return null
     }
   }

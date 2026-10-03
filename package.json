@@ -1,32 +1,30 @@
 {
-  "name": "vite-react-typescript-starter",
+  "name": "rogleskogen-convex",
   "private": true,
   "version": "0.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:convex": "convex dev",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.120.0",
     "@blobatar/react": "^2.7.0",
-    "appwrite": "^26.2.0",
+    "@convex-dev/auth": "^0.0.94",
     "blobatar": "^2.7.0",
+    "convex": "^1.46.0",
     "heic2any": "^0.0.4",
     "leaflet": "^1.9.4",
     "lucide-react": "^1.25.0",
     "motion": "^13.4.1",
-    "node-appwrite": "^27.0.0",
     "pdfjs-dist": "^6.2.108",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-leaflet": "^5.0.0",
     "react-router-dom": "^7.18.1",
-    "resend": "^6.18.1",
-    "yet-another-react-lightbox": "^3.32.2",
-    "zod": "^4.4.3"
+    "yet-another-react-lightbox": "^3.32.2"
   },
   "devDependencies": {
     "@types/leaflet": "^1.9.21",

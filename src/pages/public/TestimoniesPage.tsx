@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { Testimony } from '../../lib/types'
 import { supabase } from '../../lib/supabase'
+import { convexClient } from '../../lib/convexClient'
+import { api } from '../../../convex/_generated/api'
 import { useToast } from '../../lib/toast'
 import TestimonyForm from '../../components/public/TestimonyForm'
 import AvatarFacepile from '../../components/AvatarFacepile'
@@ -38,40 +40,32 @@ export default function TestimoniesPage() {
 
   async function handleSubmit(data: Record<string, unknown>) {
     // E-posten, den interna anteckningen och namnet på anonyma vittnesmål
-    // sparas i testimony_contacts, inte här. Ett godkänt vittnesmål är publikt
-    // läsbart i sin helhet, och Appwrite kan inte skydda enskilda fält.
+    // sparas i testimonyContacts, inte här. Ett godkänt vittnesmål är publikt
+    // läsbart i sin helhet, och Convex kan inte skydda enskilda fält.
+    //
+    // submit() skriver vittnesmålet + kontaktuppgifterna atomiskt i en
+    // transaktion (en förbättring jämfört med de två sekventiella inserts
+    // Appwrite-/PHP-versionerna gjorde — se MIGRATION_PLAN.md §2).
     const anonym = data.is_anonymous === true
-    const { data: created, error } = await supabase.from('testimonies').insert({
-      title: data.title,
-      story: data.story,
-      author_name: anonym ? null : data.author_name,
-      is_anonymous: data.is_anonymous,
-      location: data.location,
-      area_usage: data.area_usage,
-      featured_image: data.featured_image || null,
-      map_lat: data.map_lat ?? null,
-      map_lng: data.map_lng ?? null,
-      consent_publish: data.consent_publish,
-      consent_contact: data.consent_contact,
-      consent_marketing: data.consent_marketing,
-      status: 'pending',
-    })
-    if (error) {
+    try {
+      await convexClient.mutation(api.testimonies.submit, {
+        title: (data.title as string | undefined) || undefined,
+        story: data.story as string,
+        is_anonymous: Boolean(data.is_anonymous),
+        location: (data.location as string | undefined) || undefined,
+        area_usage: (data.area_usage as string | undefined) || undefined,
+        featured_image: (data.featured_image as string | undefined) || undefined,
+        map_lat: (data.map_lat as number | undefined) ?? undefined,
+        map_lng: (data.map_lng as number | undefined) ?? undefined,
+        consent_publish: Boolean(data.consent_publish),
+        consent_contact: Boolean(data.consent_contact),
+        consent_marketing: Boolean(data.consent_marketing),
+        contact_email: (data.email as string | undefined) || undefined,
+        contact_author_name: anonym ? undefined : ((data.author_name as string | undefined) || undefined),
+      })
+    } catch {
       show('Något gick fel. Försök igen senare.', 'error')
       return
-    }
-
-    // Kontaktuppgifterna i sin egen, adminskyddade kollektion. Misslyckas den
-    // här skrivningen är vittnesmålet ändå inne — berättelsen är det viktiga,
-    // och redaktionen kan höra av sig via en annan väg. Besökaren ska inte få
-    // ett felmeddelande om något som redan gått igenom.
-    const id = (created as { id?: string } | null)?.id
-    if (id) {
-      await supabase.from('testimony_contacts').insert({
-        testimony_id: id,
-        email: data.email || null,
-        author_name: data.author_name || null,
-      })
     }
 
     show(`${page.text('success')} Du är nu en ${randomRogleTitle()}!`, 'success')
