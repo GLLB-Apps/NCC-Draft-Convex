@@ -43,6 +43,18 @@ build-miljö, och `tsc -b` floppar direkt på "Cannot find module".
 3. Kräver `CONVEX_DEPLOY_KEY` som miljövariabel i Vercel (satt, Secret-typ,
    genererad via `npx convex deployment token create <namn> --prod`).
 
+**En till fälla hittad på vägen:** `npm run build:ci` (inte `npm run build`)
+används i `--cmd`, med `tsc -b --force` i stället för bara `tsc -b`. Vercel
+återanvänder `node_modules` (inklusive `tsc`s egen inkrementella
+cache-fil, `node_modules/.tmp/*.tsbuildinfo`) mellan byggen. Det första
+misslyckade försöket (innan `convex/_generated` fanns) skrev en cache-fil
+som sa "den här modulen finns inte" — och den cachen trumfade sedan att
+modulen FAKTISKT fanns efter att `npx convex deploy` skapat den, så bygget
+fortsatte floppa trots att allt annat var rätt. `--force` tvingar en ren
+omkontroll varje gång i CI, där det här inte spelar någon roll
+tidsmässigt. Lokalt (`npm run build`, utan `--force`) är det fortfarande
+snabbt som vanligt.
+
 Det betyder: `git push origin main` räcker för EN helt komplett
 driftsättning av både `convex/`-kod och `src/`-kod i samma körning — inget
 separat `npx convex deploy`-steg behövs längre.
