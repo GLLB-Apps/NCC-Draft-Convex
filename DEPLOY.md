@@ -1,47 +1,48 @@
-# Automatisk driftsättning (GitHub Actions) — Inleed, ingen Vercel
+# Driftsättning (Vercel + Convex)
 
-Push till `main` → GitHub bygger React-appen mot din Convex-produktionsdeployment
-och laddar upp till Inleed via FTP. Samma mönster som `NCC-Draft-PHP` använder
-(se dess DEPLOY.md), men enklare: ingen `server/`-mapp, ingen databas eller
-`uploads/`-katalog att akta sig för att skriva över — allt innehåll bor i
-Convex, inte på webbhotellet. Varje körning laddar upp HELA `dist/` på nytt;
-det finns inget lokalt tillstånd på Inleed-sidan att förlora.
-
-## Krav på webbhotellet
-
-FTP eller FTPS (användarnamn, lösenord, värdnamn) — **inte** SFTP, det stödjer
-inte den GitHub Action som används här. Inleed visar de här uppgifterna under
-"FTP-konton" i kontrollpanelen.
+Ingen Inleed-hosting, ingen FTP — bara domänen är registrerad hos Inleed
+(DNS). Frontend är helt statisk (ingen PHP, ingen `/api`-rutt) och deployas
+av Vercel direkt från GitHub-repot vid varje push till `main`. Backenden är
+Convex, ett helt separat moln-projekt som inte bor på Vercel alls.
 
 ## Engångsinställning
 
-1. **Convex-sidan klar först:** kör `npx convex deploy` lokalt minst en gång så
-   du har en riktig produktions-URL (`https://ditt-projekt.convex.cloud`), och
-   sätt serverns miljövariabler (`RESEND_API_KEY` m.fl.) med `npx convex env set`.
-2. Öppna repot på github.com → **Settings** → **Secrets and variables** → **Actions**.
-3. Under fliken **Secrets**, lägg in fem hemligheter:
+1. **Vercel-projektet** är redan skapat (`raddarogleskogen-convex` under
+   `dawwe98dg-gmailcoms-projects`), kopplat till
+   `GLLB-Apps/NCC-Draft-Convex`. Push till `main` bygger och deployar
+   automatiskt — inget mer att göra där.
+2. **`VITE_CONVEX_URL`** är satt som miljövariabel i Vercel-projektet,
+   pekar på produktions-Convex (`https://joyous-robin-892.convex.cloud`).
+   Byts den URL:en (t.ex. ett nytt Convex-projekt) måste den uppdateras i
+   Vercels projektinställningar → Environment Variables, följt av en ny
+   deploy.
+3. **Domänen** `raddarogleskogen.nu` (+ `www.`) är flyttad från det gamla
+   `ncc-draft-rs`-projektet till det här. DNS ligger kvar hos Inleed
+   (nameservers `ns1–6.inleed.net`) — det är bara själva Vercel-kopplingen
+   (en A-post/CNAME i Inleeds DNS-zon) som pekar om, inga nameserver-byten.
 
-   | Namn | Värde |
-   | --- | --- |
-   | `VITE_CONVEX_URL` | Din Convex-produktions-URL från steg 1 |
-   | `FTP_SERVER` | Värdnamnet till FTP-servern, t.ex. `ftp.din-domän.se` |
-   | `FTP_USERNAME` | FTP-användarnamnet |
-   | `FTP_PASSWORD` | FTP-lösenordet |
-   | `FTP_SERVER_DIR` | Målmappen på servern, **måste sluta med `/`** — t.ex. `public_html/` |
+## Serversidans miljövariabler (Convex, INTE Vercel)
 
-4. Stödjer webbhotellet inte FTPS (bara vanlig FTP)? Under fliken **Variables**,
-   lägg till `FTP_PROTOCOL` med värdet `ftp`. Annars används `ftps`
-   (krypterat) som standard.
-5. Just nu är `push`-triggern avstängd i `.github/workflows/deploy.yml` (en
-   kommenterad rad). Kör manuellt under tiden: **Actions**-fliken → välj
-   workflowen → **Run workflow**. När secrets är på plats, avkommentera
-   `push: branches: [main]` så byggs och laddas det upp automatiskt vid varje push.
+Sätts med `npx convex env set NAMN värde --prod`, aldrig i Vercel:
+`JWT_PRIVATE_KEY`/`JWKS`/`SITE_URL` (satta av `npx @convex-dev/auth --prod`),
+`RESEND_API_KEY`, `MAIL_FROM_ADDRESS`. Valfria: `PETITION_URL`,
+`ANTHROPIC_API_KEY`.
+
+## Vanlig arbetsgång efter detta
+
+```bash
+git push origin main      # Vercel bygger och deployar automatiskt
+npx convex deploy          # om convex/-koden ändrats, pusha den separat
+```
+
+De två är helt oberoende — en kodändring i `src/` kräver bara `git push`,
+en ändring i `convex/` kräver `npx convex deploy` (annars kör produktionen
+kvar på den gamla backend-koden även om frontend-bygget är nytt).
 
 ## Felsökning
 
 | Symptom | Trolig orsak |
 | --- | --- |
-| Workflowen misslyckas på FTP-steget | Fel värde i någon av hemligheterna, eller fel protokoll (`ftp`/`ftps`) |
-| "530 Login incorrect" | Fel användarnamn/lösenord, eller kontot kräver SFTP i stället |
-| Sidan laddas men pratar inte med backend | `VITE_CONVEX_URL` saknas/fel i GitHub-secrets — bygget bakar in den vid kompileringstillfället, den går inte att ändra efteråt utan en ny build |
-| Direktlänk till en undersida ger tom sida | `.htaccess` kom inte med, eller `mod_rewrite` är avstängt hos värden |
+| Sidan laddas men pratar inte med backend | `VITE_CONVEX_URL` i Vercel pekar på fel/gammal Convex-deployment |
+| Ändringar i `convex/*.ts` syns inte | Glömt `npx convex deploy` — Vercel bygger bara frontend, aldrig Convex-koden |
+| Domänen visar den gamla Appwrite-sajten | DNS-cache — vänta ut TTL, eller kontrollera att domänen verkligen flyttats till rätt Vercel-projekt (`vercel domains inspect raddarogleskogen.nu`) |

@@ -29,21 +29,13 @@ Originalprojektet (`NCC-Draft-RS`, Appwrite) och den PHP-baserade varianten
 
 ## Status
 
-Se [MIGRATION_PLAN.md](MIGRATION_PLAN.md) för fullständig analys och fasordning.
+**Live:** [raddarogleskogen.nu](https://raddarogleskogen.nu), på Vercel (projekt
+`raddarogleskogen-convex`) + Convex produktion (`joyous-robin-892`). Allt
+innehåll och alla konton migrerade från den levande Appwrite-installationen.
 
-**Fas 0 (skriven kod, inget Convex-konto krävs) är klar:** schema, samtliga
-`convex/*.ts`-funktioner, den omskrivna kompat-shimmen (`src/lib/supabase.ts`),
-`storage.ts`, `auth.tsx` (native Convex Auth-hooks), `notifications.tsx` (native
-`useQuery`, ersätter 10 separata hämtningar + manuell refresh med en reaktiv
-query), samt de sex filer som pratade direkt med Vercel-funktioner
-(`AdminAdmins.tsx`, `ChangelogImport.tsx`, `AdminSettings.tsx`, `ContactPage.tsx`,
-`TestimoniesPage.tsx`, `FaqPage.tsx`) skrivna om mot Convex-motsvarigheterna.
-
-**Fas 1 (kräver inloggning) är INTE påbörjad** — ingen `npx convex dev` har körts
-än, så koden är overifierad mot ett riktigt Convex-projekt. Se MIGRATION_PLAN.md
-§6/§7 för de konkreta punkter som flaggats som osäkra tills den körningen skett
-(framför allt: hur en superadmin sätter en annan användares lösenord, och
-Convex Auths exakta schema för sessionstabellen).
+Se [MIGRATION_PLAN.md](MIGRATION_PLAN.md) för fullständig analys och fasordning
+— samtliga tre faser (kodskrivning, kontoinloggning/verifiering,
+datamigrering) är klara, både i dev- och produktionsdeploymenten.
 
 ## Utveckling
 
@@ -62,17 +54,20 @@ Första gången: skapa en superadmin via Convex-dashboardens datavy (eller ett
 `npx convex run`-anrop till en egen engångsmutation) — self-signup ger
 medvetet ingen åtkomst, se `convex/auth.ts`.
 
-## Installation i produktion (Inleed, samma domän som idag)
+## Installation i produktion (Vercel + Convex)
 
-Ingen Vercel inblandad — frontend laddas upp som rena statiska filer till det
-befintliga Inleed-kontot, precis som webbhotellsvarianten, bara utan PHP/
-SQLite/uploads-delen (allt det är Convex nu). Se [DEPLOY.md](DEPLOY.md) för
-GitHub Actions-varianten (push → bygg → FTP), annars manuellt:
+Inget Inleed-webbhotell inblandat — Inleed är bara domänregistrar/DNS här
+(`ns1–6.inleed.net`). Frontend byggs och deployas automatiskt av Vercel vid
+push till `main` (kopplat direkt mot `GLLB-Apps/NCC-Draft-Convex`), backend är
+ett eget Convex-produktionsprojekt. Se [DEPLOY.md](DEPLOY.md) för detaljer och
+felsökning.
 
-1. `npx convex deploy` — skapar/uppdaterar produktionsdeploymenten, ger en
-   produktions-URL för `VITE_CONVEX_URL`.
-2. Sätt serversidans miljövariabler (`RESEND_API_KEY` m.fl., se `.env.example`)
-   via `npx convex env set` eller dashboarden — **inte** i en `.env`-fil.
-3. `npm run build` med `VITE_CONVEX_URL` satt till produktions-URL:en → `dist/`.
-4. Ladda upp `dist/*` + `.htaccess` till `public_html/` på Inleed. Inget annat
-   behövs — ingen `server/`, ingen databas, inga rättigheter att sätta.
+Kort version:
+1. `npx convex deploy` — pushar `convex/`-koden till produktion. Körs separat
+   från frontend-deployen (Vercel rör aldrig Convex-koden).
+2. `npx @convex-dev/auth --prod --web-server-url https://raddarogleskogen.nu`
+   + `npx convex env set ... --prod` för `RESEND_API_KEY`/`MAIL_FROM_ADDRESS`
+   — engångsinställning, redan gjord.
+3. `VITE_CONVEX_URL` är satt som miljövariabel i Vercel-projektet, inte i en
+   `.env`-fil i repot.
+4. `git push origin main` → Vercel bygger och deployar `dist/` automatiskt.

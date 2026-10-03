@@ -33,3 +33,6 @@ convex/_generated
 # korta) behålls, men den stora referensmängden hör inte hemma i repot.
 .agents/
 .claude/
+
+.vercel
+.env*
