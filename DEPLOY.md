@@ -28,21 +28,30 @@ Sätts med `npx convex env set NAMN värde --prod`, aldrig i Vercel:
 `RESEND_API_KEY`, `MAIL_FROM_ADDRESS`. Valfria: `PETITION_URL`,
 `ANTHROPIC_API_KEY`.
 
-## Vanlig arbetsgång efter detta
+## Byggkommandot (viktigt — varför det inte är bara `npm run build`)
 
-```bash
-git push origin main      # Vercel bygger och deployar automatiskt
-npx convex deploy          # om convex/-koden ändrats, pusha den separat
-```
+`vercel.json`s `buildCommand` är `npx convex deploy --cmd 'npm run build'`,
+inte bara `npm run build`. Det beror på att `convex/_generated/` (de typer
+`src/`-koden importerar från, t.ex. `../../convex/_generated/api`) är
+medvetet gitignorad — det är genererad kod, inte något att committa. Utan
+`npx convex deploy` först finns den katalogen helt enkelt inte i Vercels
+build-miljö, och `tsc -b` floppar direkt på "Cannot find module".
+`npx convex deploy`:
+1. Genererar `convex/_generated/` (löser importfelet).
+2. Pushar `convex/`-koden till produktion — samma körning deployar alltså
+   BÅDE backend och frontend, inte bara frontend.
+3. Kräver `CONVEX_DEPLOY_KEY` som miljövariabel i Vercel (satt, Secret-typ,
+   genererad via `npx convex deployment token create <namn> --prod`).
 
-De två är helt oberoende — en kodändring i `src/` kräver bara `git push`,
-en ändring i `convex/` kräver `npx convex deploy` (annars kör produktionen
-kvar på den gamla backend-koden även om frontend-bygget är nytt).
+Det betyder: `git push origin main` räcker för EN helt komplett
+driftsättning av både `convex/`-kod och `src/`-kod i samma körning — inget
+separat `npx convex deploy`-steg behövs längre.
 
 ## Felsökning
 
 | Symptom | Trolig orsak |
 | --- | --- |
+| Build floppar på "Cannot find module '.../convex/_generated/...'" | `CONVEX_DEPLOY_KEY` saknas/ogiltig i Vercel, eller `buildCommand` har av misstag bytts till bara `npm run build` |
 | Sidan laddas men pratar inte med backend | `VITE_CONVEX_URL` i Vercel pekar på fel/gammal Convex-deployment |
-| Ändringar i `convex/*.ts` syns inte | Glömt `npx convex deploy` — Vercel bygger bara frontend, aldrig Convex-koden |
 | Domänen visar den gamla Appwrite-sajten | DNS-cache — vänta ut TTL, eller kontrollera att domänen verkligen flyttats till rätt Vercel-projekt (`vercel domains inspect raddarogleskogen.nu`) |
+| Vercel visar "Build failed" men ingen förklaring i mejlet | `vercel inspect <deployment-url> --logs` visar hela byggloggen |
