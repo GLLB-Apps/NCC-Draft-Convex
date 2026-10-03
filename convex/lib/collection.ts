@@ -20,7 +20,15 @@ export interface ListOptions {
   ilike?: Record<string, string>
   gte?: Record<string, unknown>
   lte?: Record<string, unknown>
-  order?: { field: string; ascending?: boolean }
+  /**
+   * EN ELLER FLERA sorteringsnycklar i prioritetsordning — t.ex. nyhetslistan
+   * sorterar på is_pinned (fästa överst) OCH DÄREFTER published_at (nyast
+   * först inom varje grupp). En enda order tappade tidigare det andra
+   * kriteriet helt tyst (se src/lib/supabase.ts: bara this.orders[0] skickades
+   * med), vilket gjorde att "nyast först" aldrig faktiskt stämde inom en
+   * pinned/opinned-grupp.
+   */
+  order?: { field: string; ascending?: boolean } | { field: string; ascending?: boolean }[]
   limit?: number
 }
 
@@ -56,14 +64,17 @@ function applyFilters<T extends Record<string, unknown>>(rows: T[], opts: ListOp
     matchesRange(r, opts.lte, (a, b) => a !== undefined && a !== null && (a as number | string) <= (b as number | string)))
 
   if (opts.order) {
-    const { field, ascending = true } = opts.order
+    const orders = Array.isArray(opts.order) ? opts.order : [opts.order]
     out = [...out].sort((a, b) => {
-      const av = a[field] as number | string | undefined
-      const bv = b[field] as number | string | undefined
-      if (av === bv) return 0
-      if (av === undefined) return 1
-      if (bv === undefined) return -1
-      return (av < bv ? -1 : 1) * (ascending ? 1 : -1)
+      for (const { field, ascending = true } of orders) {
+        const av = a[field] as number | string | undefined
+        const bv = b[field] as number | string | undefined
+        if (av === bv) continue
+        if (av === undefined) return 1
+        if (bv === undefined) return -1
+        return (av < bv ? -1 : 1) * (ascending ? 1 : -1)
+      }
+      return 0
     })
   }
   if (opts.limit !== undefined) out = out.slice(0, opts.limit)

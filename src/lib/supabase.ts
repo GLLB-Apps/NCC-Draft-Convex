@@ -91,7 +91,12 @@ class QueryBuilder implements PromiseLike<Result> {
       if (!fns) throw new Error(`Okänd tabell: ${this.table}`)
 
       if (this.op === 'select') {
-        const order = this.orders[0] ? { field: this.orders[0][0], ascending: this.orders[0][1] === 'asc' } : undefined
+        // ALLA .order()-anrop skickas med, inte bara det första — en andra
+        // sorteringsnyckel (t.ex. "nyast först" INOM fästa/ej fästa-gruppen)
+        // föll tidigare bort helt tyst här.
+        const order = this.orders.length
+          ? this.orders.map(([field, dir]) => ({ field, ascending: dir === 'asc' }))
+          : undefined
         let rows: Row[] = await convexClient.query(fns.list, { eq: this.eqObj(), order, limit: this._limit })
         rows = rows.map(fromDoc)
         for (const f of this.post) rows = f(rows)
